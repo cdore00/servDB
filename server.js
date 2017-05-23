@@ -1,13 +1,8 @@
 //  OpenShift sample Node application
 
 const http = require('http');
-var express = require('express'),
-    fs      = require('fs'),
-    app     = express(),
-    eps     = require('ejs'),
-    morgan  = require('morgan');
-    
-Object.assign=require('object-assign')
+const fs = require('fs'); 
+
 
 
 var port = 8080;
@@ -86,7 +81,6 @@ function testBD(){
 	
 }
 
-
 initDb(function(err){
   console.log('Error connecting to Mongo. Message:\n'+err);
 });
@@ -138,10 +132,7 @@ console.log(url_parts.pathname);
 
 				
 			  default:
-				var param = url_parts.query;
-				if (param.code)  // New code received to obtain Token
-					getNewCode(req, res, url_parts)
-				else{  //Cancel unknow request
+				{  //Cancel unknow request
 					res.statusCode = 200;
 					res.end("<h1>Received</h1>");
 				}
