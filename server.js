@@ -1,4 +1,6 @@
 //  OpenShift sample Node application
+
+const http = require('http');
 var express = require('express'),
     fs      = require('fs'),
     app     = express(),
@@ -74,7 +76,7 @@ function testBD(){
     //col.insert({ip: req.ip, date: Date.now()});
     col.count(function(err, count){
 
-	  console.log("Page compte11= " + count);
+	  console.log("Page compte121= " + count);
     });
   }
 	
@@ -85,4 +87,68 @@ initDb(function(err){
   console.log('Error connecting to Mongo. Message:\n'+err);
 });
 
+tl = require('./tools.js');
+var infoBup = new Array();
+var subWeb = '';
+var subNod = 'nod/';
+
+// Instantiate Web Server
+	const server = http.createServer((req, res) => {
+			//debugger;
+		var url_parts = url.parse(req.url,true);
+		var arrPath = url_parts.pathname.split("/");
+		var filePath = arrPath[arrPath.length - 1];
+		subWeb = arrPath[arrPath.length - 2] + '/';
+console.log(url_parts.pathname);
+		if (req.method == 'POST') {
+			if (filePath == "listLog"){
+				tl.listLog2(req, res, Mailer.pass);
+			}else{
+			if (filePath == "commPic"){
+				sendImage(url_parts.query, req, res);
+			}else{
+				res.end();
+			}}
+		}else{  // method == 'GET'
+			switch (filePath) {
+			  case "getFav":
+				getUserFav(req, res, url_parts.query);
+				break;
+			  case "getRegions":
+				getRegionList(req, res);
+				break;
+			  case "getClubParc":
+				getClubParcours(req, res, url_parts.query);
+				break;
+			  case "getClubList":
+				getClubList(req, res, url_parts.query);  //À réutiliser
+				break;
+			  case "getGolfGPS":
+				getGolfGPS(req, res, url_parts.query);
+				break;
+			  case "searchResult":{
+				  debugger;
+				searchResult(req, res, url_parts.query);
+				break;				  
+			  }
+
+				
+			  default:
+				var param = url_parts.query;
+				if (param.code)  // New code received to obtain Token
+					getNewCode(req, res, url_parts)
+				else{  //Cancel unknow request
+					res.statusCode = 200;
+					res.end("<h1>Received</h1>");
+				}
+			}		
+
+		} //Fin GET
+	});
+// Start server listening request
+	server.listen(port, hostname, () => {
+		console.log('Server started on port ' + port);
+		//tl.logFile('Server started on port ' + port);
+	});
+// END Web Server
 
