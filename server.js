@@ -56,10 +56,28 @@ var initDb = function(callback) {
 
     console.log('Connected to MongoDB at: %s', mongoURL);
 	console.log("Connection BD mongoServiceName=" + mongoServiceName);
+	testBD();
   });
 };
 
-var compteur = "Vide";
+function testBD(){
+
+  if (!db) {
+    initDb(function(err){});
+  }
+  if (db) {
+    var col = db.collection('counts');
+    // Create a document with request IP and current time of request
+    //col.insert({ip: req.ip, date: Date.now()});
+    col.count(function(err, count){
+
+	  console.log("Page compte11= " + count);
+    });
+  }
+	
+}
+
+
 
 app.get('/', function (req, res) {
   // try to initialize the db on every request if it's not already
@@ -96,7 +114,7 @@ app.get('/pagecount', function (req, res) {
   }
 });
 
-
+var compteur = "Vide";
 function catchCount(count){
 	compteur = count;
 }
