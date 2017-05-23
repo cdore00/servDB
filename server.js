@@ -1,35 +1,7 @@
 //  OpenShift sample Node application
-
-const http = require('http');
-const fs = require('fs'); 
-
+var fs      = require('fs');
     
-Object.assign=require('object-assign')
-
-
-var port = 8080;
-var hostname = '';
-
-tl = require('./tools.js');
-var infoBup = new Array();
-var subWeb = '';
-var subNod = 'nod/';
-
-// Instantiate Web Server
-	const server = http.createServer((req, res) => {
-			//debugger;
-		var url_parts = url.parse(req.url,true);
-		var arrPath = url_parts.pathname.split("/");
-		var filePath = arrPath[arrPath.length - 1];
-		subWeb = arrPath[arrPath.length - 2] + '/';
-console.log(url_parts.pathname);
-
-					res.statusCode = 200;
-					res.end("<h1>Received</h1>");
-
-	});
-
-
+//Object.assign=require('object-assign')
 
 var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
@@ -77,7 +49,6 @@ var initDb = function(callback) {
 
     console.log('Connected to MongoDB at: %s', mongoURL);
 	console.log("Connection BD mongoServiceName=" + mongoServiceName);
-	console.log("Connection BD mongoServiceName=" + mongoServiceName);
 	console.log("mongoHost=" + mongoHost);
 	console.log("mongoPort=" + mongoPort);
 	console.log("mongoDatabase=" + mongoDatabase);
@@ -104,10 +75,9 @@ function testBD(){
 	
 }
 
+
 initDb(function(err){
   console.log('Error connecting to Mongo. Message:\n'+err);
 });
-
-
 
 
