@@ -3,6 +3,8 @@
 const http = require('http');
 const fs = require('fs'); 
 
+    
+Object.assign=require('object-assign')
 
 
 var port = 8080;
