@@ -10,6 +10,32 @@ Object.assign=require('object-assign')
 var port = 8080;
 var hostname = '';
 
+tl = require('./tools.js');
+var infoBup = new Array();
+var subWeb = '';
+var subNod = 'nod/';
+
+// Instantiate Web Server
+	const server = http.createServer((req, res) => {
+			//debugger;
+		var url_parts = url.parse(req.url,true);
+		var arrPath = url_parts.pathname.split("/");
+		var filePath = arrPath[arrPath.length - 1];
+		subWeb = arrPath[arrPath.length - 2] + '/';
+console.log(url_parts.pathname);
+
+					res.statusCode = 200;
+					res.end("<h1>Received</h1>");
+
+	});
+// Start server listening request
+	server.listen(port, hostname, () => {
+		console.log('Server started on port ' + port);
+		//tl.logFile('Server started on port ' + port);
+	});
+// END Web Server
+
+
 var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
     mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
@@ -87,65 +113,5 @@ initDb(function(err){
   console.log('Error connecting to Mongo. Message:\n'+err);
 });
 
-tl = require('./tools.js');
-var infoBup = new Array();
-var subWeb = '';
-var subNod = 'nod/';
 
-// Instantiate Web Server
-	const server = http.createServer((req, res) => {
-			//debugger;
-		var url_parts = url.parse(req.url,true);
-		var arrPath = url_parts.pathname.split("/");
-		var filePath = arrPath[arrPath.length - 1];
-		subWeb = arrPath[arrPath.length - 2] + '/';
-console.log(url_parts.pathname);
-		if (req.method == 'POST') {
-			if (filePath == "listLog"){
-				tl.listLog2(req, res, Mailer.pass);
-			}else{
-			if (filePath == "commPic"){
-				sendImage(url_parts.query, req, res);
-			}else{
-				res.end();
-			}}
-		}else{  // method == 'GET'
-			switch (filePath) {
-			  case "getFav":
-				getUserFav(req, res, url_parts.query);
-				break;
-			  case "getRegions":
-				getRegionList(req, res);
-				break;
-			  case "getClubParc":
-				getClubParcours(req, res, url_parts.query);
-				break;
-			  case "getClubList":
-				getClubList(req, res, url_parts.query);  //À réutiliser
-				break;
-			  case "getGolfGPS":
-				getGolfGPS(req, res, url_parts.query);
-				break;
-			  case "searchResult":{
-				  debugger;
-				searchResult(req, res, url_parts.query);
-				break;				  
-			  }
-
-				
-			  default:
-				{  //Cancel unknow request
-					res.statusCode = 200;
-					res.end("<h1>Received</h1>");
-				}
-			}		
-
-		} //Fin GET
-	});
-// Start server listening request
-	server.listen(port, hostname, () => {
-		console.log('Server started on port ' + port);
-		//tl.logFile('Server started on port ' + port);
-	});
-// END Web Server
 
