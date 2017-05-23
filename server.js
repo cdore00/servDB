@@ -109,11 +109,5 @@ initDb(function(err){
 });
 
 
-// Start server listening request
-	server.listen(port, ip, () => {
-		console.log('Server started on port ' + port);
-		//tl.logFile('Server started on port ' + port);
-	});
-// END Web Server
 
 
