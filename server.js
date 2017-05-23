@@ -28,12 +28,7 @@ console.log(url_parts.pathname);
 					res.end("<h1>Received</h1>");
 
 	});
-// Start server listening request
-	server.listen(port, hostname, () => {
-		console.log('Server started on port ' + port);
-		//tl.logFile('Server started on port ' + port);
-	});
-// END Web Server
+
 
 
 var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
@@ -113,5 +108,12 @@ initDb(function(err){
   console.log('Error connecting to Mongo. Message:\n'+err);
 });
 
+
+// Start server listening request
+	server.listen(port, ip, () => {
+		console.log('Server started on port ' + port);
+		//tl.logFile('Server started on port ' + port);
+	});
+// END Web Server
 
 
