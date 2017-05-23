@@ -9,6 +9,10 @@ var express = require('express'),
     
 Object.assign=require('object-assign')
 
+
+var port = 8080;
+var hostname = '';
+
 var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
     mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
@@ -76,7 +80,7 @@ function testBD(){
     //col.insert({ip: req.ip, date: Date.now()});
     col.count(function(err, count){
 
-	  console.log("Page compte121= " + count);
+	  console.log("Page compte11= " + count);
     });
   }
 	
