@@ -55,8 +55,11 @@ var initDb = function(callback) {
     dbDetails.type = 'MongoDB';
 
     console.log('Connected to MongoDB at: %s', mongoURL);
+	console.log("Connection BD mongoServiceName=" + mongoServiceName);
   });
 };
+
+var compteur = "Vide";
 
 app.get('/', function (req, res) {
   // try to initialize the db on every request if it's not already
@@ -70,6 +73,7 @@ app.get('/', function (req, res) {
     col.insert({ip: req.ip, date: Date.now()});
     col.count(function(err, count){
       res.render('index.html', { pageCountMessage : count, dbInfo: dbDetails });
+	  console.log("Page compte1= " + count);
     });
   } else {
     res.render('index.html', { pageCountMessage : null});
@@ -85,11 +89,17 @@ app.get('/pagecount', function (req, res) {
   if (db) {
     db.collection('counts').count(function(err, count ){
       res.send('{ pageCount: ' + count + '}');
+	  console.log("Page compte2= " + count);
     });
   } else {
     res.send('{ pageCount: -1 }');
   }
 });
+
+
+function catchCount(count){
+	compteur = count;
+}
 
 // error handling
 app.use(function(err, req, res, next){
@@ -103,5 +113,6 @@ initDb(function(err){
 
 app.listen(port, ip);
 console.log('Server running on http://%s:%s', ip, port);
+console.log("Page compte=" + compteur);
 
 module.exports = app ;
