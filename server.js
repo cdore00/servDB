@@ -151,3 +151,32 @@ initDb(function(err){
 		tl.logFile('Server started on port ' + port);
 	});
 // END Web Server
+
+function insertdata(res, data){
+		debugger;
+	var ids = data;
+ids = ids.map(function(id) {  });
+data = data.map(conver);
+
+function conver(id){
+	if (typeof id == 'number')
+		return eval(id);
+	else
+		return id;
+	};	
+
+data = JSON.stringify(data);
+
+console.log(data);
+	var coll = dBase.collection('region'); 
+	
+	coll.insertOne( data, function(err, result) {
+		 if(err) { 
+			throw err; 
+		}
+		console.log("Insert data");
+		res.statusCode = 200;
+		res.end("Insert data");
+		
+  });	
+}
