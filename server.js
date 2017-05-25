@@ -125,6 +125,8 @@ var initDb = function(callback) {
   });
 };
 
+var dBase;
+
 function testBD(){
 
   if (!db) {
@@ -132,6 +134,7 @@ function testBD(){
   }
   if (db) {
     var col = db.collection('counts');
+	dBase = db;
     // Create a document with request IP and current time of request
     //col.insert({ip: req.ip, date: Date.now()});
     col.count(function(err, count){
