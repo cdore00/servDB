@@ -159,38 +159,9 @@ initDb(function(err){
 
 //Request functions
 
+
+
 //
-function getUserFav(req, res, param){
-//var strClub = "";
-var arrC = new Array;
-
-var coll = dBase.collection('userFavoris');
-  // Find some documents
-  coll.find({}, ["CLUB_ID"]).toArray(function(err, docs) {
-    assert.equal(err, null);
-	    console.log(docs);
-
-for (var i = 0; i < docs.length; i++) {
-  //strClub += "," + docs[i].CLUB_ID;
-  arrC[arrC.length] = docs[i].CLUB_ID;
-}
-getClubNameList(res, arrC)
-
-  });	
-  	
-  
-}
-
-function getClubNameList(res, clubList){
-//var query = 
-var a=clubList[0], b=clubList[1], c=clubList[2], d=clubList[3], e=clubList[4], f=clubList[5], g=clubList[6], h=clubList[7], i=clubList[8], j=clubList[9];
-	var coll = dBase.collection('club'); 
-coll.find({"_id":{$in:[ a,b,c,d,e,f,g,h,i,j ]}},["_id","nom"]).toArray(function(err, docs) {
-//{"CLUB_ID":{$in:[429,424]}} 
-    assert.equal(err, null);
-returnRes(res, docs);
-  });  
-}
 
 function returnRes(res, docs){
 	
@@ -211,10 +182,38 @@ function returnRes(res, docs){
     res.end(JSON.stringify(docs));
 }
 
+function getUserFav(req, res, param){
+//var strClub = "";
+var arrC = new Array;
+
+var coll = dBase.collection('userFavoris');
+  // Find some documents
+  coll.find({}, ["CLUB_ID"]).toArray(function(err, docs) {
+	    console.log(docs);
+
+for (var i = 0; i < docs.length; i++) {
+  //strClub += "," + docs[i].CLUB_ID;
+  arrC[arrC.length] = docs[i].CLUB_ID;
+}
+getClubNameList(res, arrC)
+
+  });	 
+}
+
+function getClubNameList(res, clubList){
+//var query = 
+var a=clubList[0], b=clubList[1], c=clubList[2], d=clubList[3], e=clubList[4], f=clubList[5], g=clubList[6], h=clubList[7], i=clubList[8], j=clubList[9];
+	var coll = dBase.collection('club'); 
+coll.find({"_id":{$in:[ a,b,c,d,e,f,g,h,i,j ]}},["_id","nom"]).toArray(function(err, docs) {
+//{"CLUB_ID":{$in:[429,424]}} 
+returnRes(res, docs);
+  });  
+}
+
+
 function getRegionList(req, res){
 	var coll = dBase.collection('regions'); 
 coll.find({}).toArray(function(err, docs) {
-    assert.equal(err, null);
 	returnRes(res, docs);
   });  
 }
@@ -224,7 +223,6 @@ var clubID = parseInt(param.data);
 
 	var coll = dBase.collection('club'); 
 coll.find({"_id": clubID }).toArray(function(err, docs) {
-    assert.equal(err, null);
 	returnRes(res, docs);
   });  
 
@@ -237,7 +235,6 @@ var ids = query.split(',');
 ids = ids.map(function(id) { return parseInt(id); });
 var coll = dBase.collection('club');
 coll.find({_id: {$in: ids }}, ["_id","nom", "adresse", "municipal", "telephone", "telephone2", "telephone3", "courses.TROUS"]).toArray(function(err, docs) {
-    assert.equal(err, null);
     console.log("Found the following list clubs");
    // console.log(docs)
 returnRes(res, docs);
@@ -248,7 +245,6 @@ function getGolfGPS(req, res, param){
 var courseID = parseInt(param.data);
 	var coll = dBase.collection('golfGPS'); 
 coll.find({"Parcours_id": courseID }).toArray(function(err, docs) {
-    assert.equal(err, null);
     console.log("Found the following GPS");
     console.log(docs)
 	res.data = docs;
@@ -259,7 +255,6 @@ coll.find({"Parcours_id": courseID }).toArray(function(err, docs) {
 function getBlocGPS(res, courseID){
 	var coll = dBase.collection('blocs'); 
 coll.find({"PARCOURS_ID": courseID }).toArray(function(err, docs) {
-    assert.equal(err, null);
     console.log("Found the following blocs");
     console.log(docs)
 	returnRes(res, docs);
@@ -291,7 +286,6 @@ switch (req[0]) {
 function listByName(query){
 console.log(query);
 coll.find({ $or:[ {nom: {'$regex': new RegExp(query, "ig")} }, {municipal: {'$regex': new RegExp(query, "ig")} } ]}).toArray(function(err, docs) {
-    assert.equal(err, null);
     console.log("Found the following search clubs");
    // console.log(docs)
 returnRes(res, docs);
@@ -304,7 +298,6 @@ debugger;
 ids = ids.map(function(id) { return parseInt(id); });
 
 coll.find({region: {$in: ids }}).toArray(function(err, docs) {
-    assert.equal(err, null);
     console.log("Found the following search clubs");
    // console.log(docs)
 returnRes(res, docs);
@@ -314,7 +307,6 @@ returnRes(res, docs);
 function listByDistance(lng, lat, dist){
 
 coll.find({ location: { $near : {$geometry: { type: "Point",  coordinates: [ lng , lat ] }, $minDistance: 0, $maxDistance: dist } } }).toArray(function(err, docs) {
-    assert.equal(err, null);
     console.log("Found the following near clubs");
    // console.log(docs)
 returnRes(res, docs);
@@ -424,11 +416,4 @@ function insertGolfGPS(coll, data, res){
 		 }
   });	  
 }
-
-
-
-
-
-
-
 
