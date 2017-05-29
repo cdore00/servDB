@@ -32,14 +32,23 @@ console.log(url_parts.pathname);
 			}}
 		}else{  // method == 'GET'
 			switch (filePath) {
+			  case "identUser":
+				authUser(req, res, url_parts.query);
+				break;
 			  case "getFav":
 				getUserFav(req, res, url_parts.query);
+				break;
+			  case "updateFav":
+				updateFav(req, res, url_parts.query);
 				break;
 			  case "getRegions":
 				getRegionList(req, res);
 				break;
 			  case "getClubParc":
 				getClubParcours(req, res, url_parts.query);
+				break;
+			  case "getBloc":
+				getBlocList(req, res, url_parts.query);
 				break;
 			  case "getClubList":
 				getClubList(req, res, url_parts.query);  //À réutiliser
@@ -53,7 +62,9 @@ console.log(url_parts.pathname);
 			  case "load":
 				loadF(req, res, url_parts.query);
 				break;					
-				
+			  case "proc":
+				execProc(req, res, url_parts.query);
+				break;				
 			  default:
 				var param = url_parts.query;
 				if (param.code)  // New code received to obtain Token
@@ -64,7 +75,7 @@ console.log(url_parts.pathname);
 				}
 			}		
 
-		} //End GET
+		} //Fin GET
 	});
 // End  Instantiate Web Server
 
@@ -121,13 +132,13 @@ var initDb = function(callback) {
 	console.log("mongoPassword=" + mongoPassword);
 	console.log("mongoUser=" + mongoUser);
 	console.log("mongoAdmin=" + process.env[mongoServiceName + '_ADMIN_PASSWORD']);
-	testBD();
+	initBD();
   });
 };
 
 var dBase;
 
-function testBD(){
+function initBD(){
 
   if (!db) {
     initDb(function(err){});
@@ -142,7 +153,6 @@ function testBD(){
 	  console.log("Page compte11= " + count);
     });
   }
-	
 }
 
 initDb(function(err){
@@ -156,10 +166,9 @@ initDb(function(err){
 	});
 // END Web Server
 
-
+//
 //Request functions
-
-
+//
 
 //
 
@@ -180,6 +189,27 @@ function returnRes(res, docs){
 	// to the API (e.g. in case you use sessions)
 	//	res.setHeader('Access-Control-Allow-Credentials', true);
     res.end(JSON.stringify(docs));
+}
+
+function authUser(req, res, param){
+var request = (decodeURI(param.data));
+var req = request.split("$pass$");
+var user = req[0];
+var pass = req[1];
+
+	var coll = dBase.collection('users'); 
+coll.find({"courriel": user}).toArray(function(err, docs) {
+	
+	if (docs[0]){
+		if (pass == docs[0].motpass) 
+			returnRes(res, [{"result":docs[0]._id}]);
+		else
+			returnRes(res, [{"result":false}]);
+	}else{
+		returnRes(res, [{"result":false}]);
+	}
+  });
+	
 }
 
 function getUserFav(req, res, param){
@@ -210,7 +240,6 @@ returnRes(res, docs);
   });  
 }
 
-
 function getRegionList(req, res){
 	var coll = dBase.collection('regions'); 
 coll.find({}).toArray(function(err, docs) {
@@ -219,16 +248,77 @@ coll.find({}).toArray(function(err, docs) {
 }
 
 function getClubParcours(req, res, param){
-var clubID = parseInt(param.data);
+var query = (decodeURI(param.data));
+var ids = query.split('$');
+var clubID = parseInt(ids[0]);
+var userID = ids[1];
 
 	var coll = dBase.collection('club'); 
 coll.find({"_id": clubID }).toArray(function(err, docs) {
-	returnRes(res, docs);
+	//console.log(docs)
+	isFavorite(res, docs, userID)
+	//returnRes(res, docs);
   });  
 
 }
 
-// À réutiliser
+function isFavorite(res, clubDoc, userID){
+//var clubID = clubDoc._id;
+var coll = dBase.collection('userFavoris');
+
+  // Find some documents
+  coll.find({"CLUB_ID": clubDoc[0]._id , "USER_ID": parseInt(userID)}, ["CLUB_ID"]).toArray(function(err, docs) {
+	    //console.log(docs);
+	if (docs[0])
+		clubDoc[0].isFavorite = true;
+	else
+		clubDoc[0].isFavorite = false;
+	
+	returnRes(res, clubDoc);
+  });	
+}
+
+
+function updateFav(req, res, param){
+var query = (decodeURI(param.data));
+var ids = query.split('$');
+var clubID = parseInt(ids[0]);
+var userID = ids[1];
+var action = ids[2];
+
+var coll = dBase.collection('userFavoris');
+
+  // Find some documents
+if (action == "0"){
+  coll.remove({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
+	    console.log(docs);
+
+	returnRes(res);
+  });	
+}
+if (action == "1"){
+  coll.insertOne({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
+	    console.log(docs);
+
+	returnRes(res);
+  });	
+}
+}
+
+
+function getBlocList(req, res, param){
+var query = (decodeURI(param.data));
+var ids = query.split('$');
+ids = ids.map(function(id) { return parseInt(id); });
+var coll = dBase.collection('blocs'); 
+coll.find({"PARCOURS_ID":{$in: ids }}).toArray(function(err, docs) {
+    console.log("Found the following blocs");
+    //console.log(docs)
+returnRes(res, docs);
+  });
+	
+}
+
 function getClubList(req, res, param){
 var query = (decodeURI(param.data));
 var ids = query.split(',');
@@ -245,9 +335,7 @@ function getGolfGPS(req, res, param){
 var courseID = parseInt(param.data);
 	var coll = dBase.collection('golfGPS'); 
 coll.find({"Parcours_id": courseID }).toArray(function(err, docs) {
-    console.log("Found the following GPS");
-    console.log(docs)
-	res.data = docs;
+	res.data = docs;   //  ADD ON RES OBJ
 	getBlocGPS(res, courseID);
   });
 }
@@ -255,8 +343,6 @@ coll.find({"Parcours_id": courseID }).toArray(function(err, docs) {
 function getBlocGPS(res, courseID){
 	var coll = dBase.collection('blocs'); 
 coll.find({"PARCOURS_ID": courseID }).toArray(function(err, docs) {
-    console.log("Found the following blocs");
-    console.log(docs)
 	returnRes(res, docs);
   });
 }
@@ -267,10 +353,9 @@ var request = (decodeURI(param.data));
 var req = request.split("$");
 var coll = dBase.collection('club');
 	
-debugger;
 switch (req[0]) {
   case "1":
-	listByName(req[1]);
+	listByName(req[1], req[2]);
 	break;
   case "2":
 	listByRegion(req[1]);
@@ -283,9 +368,10 @@ switch (req[0]) {
 	res.end("No action");
 }
 
-function listByName(query){
-console.log(query);
-coll.find({ $or:[ {nom: {'$regex': new RegExp(query, "ig")} }, {municipal: {'$regex': new RegExp(query, "ig")} } ]}).toArray(function(err, docs) {
+function listByName(qNom, qVille){
+
+console.log(qNom + qVille);
+coll.find({ $or:[ {nom: {'$regex': new RegExp(qNom, "ig")} }, {municipal: {'$regex': new RegExp(qVille, "ig")} } ]}, {"sort": "nom"}).collation( { locale: "fr" } ).toArray(function(err, docs) {
     console.log("Found the following search clubs");
    // console.log(docs)
 returnRes(res, docs);
@@ -294,10 +380,10 @@ returnRes(res, docs);
 	
 function listByRegion(query){
 var ids = query.split(',');
-debugger;
+
 ids = ids.map(function(id) { return parseInt(id); });
 
-coll.find({region: {$in: ids }}).toArray(function(err, docs) {
+coll.find({region: {$in: ids }}, {"sort": "nom"}).toArray(function(err, docs) {
     console.log("Found the following search clubs");
    // console.log(docs)
 returnRes(res, docs);
@@ -305,16 +391,18 @@ returnRes(res, docs);
 }
 
 function listByDistance(lng, lat, dist){
-
-coll.find({ location: { $near : {$geometry: { type: "Point",  coordinates: [ lng , lat ] }, $minDistance: 0, $maxDistance: dist } } }).toArray(function(err, docs) {
+console.log("lng=" + lng + "  lat=" + lat + "  dist=" + dist);
+coll.find({ location: { $near : {$geometry: { type: "Point",  coordinates: [ lng , lat ] }, $minDistance: 0, $maxDistance: dist } } }, {"sort": "nom"}).collation( { locale: "fr" } ).toArray(function(err, docs) {
     console.log("Found the following near clubs");
-   // console.log(docs)
+   console.log(docs)
 returnRes(res, docs);
   });
 }
 
 }
 
+//
+// LOAD & format DATA
 
 function loadF(req, res, param){
 var fileName = (decodeURI(param.data));
@@ -334,6 +422,15 @@ switch (collName) {
 	break;
   case "golfGPS":
 	var  insertdata = insertGolfGPS;
+	break;
+  case "blocs":
+	var  insertdata = insertBlocs;
+	break;
+  case "parcours":
+	var  insertdata = insertParc;
+	break;
+  case "club":
+	var  insertdata = insertClub;
 	break;
 }
 
@@ -363,7 +460,7 @@ switch (collName) {
 
 function  insertuserFavoris(coll, data, res){
 
-	coll.insertOne( {"_id": eval(data._id),"USER_ID":data.Nom,"Nom2":data.Nom2}, function(err, result) {
+	coll.insertOne( {"_id": eval(data._id),"USER_ID":data.USER_ID,"CLUB_ID":data.CLUB_ID}, function(err, result) {
 		 if(err) { 
 			console.log("Insert erreur:" + err.message);
 			throw err; 
@@ -377,7 +474,7 @@ function  insertuserFavoris(coll, data, res){
 
 function insertUsers(coll, data, res){
 
-	coll.insertOne( {"_id": eval(data._id),"USER_ID": eval(data.USER_ID),"CLUB_ID": eval(data.CLUB_ID)}, function(err, result) {
+	coll.insertOne( {"_id": eval(data._id),"ident":data.ident,"actif":data.actif,"motpass":data.motpass,"niveau":data.niveau,"Nom":data.Nom,"Prenom":data.Prenom,"courriel":data.courriel,"Telephone":data.Telephone}, function(err, result) {
 		 if(err) { 
 			console.log("Insert erreur:" + err.message);
 			throw err; 
@@ -417,3 +514,191 @@ function insertGolfGPS(coll, data, res){
   });	  
 }
 
+function insertBlocs(coll, data, res){
+
+	coll.insertOne( {"_id": eval(data._id),"PARCOURS_ID": eval(data.PARCOURS_ID),"Bloc": data.Bloc,"T1": eval(data.T1), "T2": eval(data.T2),"T3": eval(data.T3), "T4": eval(data.T4),"T5": eval(data.T5), "T6": eval(data.T6),"T7": eval(data.T7),"T8": eval(data.T8), "T9": eval(data.T9), "Aller": eval(data.Aller),"T10": eval(data.T10),"T11": eval(data.T11),"T12": eval(data.T12),"T13": eval(data.T13),"T14": eval(data.T14),"T15": eval(data.T15),"T16": eval(data.T16),"T17": eval(data.T17),"T18": eval(data.T18),"Retour": eval(data.Retour),"Total": eval(data.Total),"Eval": data.Eval,"Slope": data.Slope}, function(err, result) {
+		 if(err) { 
+			console.log("Insert erreur:" + err.message);
+			throw err; 
+		}
+		 if (res){
+			 console.log("Insert data terminate in " + coll.namespace);
+			 res.end();
+		 }
+  });	  
+}
+
+function  insertParc(coll, data, res){
+
+	coll.insertOne( {"_id": eval(data._id),"CLUB_ID": eval(data.CLUB_ID),"PARCOURS":data.PARCOURS,"DEPUIS": data.DEPUIS,"TROUS": eval(data.TROUS),"NORMALE": eval(data.NORMALE),"VERGES": eval(data.VERGES)}, function(err, result) {
+		 if(err) { 
+			console.log("Insert erreur:" + err.message);
+			throw err; 
+		}
+		 if (res){
+			 console.log("Insert data terminate in " + coll.namespace);
+			 res.end();
+		 }
+  });	  
+}
+
+function insertClub(coll, data, res){
+
+	coll.insertOne( {"_id": eval(data._id), "nom": data.nom, "prive": eval(data.prive), "depuis": data.depuis, "municipal": data.municipal, "url_ville": data.url_ville, "telephone": data.telephone, "telephone2": data.telephone2, "telephone3": data.telephone3, "adresse": data.adresse, "codepostal2": data.codepostal2, "region": eval(data.region), "codepostal": data.codepostal, "longitude": eval(data.longitude), "latitude": eval(data.latitude)}, function(err, result) {
+		 if(err) { 
+			console.log("Insert erreur:" + err.message);
+			throw err; 
+		}
+		 if (res){
+			 console.log("Insert data terminate in " + coll.namespace);
+			 res.end();
+		 }
+  });	  
+}
+
+function execProc(req, res, param){
+var procName = (decodeURI(param.data));
+console.log(procName);
+
+switch (procName) {
+  case "creLoc":
+	addLoc();
+	break;
+  case "creBlocsParc":
+	addBlocsParc();
+	break;
+  case "creParcClub":
+	addParcClub(res);
+	break;
+  case "delBlocsParc":
+	deleteParcClub();
+	break;
+  case "delClub":
+	deleteClub(res);
+	break;
+  case "indexData":
+	createIndex(res);
+	break;	
+  case "addToParc":
+	addFieldParc(res);
+	break;
+
+}
+	
+}
+
+function addLoc(){
+// Add Geo lat, lng
+var coll = dBase.collection('club');
+    coll.find().forEach(function(doc){
+         coll.update({_id:doc._id}, {$set:{"location": {y: doc.longitude, x: doc.latitude} }});
+    });
+	console.log("Location created");
+}
+
+function addBlocsParc(){
+// Add Geo lat, lng
+var collParc = dBase.collection('parcours');
+var collBloc = dBase.collection('blocs');
+
+    collParc.find().forEach(function(doc){
+         collParc.update({_id:doc._id}, {$set:{"blocs": collBloc.find({PARCOURS_ID: doc._id}).toArray() }});
+    });
+	console.log("Blocs add to club");
+}
+
+// addParcClub functions
+function addParcClub(res){
+
+var collParc = dBase.collection('parcours');
+
+    collParc.find().toArray(function(err, doc){
+		//debugger;
+		addParcToClub(doc);
+    });
+res.end();
+}
+
+function addParcToClub(arrP){
+// Add Geo lat, lng
+var collClub = dBase.collection('club');
+
+    collClub.find().forEach(function(doc){
+				var noID =  doc._id;
+				//debugger;
+         collClub.update({_id:doc._id}, {$set:{"courses": addCobj(arrP, doc._id) }});
+    });
+	console.log("Courses add to club");
+}
+
+function addCobj(arrP, id){
+var courseObjArr = new Array();
+for (var p = 0; p < arrP.length; p++) {
+
+if (arrP[p].CLUB_ID == id){
+	courseObjArr[courseObjArr.length] = {"_id": eval(arrP[p]._id), "CLUB_ID" : eval(arrP[p].CLUB_ID), "PARCOURS" : arrP[p].PARCOURS, "DEPUIS" : eval(arrP[p].DEPUIS), "TROUS" : eval(arrP[p].TROUS), "NORMALE" : eval(arrP[p].NORMALE), "VERGES" : eval(arrP[p].VERGES), "golfGPS" : arrP[p].golfGPS };
+}
+	
+}
+//strObj += '}';
+return courseObjArr;
+}
+
+// END addParcClub functions
+
+// Add fields to parcours collection
+function addFieldParc(res){
+var collParc = dBase.collection('golfGPS');
+
+    collParc.distinct("Parcours_id", function(err, doc){
+		//debugger;
+		addGolfGPS(doc);
+    });
+res.end();
+	
+}
+
+function addGolfGPS(arrG){
+var collParc = dBase.collection('parcours');
+
+    collParc.find().forEach(function(doc){
+         collParc.update({_id:doc._id}, {$set:{"golfGPS": addGobj(arrG, doc._id) }});
+    });
+	console.log("GolfGPS to parcours created");
+}
+
+function addGobj(arrG, id){
+
+for (var p = 0; p < arrG.length; p++) {
+	if (arrG[p] == id){
+		return true;
+		break;
+	}	
+}
+return false;
+}
+
+function deleteClub(res){
+var collClub = dBase.collection('club');
+collClub.drop();
+console.log("Clubs removed");
+res.end();
+}
+
+function createIndex(res){
+
+var collClub = dBase.collection('club');
+collClub.createIndex( { "region" : 1 } );
+collClub.createIndex( { "location" : "2dsphere" } )	;
+collClub.createIndex( { "nom" : 1 }, {collation:{ locale: "fr", strength: 2 }} );
+collClub.createIndex( { nom: "text", municipal: "text" } )
+
+var collClub = dBase.collection('blocs');
+collClub.createIndex( { "PARCOURS_ID" : 1 } );
+
+var collClub = dBase.collection('golfGPS');
+collClub.createIndex( { "Parcours_id" : 1 } );
+
+console.log("Index Created");
+res.end();
+}
