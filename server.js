@@ -64,6 +64,9 @@ console.log(url_parts.pathname);
 				break;					
 			  case "proc":
 				execProc(req, res, url_parts.query);
+				break;	
+			  case "delTable":
+				deleteColl(req, res, url_parts.query);
 				break;				
 			  default:
 				var param = url_parts.query;
@@ -171,7 +174,6 @@ initDb(function(err){
 //
 
 //
-
 function returnRes(res, docs){
 	
 	if (res.data){
@@ -199,7 +201,7 @@ var pass = req[1];
 
 	var coll = dBase.collection('users'); 
 coll.find({"courriel": user}).toArray(function(err, docs) {
-	
+	debugger;
 	if (docs[0]){
 		if (pass == docs[0].motpass) 
 			returnRes(res, [{"result":docs[0]._id}]);
@@ -287,7 +289,7 @@ var userID = ids[1];
 var action = ids[2];
 
 var coll = dBase.collection('userFavoris');
-
+debugger;
   // Find some documents
 if (action == "0"){
   coll.remove({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
@@ -380,7 +382,7 @@ returnRes(res, docs);
 	
 function listByRegion(query){
 var ids = query.split(',');
-
+debugger;
 ids = ids.map(function(id) { return parseInt(id); });
 
 coll.find({region: {$in: ids }}, {"sort": "nom"}).toArray(function(err, docs) {
@@ -600,7 +602,7 @@ function addBlocsParc(){
 // Add Geo lat, lng
 var collParc = dBase.collection('parcours');
 var collBloc = dBase.collection('blocs');
-
+debugger;
     collParc.find().forEach(function(doc){
          collParc.update({_id:doc._id}, {$set:{"blocs": collBloc.find({PARCOURS_ID: doc._id}).toArray() }});
     });
@@ -678,12 +680,17 @@ for (var p = 0; p < arrG.length; p++) {
 return false;
 }
 
-function deleteClub(res){
-var collClub = dBase.collection('club');
-collClub.drop();
-console.log("Clubs removed");
+
+function deleteColl(req, res, param){
+var tableName = (decodeURI(param.data));
+	
+var collTable = dBase.collection(tableName);
+collTable.drop();
+console.log( tableName + " removed");
 res.end();
 }
+
+
 
 function createIndex(res){
 
