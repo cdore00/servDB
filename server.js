@@ -174,6 +174,7 @@ initDb(function(err){
 //
 
 //
+
 function returnRes(res, docs){
 	
 	if (res.data){
@@ -336,7 +337,7 @@ returnRes(res, docs);
 function getGolfGPS(req, res, param){
 var courseID = parseInt(param.data);
 	var coll = dBase.collection('golfGPS'); 
-coll.find({"Parcours_id": courseID }).toArray(function(err, docs) {
+coll.find({"Parcours_id": courseID }, {"sort": "trou"}).toArray(function(err, docs) {
 	res.data = docs;   //  ADD ON RES OBJ
 	getBlocGPS(res, courseID);
   });
@@ -396,7 +397,12 @@ function listByDistance(lng, lat, dist){
 console.log("lng=" + lng + "  lat=" + lat + "  dist=" + dist);
 coll.find({ location: { $near : {$geometry: { type: "Point",  coordinates: [ lng , lat ] }, $minDistance: 0, $maxDistance: dist } } }, {"sort": "nom"}).collation( { locale: "fr" } ).toArray(function(err, docs) {
     console.log("Found the following near clubs");
-   console.log(docs)
+	if (err){
+		console.log(err.message);
+	}
+	else{
+		console.log(docs);
+	}
 returnRes(res, docs);
   });
 }
