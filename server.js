@@ -174,6 +174,7 @@ initDb(function(err){
 //
 
 //
+//
 
 function returnRes(res, docs){
 	
@@ -374,7 +375,8 @@ switch (req[0]) {
 function listByName(qNom, qVille){
 
 console.log(qNom + qVille);
-coll.find({ $or:[ {nom: {'$regex': new RegExp(qNom, "ig")} }, {municipal: {'$regex': new RegExp(qVille, "ig")} } ]}, {"sort": "nom"}).collation( { locale: "fr" } ).toArray(function(err, docs) {
+//.collation( { locale: "fr" } ) avant .toArry
+coll.find({ $or:[ {nom: {'$regex': new RegExp(qNom, "ig")} }, {municipal: {'$regex': new RegExp(qVille, "ig")} } ]}, {"sort": "nom"}).toArray(function(err, docs) {
     console.log("Found the following search clubs");
    // console.log(docs)
 returnRes(res, docs);
@@ -395,7 +397,8 @@ returnRes(res, docs);
 
 function listByDistance(lng, lat, dist){
 console.log("lng=" + lng + "  lat=" + lat + "  dist=" + dist);
-coll.find({ location: { $near : {$geometry: { type: "Point",  coordinates: [ lng , lat ] }, $minDistance: 0, $maxDistance: dist } } }, {"sort": "nom"}).collation( { locale: "fr" } ).toArray(function(err, docs) {
+//			{ "loc": {  "$near": {"$geometry": {"type": "Point", "coordinates": [ 121.001, 31.001 ] }  }, "$maxDistance": 2000 }}
+coll.find({ "location": { "$near" : {"$geometry": { "type": "Point",  "coordinates": [ lng , lat ] }, "$maxDistance": dist }}}, {"sort": "nom"}).toArray(function(err, docs) {
     console.log("Found the following near clubs");
 	if (err){
 		console.log(err.message);
@@ -408,6 +411,8 @@ returnRes(res, docs);
 }
 
 }
+
+
 
 //
 // LOAD & format DATA
