@@ -151,7 +151,6 @@ function initBD(){
     initDb(function(err){});
   }
   if (db) {
-    var col = db.collection('counts');
 	dBase = db;
   }
 }
