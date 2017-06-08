@@ -22,6 +22,7 @@
 
 var HOSTserv = localStorage.getItem("HOSTserv");
 var clubPos = null;
+var lat, lng, km;
 
 function ficheClub (IdClub) {
 var url = 'ficheClub.html?data=' + IdClub;
@@ -39,13 +40,19 @@ if (urlInfo.indexOf("data=") == -1){
 	getInfo("getClubList?data=" + request, showResult);
 	clubPos = '#pos' + localStorage.getItem("clubPos");
 }else{
-	var data = (urlInfo.substring(urlInfo.indexOf("data=") + 5));
+	var data = getURLdata();
 	var request = encodeURI(data);
+	var data = data.split("$");
+	lat = (data[1]);
+	lng = (data[2]);
+	km  = (data[3]);
 	getInfo("searchResult?data=" + request, showResult);
 }
 }
 
+
 function showResult(result){
+var callMap = document.getElementById('callMap');
 var clubList = document.getElementById('clubList');
 var message = document.getElementById('message');
 
@@ -102,12 +109,16 @@ for (var i = 0; i < result.length; i++) {
 	liElem.appendChild(spanElem);
 	clubList.appendChild(liElem);
 }
-localStorage.setItem('idList', idList.substring(0, idList.length - 1 ));
+
+idList = idList.substring(0, idList.length - 1 )
+localStorage.setItem('idList', idList);
+callMap.href += lat + "," + lng + "," + km + "," + idList;
 var chargement = document.getElementById('chargement');
 chargement.style.display = "none";
 if (clubPos)
 	document.location = clubPos;
 }
+
 
 // -->
 </script>
@@ -116,13 +127,13 @@ if (clubPos)
 <body onload="initPage();"><a name="haut"></a>
 
 <div id="topbar" class="vert">
-<div id="leftnav"><a title="Formulaire de recherche" href="default.html"><img alt="Formulaire de recherche" height="22" width="25" src="images/home22.png" /></a></div>
+<div id="leftnav"><a title="Formulaire de recherche" href="index.html"><img alt="Formulaire de recherche" height="22" width="25" src="images/home22.png" /></a></div>
 <div id="chargement" class="textBlink">Chargement...</div>
 <button type="button" id="rightnav" title="Taille de police" onclick="changeTaille();"><img id="imgTaille" alt="Taille de police" height="20" width="45" src="images/taille.png" /></button>
 <button type="button" id="rightnav" title="Taille de police" onclick="changeTaille();"><img id="imgTaille" alt="Taille de police" height="20" width="45" src="images/taille.png" /></button>
 </div><div id="duobutton"><a id="pressed" href="#">Liste</a>
 
-<a href="#" onclick="document.ListID.submit(); return false;">Carte</a>
+<a id="callMap" href="golfMap.html?data=">Carte</a>
 
 </div>
 
