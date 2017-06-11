@@ -428,10 +428,10 @@ switch (hole) {
 	coll.update({ USER_ID: user, PARCOURS_ID: parc, score_date: null }, { $set: {USER_ID: user, PARCOURS_ID: parc, score_date: null, T11: stroke, P11: put, L11: lost} }, { upsert : true }, callResult );
 	break;
   case 12:
-	coll.update({ USER_ID: user, PARCOURS_ID: parc, score_date: null }, { $set: {USER_ID: user, PARCOURS_ID: parc, score_date: null, T12: stroke, P5: put, L12: lost} }, { upsert : true }, callResult );
+	coll.update({ USER_ID: user, PARCOURS_ID: parc, score_date: null }, { $set: {USER_ID: user, PARCOURS_ID: parc, score_date: null, T12: stroke, P12: put, L12: lost} }, { upsert : true }, callResult );
 	break;
   case 13:
-	coll.update({ USER_ID: user, PARCOURS_ID: parc, score_date: null }, { $set: {USER_ID: user, PARCOURS_ID: parc, score_date: null, T13: stroke, P3: put, L13: lost} }, { upsert : true }, callResult );
+	coll.update({ USER_ID: user, PARCOURS_ID: parc, score_date: null }, { $set: {USER_ID: user, PARCOURS_ID: parc, score_date: null, T13: stroke, P13: put, L13: lost} }, { upsert : true }, callResult );
 	break;
   case 14:
 	coll.update({ USER_ID: user, PARCOURS_ID: parc, score_date: null }, { $set: {USER_ID: user, PARCOURS_ID: parc, score_date: null, T14: stroke, P14: put, L14: lost} }, { upsert : true }, callResult );
@@ -451,6 +451,7 @@ switch (hole) {
 	
 //dBase.score.update({ USER_ID: "cdore00@yahoo.ca", PARCOURS_ID: 407, score_date: new Date("2016/05/10") }, { $set: {T1: 8} }, { upsert : true } );
 }
+
 
 function callResult(err, docr){
 	//debugger;
