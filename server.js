@@ -50,6 +50,9 @@ console.log(url_parts.pathname);
 			  case "getGolfGPS":
 				getGolfGPS(req, res, url_parts.query);
 				break;
+			  case "getClubParcTrous":
+				getClubParcTrous(req, res, url_parts.query);
+				break;
 			  case "searchResult":
 				searchResult(req, res, url_parts.query);
 				break;				
@@ -74,8 +77,8 @@ console.log(url_parts.pathname);
 			  case "endDelGame":
 				endDelGame(req, res, url_parts.query);
 				break;	
-			  case "userIdent":
-				userIdent(req, res, url_parts.query);
+			  case "addUserIdent":
+				addUserIdent(req, res, url_parts.query);
 				break;	
 			  case "getGameList":
 				getGameList(req, res, url_parts.query);
@@ -503,9 +506,40 @@ var ids = new Array();
 
 function getRegionList(req, res){
 	var coll = dBase.collection('regions'); 
-coll.find({}).toArray(function(err, docs) {
+coll.find({}, {"sort": "Nom"}).toArray(function(err, docs) {
 	returnRes(res, docs);
   });  
+}
+
+function getClubParcTrous(req, res, param){
+var query = (decodeURI(param.data));
+var ids = query.split('$');
+var clubID = parseInt(ids[0]);
+var courseID = parseInt(ids[1]);
+
+	var coll = dBase.collection('club'); 
+coll.find({"_id": clubID }, ["_id","nom", "latitude", "longitude"]).toArray(function(err, doc) {
+	getTrous(res, doc)
+
+  });  
+
+	function getTrous(res, doc){
+		getParcTrous(res, doc, courseID)
+	}  
+}
+
+function getParcTrous(res, doc, courseID){
+	var club = doc;
+	debugger;
+	var coll = dBase.collection('golfGPS'); 
+coll.find({"Parcours_id": courseID }, {"sort": "trou"}).toArray(function(err, docs) {
+	   addTrousReturn(res, docs);
+  });
+  
+	function addTrousReturn(res, docs){
+		club[0].trous = docs;
+		returnRes(res, club);
+	}
 }
 
 function getClubParcours(req, res, param){
@@ -581,7 +615,7 @@ var query = (decodeURI(param.data));
 var ids = query.split(',');
 ids = ids.map(function(id) { return parseInt(id); });
 var coll = dBase.collection('club');
-coll.find({_id: {$in: ids }}, ["_id","nom", "adresse", "municipal", "telephone", "telephone2", "telephone3", "courses.TROUS"]).toArray(function(err, docs) {
+coll.find({_id: {$in: ids }}, ["_id","nom", "adresse", "municipal", "telephone", "telephone2", "telephone3", "location", "courses.TROUS"]).toArray(function(err, docs) {
     console.log("Found the following list clubs");
    // console.log(docs)
 returnRes(res, docs);
