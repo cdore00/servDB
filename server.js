@@ -1,57 +1,11 @@
-// servG4.js 
-// Google API server for Sheets (V4) and Gmail (V2)
+//  OpenShift sample Node application
+
 const http = require('http');
 const fs = require('fs'); 
-const url = require('url');
+const url = require('url');    
+//Object.assign=require('object-assign')
 
-var ip;
-
-var MongoClient = require('mongodb').MongoClient
-  , assert = require('assert');
-var ObjectId = require('mongodb').ObjectId;
-
-// Connection URL
-//var urlDB = 'mongodb://localhost:27017/golfDB';
-var urlDB = 'mongodb://localhost:27017/golf';
-var dBase;
-
-// Use connect method to connect to the server
-MongoClient.connect(urlDB, function(err, db) {
-  assert.equal(null, err);
-  console.log("Connected successfully to MongoDB server");
-	setDbase(db);
-
-  //db.close();
-});
-
-function setDbase(db){
-	dBase = db;	
-		//debugger;
-var coll = dBase.collection('club');
-  // Find some documents
-  coll.find({"_id" : 3}).toArray(function(err, docs) {
-    assert.equal(err, null);
-    //console.log("Found the following records");
-  });
-  }
-
-const args = process.argv;
-if (args[2] && args[2] == 3000){
-	port = args[2];
-	hostURL = 'http://cdore.no-ip.biz/nod/';
-}else{
-	var port = 8080;
-	hostURL = 'https://googserv4-goog-server.1d35.starter-us-east-1.openshiftapps.com/';
-}
-console.log(hostURL + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]=" + args[2]);
-
-
-const Mailer = require('./mailer.js');
-//const Mailer = new Mail;
 tl = require('./tools.js');
-var infoBup = new Array();
-var subWeb = '';
-var subNod = 'nod/';
 
 // Instantiate Web Server
 	const server = http.createServer((req, res) => {
@@ -148,9 +102,84 @@ console.log(url_parts.pathname);
 
 		} //Fin GET
 	});
-	
-	
-	
+
+// End  Instantiate Web Server
+
+
+var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
+    ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
+    mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
+    mongoURLLabel = "";
+
+if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
+  var mongoServiceName = process.env.DATABASE_SERVICE_NAME.toUpperCase(),
+      mongoHost = process.env[mongoServiceName + '_SERVICE_HOST'],
+      mongoPort = process.env[mongoServiceName + '_SERVICE_PORT'],
+      mongoDatabase = process.env[mongoServiceName + '_DATABASE'],
+      mongoPassword = process.env[mongoServiceName + '_PASSWORD']
+      mongoUser = process.env[mongoServiceName + '_USER'];
+
+  if (mongoHost && mongoPort && mongoDatabase) {
+    mongoURLLabel = mongoURL = 'mongodb://';
+    if (mongoUser && mongoPassword) {
+      mongoURL += mongoUser + ':' + mongoPassword + '@';
+    }
+    // Provide UI label that excludes user id and pw
+    mongoURLLabel += mongoHost + ':' + mongoPort + '/' + mongoDatabase;
+    mongoURL += mongoHost + ':' +  mongoPort + '/' + mongoDatabase;
+
+  }
+}
+var db = null,
+    dbDetails = new Object();
+var ObjectId = require('mongodb').ObjectId;
+
+var initDb = function(callback) {
+  if (mongoURL == null) return;
+
+  var mongodb = require('mongodb');
+  if (mongodb == null) return;
+
+  mongodb.connect(mongoURL, function(err, conn) {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    db = conn;
+    dbDetails.databaseName = db.databaseName;
+    dbDetails.url = mongoURLLabel;
+    dbDetails.type = 'MongoDB';
+
+    console.log('Connected to MongoDB at: %s', mongoURL);
+	console.log("Connection BD mongoServiceName=" + mongoServiceName);
+	console.log("mongoHost=" + mongoHost);
+	console.log("mongoPort=" + mongoPort);
+	console.log("mongoDatabase=" + mongoDatabase);
+	console.log("mongoPassword=" + mongoPassword);
+	console.log("mongoUser=" + mongoUser);
+	console.log("mongoAdmin=" + process.env[mongoServiceName + '_ADMIN_PASSWORD']);
+	initBD();
+  });
+};
+
+var dBase;
+
+function initBD(){
+
+  if (!db) {
+    initDb(function(err){});
+  }
+  if (db) {
+    var col = db.collection('counts');
+	dBase = db;
+  }
+}
+
+initDb(function(err){
+  console.log('Error connecting to Mongo. Message:\n'+err);
+});
+
 // Start server listening request
 	server.listen(port, ip, () => {
 		console.log('Server started on port ' + port);
@@ -158,7 +187,9 @@ console.log(url_parts.pathname);
 	});
 // END Web Server
 
-
+//
+//Request functions
+//
 
 //
 
