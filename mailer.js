@@ -5,6 +5,11 @@ const jsonInfo = "mailInfo.json";
 var transporter = null;
 var subject, toMail, userM, passW;
 
+var Mailer = {
+	user: "",
+	pass: ""
+}
+
 Mailer.initMailer = initM;
 
 function initM(mailer, PARAM_DIR) {
@@ -47,36 +52,14 @@ function initM(mailer, PARAM_DIR) {
 }
 // END define email transporter
 
-Mailer.formatMailData = function (HOST, laDate, userName, userMail, updRange, m1arr, m3arr, m1Info, m3Info, photo) {
-	var formattedBody = "<p>Bonjour,</p><p>&nbsp;</p><p></br>Voici ma commande.</p><p>&nbsp;</p>";
-	if (m1arr.length > 1){
-		formattedBody += "<p>" + m1arr[0] + "</p><ul>";
-		for (var i=1; i < m1arr.length; i++) {
-			formattedBody += "<li>" + m1arr[i] + "</li>";
-		}
-		formattedBody += "</ul>";
-		m1Info = m1Info.substring(m1Info.indexOf("$"));
-	}else
-		m1Info = "";
-
-	if (m3arr.length > 1){
-		formattedBody += "<p>" + m3arr[0] + "</p><ul>";
-		for (var i=1; i < m3arr.length; i++) {
-			formattedBody += "<li>" + m3arr[i] + "</li>";
-		}
-		formattedBody += "</ul>";
-		m3Info = m3Info.substring(m3Info.indexOf("$"));
-	}else
-		m3Info = "";
-
-	formattedBody += "<p>&nbsp;</p><p>Merci,</p><p>" + userName + "</p><p>&nbsp;</p>";
-	var modURL = HOST + 'menu.html?rang=' + updRange + '$' + userMail + '$' + laDate + m1Info + m3Info ;
-	formattedBody += '<a href="' + modURL + '">Modifier ma commande</a>';
+Mailer.formatMailData = function (HOST, userMail, userPass) {
 	
-	if (photo){
-	formattedBody = '<div><div style="float: right;"><img src="' + photo + '" /></div>' + formattedBody + '</div>';
-	}
-return { url: modURL, Mbody: formattedBody };
+var formattedBody = '<html><body><div style="text-align: center;"><div style="background-color: #3A9D23;height: 34px;"><div style="margin: 3px;float:left;"><img alt="Image Golf du Québec" width="25" height="25" src="https://cdore00.github.io/golf/images/golf.png" /></div><div style="font-size: 22px;font-weight: bold;color: #ccf;padding-top: 5px;">Golfs du Qu&eacute;bec</div></div></br><a href="%1" style="font-size: 20px;font-weight: bold;">Cliquer ce lien pour confirmer l\'inscription de votre compte:<p>%2</p> </a></br></br></br><p><div id="copyright">Copyright &copy; 2005-2017</div></p></div></body></html>';
+
+formattedBody = formattedBody.replace("%1", HOST + "confInsc?data=" + userMail);
+formattedBody = formattedBody.replace("%2", userMail);
+
+return formattedBody;
 }
 
 Mailer.sendMessage = function( res, userName, userMail, bodyMess, linkMess) {
