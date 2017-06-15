@@ -526,7 +526,7 @@ coll.find({"courriel": data}).toArray(function(err, docs) {
 }
 
 function loginUser(res, user, pass){
-var redir = '<html><head><script type="text/javascript" language="Javascript">function initPage(){var cliURL = "%1",user = "%2",pass = "%3";document.location.href = cliURL + "login.html?data=" + user + "$pass$" + pass;}</script></head><body onload="initPage()"><h1>Identification</h1></body></html>';
+var redir = '<html><head><script type="text/javascript" language="Javascript">function initPage(){var cliURL = "%1",user = "%2",pass = "%3";document.location.href = cliURL + "login.html?data=" + user + "$pass$" + pass;}</script></head><body onload="initPage()"><h1>Confirmation en cours...</h1></body></html>';
 
 redir = redir.replace("%1", HOSTclient);
 redir = redir.replace("%2", user);
