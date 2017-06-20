@@ -4,7 +4,32 @@ const http = require('http');
 const fs = require('fs'); 
 const url = require('url');
 
-var ip;
+const PARAM_DIR = './param/';
+var HOSTserv = 'http://127.0.0.1:3000/';
+var HOSTclient = 'https://cdore00.github.io/golf/';
+//'http://cdore.no-ip.biz/lou/';
+//'https://cdore00.github.io/golf/';
+//'file:///C:/data/node/';
+// For hyperlink in mails and user Web pages.
+
+const Mailer = require('./mailer.js');
+tl = require('./tools.js');
+var infoBup = new Array();
+//var subWeb = '';
+//var subNod = 'nod/';
+var isLog = false;
+
+const args = process.argv;
+if (args[2] && args[2] == 3000){
+	port = args[2];
+	//HOSTserv = 'http://cdore.no-ip.biz/nod/';
+	//HOSTclient = 'file:///C:/data/node/';
+}else{
+	var port = 8080;
+	HOSTserv = "https://nodejs-mongo-persistent-cd-serv.1d35.starter-us-east-1.openshiftapps.com/";
+	HOSTclient = 'https://cdore00.github.io/golf/';
+}
+console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]=" + args[2]);
 
 var MongoClient = require('mongodb').MongoClient
   , assert = require('assert');
@@ -19,39 +44,12 @@ var dBase;
 MongoClient.connect(urlDB, function(err, db) {
   assert.equal(null, err);
   console.log("Connected successfully to MongoDB server");
-	setDbase(db);
 
+	dBase = db;	
   //db.close();
 });
 
-function setDbase(db){
-	dBase = db;	
-		//debugger;
-var coll = dBase.collection('club');
-  // Find some documents
-  coll.find({"_id" : 3}).toArray(function(err, docs) {
-    assert.equal(err, null);
-    //console.log("Found the following records");
-  });
-  }
 
-const args = process.argv;
-if (args[2] && args[2] == 3000){
-	port = args[2];
-	hostURL = 'http://cdore.no-ip.biz/nod/';
-}else{
-	var port = 8080;
-	hostURL = 'https://googserv4-goog-server.1d35.starter-us-east-1.openshiftapps.com/';
-}
-console.log(hostURL + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]=" + args[2]);
-
-
-const Mailer = require('./mailer.js');
-//const Mailer = new Mail;
-tl = require('./tools.js');
-var infoBup = new Array();
-var subWeb = '';
-var subNod = 'nod/';
 
 // Instantiate Web Server
 	const server = http.createServer((req, res) => {
@@ -60,6 +58,7 @@ var subNod = 'nod/';
 		var arrPath = url_parts.pathname.split("/");
 		var filePath = arrPath[arrPath.length - 1];
 		subWeb = arrPath[arrPath.length - 2] + '/';
+if (isLog)
 console.log(url_parts.pathname);
 		if (req.method == 'POST') {
 			if (filePath == "listLog"){
@@ -72,9 +71,26 @@ console.log(url_parts.pathname);
 			}}
 		}else{  // method == 'GET'
 			switch (filePath) {
+			  case "logOnOff":
+				if (isLog)
+					isLog = false;
+				else
+					isLog = true;
+				console.log("Log " + isLog );
+				res.end("<h1>Log " + isLog + "</h1>");
+				break;
 			  case "identUser":
 				authUser(req, res, url_parts.query);
 				break;
+			  case "confInsc":
+				confInsc(req, res, url_parts.query);
+				break;	
+			  case "saveUser":
+				saveUser(req, res, url_parts.query);
+				break;
+			  case "getPass":
+				getPass(req, res, url_parts.query);
+				break;					
 			  case "getFav":
 				getUserFav(req, res, url_parts.query);
 				break;
@@ -152,12 +168,12 @@ console.log(url_parts.pathname);
 	
 	
 // Start server listening request
-	server.listen(port, ip, () => {
+	server.listen(port, () => {
 		console.log('Server started on port ' + port);
 		tl.logFile('Server started on port ' + port);
+		Mailer.initMailer(Mailer,PARAM_DIR);  // Initialyse Mailer Object
 	});
 // END Web Server
-
 
 
 //
@@ -183,27 +199,6 @@ function returnRes(res, docs){
 
 function logErreur(mess){
 	tl.logFile(mess);
-}
-
-function addUserIdent(req, res, param){
-var request = (decodeURI(param.data));
-var data = request.split("$");
-var user = (data[0]);
-var email = (data[1]);
-var pass = (data[2]);
-
-var coll = dBase.collection('users'); 
-  coll.insertOne({"Nom": user , "courriel": email, "motpass": pass , "niveau": "MEM", "actif": true}, {new:true}, function(err, doc) {
-	  		debugger;
-	if (err){
-		returnRes(res, err);
-		console.log(err);
-	}else{
-		returnRes(res, doc.ops);
-
-		console.log(doc.ops);
-	}
-  });
 }
 
 
@@ -263,8 +258,6 @@ function addCur(doc){
 }
 
 addName(cur, coll, is18);
-
-
 
 }
 
@@ -416,34 +409,205 @@ switch (hole) {
 //dBase.score.update({ USER_ID: "cdore00@yahoo.ca", PARCOURS_ID: 407, score_date: new Date("2016/05/10") }, { $set: {T1: 8} }, { upsert : true } );
 }
 
-function callResult(err, docr){
-	//debugger;
-	getGame(false, res, false, user, parc);
-	//returnRes(res, docr.ops)
-	//console.log(docr);
-}
-//returnRes(res, doc.ops[{"result":true}]);
+	function callResult(err, docr){
+		//debugger;
+		getGame(false, res, false, user, parc);
+	}
 
 }
 
-function authUser(req, res, param){
-var request = (decodeURI(param.data));
-var req = request.split("$pass$");
-var user = req[0];
-var pass = req[1];
+function addUserIdent(req, res, param){
+var user = param.user;
+var email = param.email;
+var pass = param.pass;
 
-	var coll = dBase.collection('users'); 
-coll.find({"courriel": user}).toArray(function(err, docs) {
-	//debugger;
-	if (docs[0]){
-		if (pass == docs[0].motpass) 
-			returnRes(res, [{"result":docs[0]._id}]);
-		else
-			returnRes(res, [{"result":false}]);
+var coll = dBase.collection('users'); 
+  coll.find({"courriel": email}).toArray( function(err, doc) {
+	  		debugger;
+	if (err){
+		console.log(err);
+		returnRes(res, err);
 	}else{
-		returnRes(res, [{"result":false}]);
+		if (doc.length > 0){
+			if (eval(doc[0].actif) == false){
+				existInactif(doc[0]);
+			}
+			if (eval(doc[0].actif) == true){
+				returnRes(res, {"code":2, message: "Ce compte existe déjà"});
+			}
+		}else{
+			insertUser();
+		}
 	}
   });
+  
+ function existInactif(doc){
+	if (doc.motpass == pass){
+		sendConfMail(email, doc.Nom);
+		returnRes(res, {"code":1, message: "Ce compte existe et est inactif. \r\nCourriel de confirmation envoyé à :" + email + ".\r\nVeuillez confirmer l'inscription de ce compte par le lien dans le courriel."});
+	}else{
+		returnRes(res, {"code":3, message: "Ce compte existe et est inactif avec un mot de passe différent"});
+	}
+ }  
+
+function insertUser(){
+  coll.insertOne({"Nom": user , "courriel": email, "motpass": pass , "niveau": "MEM", "actif": false}, {new:true}, function(err, doc) {
+	  		debugger;
+	if (err){
+		returnRes(res, err);
+		console.log(err);
+	}else{
+		sendConfMail(doc.ops[0].courriel, doc.ops[0].motpass);
+		returnRes(res, {"code":-1, message: "Courriel de confirmation envoyé à :" + doc.ops[0].courriel + ".\r\nVeuillez confirmer votre inscription par le lien dans le courriel."});
+		//console.log(doc.ops);
+	}
+  });  
+}
+  
+}  // END addUserIdent
+
+// Authenticate & modify
+function authUser(req, res, param){
+var user = (decodeURI(param.user));
+var pass = (decodeURI(param.pass));
+
+debugger;
+	var coll = dBase.collection('users'); 
+coll.find({"courriel": user, "actif": true}, ["_id","Nom", "courriel", "motpass"]).toArray(function(err, docs) {
+	//debugger;
+	if (docs.length > 0){
+		checkPass(docs[0]);
+	}else{
+		returnRes(res, {resp: {"result":false} });
+	}
+  });
+
+	function checkPass(doc){
+		if (pass != "undefined"){
+			if (pass == doc.motpass){ 
+				returnRes(res, {resp: {"result":true, "user": doc} });
+			}else{
+				returnRes(res, {resp: {"result":false} });
+			}
+		}else{  // For modify
+			delete doc.motpass;
+			returnRes(res, doc);
+		}
+	} 
+}
+
+function saveUser(req, res, param){
+var id = (decodeURI(param.id));
+var name = (decodeURI(param.name));
+var user = (decodeURI(param.cour));
+var pass = (decodeURI(param.pass));
+var Npass = (decodeURI(param.newpass));
+
+if (parseInt(id) < 500)
+	var o_id = parseInt(id);
+else	
+	var o_id = new ObjectId(id);
+
+	var coll = dBase.collection('users'); 
+coll.find({"_id": o_id, "actif": true}).toArray(function(err, docs) {
+	if (docs.length > 0){
+		checkEmailExist(docs[0]);
+	}else{
+		returnRes(res, {resp: {"result":false, "message": "Utilisateur inexistant."} });
+	}
+  });
+
+  
+	function checkEmailExist(doc){
+		var coll = dBase.collection('users'); 
+	coll.find({"courriel": user, "_id": {$ne: o_id}}).toArray(function(err, docs) {
+
+		if (docs.length > 0){
+			returnRes(res, {resp: {"result":false, "message": "Un compte utilise déjà cette adresse courriel."} });
+		}else{
+			updUser(doc);
+		}
+	  });		
+	}
+  
+	function updUser(doc){
+	if (doc.motpass == pass){
+		if (eval(Npass) != null){
+		coll.update({"_id": o_id, "actif": true}, { $set: {'Nom': name, 'courriel': user, 'motpass': Npass } }, function(err, rDoc) {
+			returnRes(res, {resp: {"result":true} });
+		  });
+		}else{
+		coll.update({"_id": o_id, "actif": true}, { $set: {'Nom': name, 'courriel': user} }, function(err, rDoc) {
+			returnRes(res, {resp: {"result":true} });
+		  });
+		}
+	}else{
+		returnRes(res, {resp: {"result":false, "message": "Mote de passe actuel incorrect."} });
+	}  
+	}
+}
+
+function sendConfMail(eMail, name){
+	var Mdata = Mailer.formatMailData( HOSTserv, eMail, "");
+	Mailer.sendMessage( false, name, eMail, Mdata, "");
+}
+
+function confInsc(req, res, param){
+var data = (decodeURI(param.data));
+	var coll = dBase.collection('users'); 
+	
+  coll.find({"courriel": data}).toArray( function(err, docs) {
+	if (eval(docs[0].actif) == true ){ 
+		res.setHeader('Access-Control-Allow-Origin', '*');
+		res.end("<h1>Le compte " + docs[0].courriel + " est d&eacute;j&agrave; actif</h1>");
+	}else{	
+		activateAccount(loginUser(res, docs[0].courriel, docs[0].motpass));
+	}
+  });
+	
+	function activateAccount(callBackLogin){
+	coll.update({"courriel": data}, { $set: {actif: true}}, function(err, docs) {
+		callBackLogin;
+	  });	
+	}
+
+} // END confInsc
+
+function loginUser(res, user, pass){
+var redir = '<html><head><script type="text/javascript" language="Javascript">function initPage(){var cliURL = "%1",user = "%2",pass = "%3";document.location.href = cliURL + "login.html?data=" + user + "$pass$" + pass;}</script></head><body onload="initPage()"><h1>Confirmation en cours...</h1></body></html>';
+
+redir = redir.replace("%1", HOSTclient);
+redir = redir.replace("%2", user);
+redir = redir.replace("%3", pass);
+
+res.setHeader('Access-Control-Allow-Origin', '*');
+res.end(redir);
+	
+}
+
+function getPass(req, res, param){
+var email = param.data;
+
+var coll = dBase.collection('users'); 
+  coll.find({"courriel": email, "actif": true}).toArray( function(err, doc) {
+	  		debugger;
+	if (err){
+		console.log(err);
+		returnRes(res, err);
+	}else{
+		if (doc.length > 0){
+			returnRes(res, {"code":-1, message: "Courriel de récupération du mot de passe envoyé à :" + email});
+			sendRecupPassMail(doc[0].courriel, doc[0].Nom, doc[0].motpass);
+		}else{
+			returnRes(res, {"code": 1, message: "Il n'existe aucun compte avec l'adresse de courriel :" + email});
+		}
+	}
+  });
+  
+	function sendRecupPassMail(eMail, name, pass){
+		var Mdata = Mailer.formatMailPass( HOSTserv, name, eMail, pass);
+		Mailer.sendMessage( false, name, eMail, Mdata, "");
+	}
 }
 
 function getUserFav(req, res, param){
@@ -567,19 +731,17 @@ var userID = ids[1];
 var action = ids[2];
 
 var coll = dBase.collection('userFavoris');
-debugger;
+//debugger;
   // Find some documents
 if (action == "0"){
   coll.remove({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
-	    console.log(docs);
-
+	   // console.log(docs);
 	returnRes(res);
   });	
 }
 if (action == "1"){
   coll.insertOne({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
-	    console.log(docs);
-
+	    //console.log(docs);
 	returnRes(res);
   });	
 }
@@ -603,7 +765,7 @@ var query = (decodeURI(param.data));
 var ids = query.split(',');
 ids = ids.map(function(id) { return parseInt(id); });
 var coll = dBase.collection('club');
-coll.find({_id: {$in: ids }}, ["_id","nom", "adresse", "municipal", "telephone", "telephone2", "telephone3", "location", "courses.TROUS"]).toArray(function(err, docs) {
+coll.find({_id: {$in: ids }}, {"_id": true,"nom": true, "adresse": true, "municipal": true, "telephone": true, "telephone2": true, "telephone3": true, "location": true, "courses.TROUS": true},{"sort": "nom"}).toArray(function(err, docs) {
     console.log("Found the following list clubs");
    // console.log(docs)
 returnRes(res, docs);
@@ -626,7 +788,7 @@ var courseId = parseInt(data[0]);
 var trou = parseInt(data[1]);
 var lat = eval(data[2]);
 var lng = eval(data[3]);
-console.log(courseId);
+//console.log(courseId);
 var coll = dBase.collection('golfGPS'); 
 coll.update({ 'Parcours_id': courseId, 'trou': trou }, { $set: {'Parcours_id': courseId, 'trou': trou, 'latitude': lat, 'longitude': lng } }, { upsert : true }, function(err, docr) {
 	returnRes(res, docr);

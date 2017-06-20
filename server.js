@@ -67,7 +67,10 @@ console.log(url_parts.pathname);
 				break;	
 			  case "saveUser":
 				saveUser(req, res, url_parts.query);
-				break;				
+				break;
+			  case "getPass":
+				getPass(req, res, url_parts.query);
+				break;					
 			  case "getFav":
 				getUserFav(req, res, url_parts.query);
 				break;
@@ -495,7 +498,7 @@ var coll = dBase.collection('users');
   
  function existInactif(doc){
 	if (doc.motpass == pass){
-		sendConfMail(email, pass);
+		sendConfMail(email, doc.Nom);
 		returnRes(res, {"code":1, message: "Ce compte existe et est inactif. \r\nCourriel de confirmation envoyé à :" + email + ".\r\nVeuillez confirmer l'inscription de ce compte par le lien dans le courriel."});
 	}else{
 		returnRes(res, {"code":3, message: "Ce compte existe et est inactif avec un mot de passe différent"});
@@ -599,9 +602,9 @@ coll.find({"_id": o_id, "actif": true}).toArray(function(err, docs) {
 	}
 }
 
-function sendConfMail(eMail, pass){
+function sendConfMail(eMail, name){
 	var Mdata = Mailer.formatMailData( HOSTserv, eMail, "");
-	Mailer.sendMessage( false, "cdore00@yahoo.ca", "cdore00@yahoo.ca", Mdata, "");
+	Mailer.sendMessage( false, name, eMail, Mdata, "");
 }
 
 function confInsc(req, res, param){
@@ -635,6 +638,31 @@ redir = redir.replace("%3", pass);
 res.setHeader('Access-Control-Allow-Origin', '*');
 res.end(redir);
 	
+}
+
+function getPass(req, res, param){
+var email = param.data;
+
+var coll = dBase.collection('users'); 
+  coll.find({"courriel": email, "actif": true}).toArray( function(err, doc) {
+	  		debugger;
+	if (err){
+		console.log(err);
+		returnRes(res, err);
+	}else{
+		if (doc.length > 0){
+			returnRes(res, {"code":-1, message: "Courriel de récupération du mot de passe envoyé à :" + email});
+			sendRecupPassMail(doc[0].courriel, doc[0].Nom, doc[0].motpass);
+		}else{
+			returnRes(res, {"code": 1, message: "Il n'existe aucun compte avec l'adresse de courriel :" + email});
+		}
+	}
+  });
+  
+	function sendRecupPassMail(eMail, name, pass){
+		var Mdata = Mailer.formatMailPass( HOSTserv, name, eMail, pass);
+		Mailer.sendMessage( false, name, eMail, Mdata, "");
+	}
 }
 
 function getUserFav(req, res, param){
