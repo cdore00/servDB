@@ -230,8 +230,6 @@ initDb(function(err){
 //Request functions
 //
 
-//
-
 function returnRes(res, docs){
 	
 	if (res.data){
@@ -513,7 +511,7 @@ function insertUser(){
 	}else{
 		sendConfMail(doc.ops[0].courriel, doc.ops[0].motpass);
 		returnRes(res, {"code":-1, message: "Courriel de confirmation envoyé à :" + doc.ops[0].courriel + ".\r\nVeuillez confirmer votre inscription par le lien dans le courriel."});
-		console.log(doc.ops);
+		//console.log(doc.ops);
 	}
   });  
 }
@@ -573,7 +571,6 @@ coll.find({"_id": o_id, "actif": true}).toArray(function(err, docs) {
 
   
 	function checkEmailExist(doc){
-		debugger;
 		var coll = dBase.collection('users'); 
 	coll.find({"courriel": user, "_id": {$ne: o_id}}).toArray(function(err, docs) {
 
@@ -589,13 +586,11 @@ coll.find({"_id": o_id, "actif": true}).toArray(function(err, docs) {
 	if (doc.motpass == pass){
 		if (eval(Npass) != null){
 		coll.update({"_id": o_id, "actif": true}, { $set: {'Nom': name, 'courriel': user, 'motpass': Npass } }, function(err, rDoc) {
-			debugger;
 			returnRes(res, {resp: {"result":true} });
 		  });
 		}else{
 		coll.update({"_id": o_id, "actif": true}, { $set: {'Nom': name, 'courriel': user} }, function(err, rDoc) {
-			debugger;
-			returnRes(res, rDoc);
+			returnRes(res, {resp: {"result":true} });
 		  });
 		}
 	}else{
@@ -763,19 +758,17 @@ var userID = ids[1];
 var action = ids[2];
 
 var coll = dBase.collection('userFavoris');
-debugger;
+//debugger;
   // Find some documents
 if (action == "0"){
   coll.remove({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
-	    console.log(docs);
-
+	   // console.log(docs);
 	returnRes(res);
   });	
 }
 if (action == "1"){
   coll.insertOne({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
-	    console.log(docs);
-
+	    //console.log(docs);
 	returnRes(res);
   });	
 }
@@ -822,7 +815,7 @@ var courseId = parseInt(data[0]);
 var trou = parseInt(data[1]);
 var lat = eval(data[2]);
 var lng = eval(data[3]);
-console.log(courseId);
+//console.log(courseId);
 var coll = dBase.collection('golfGPS'); 
 coll.update({ 'Parcours_id': courseId, 'trou': trou }, { $set: {'Parcours_id': courseId, 'trou': trou, 'latitude': lat, 'longitude': lng } }, { upsert : true }, function(err, docr) {
 	returnRes(res, docr);
@@ -1206,6 +1199,7 @@ collTable.drop();
 console.log( tableName + " removed");
 res.end();
 }
+
 
 
 function createIndex(res){
