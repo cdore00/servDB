@@ -282,23 +282,29 @@ if (is18 == 18){
 function getGameList(req, res, param){
 var request = (decodeURI(param.data));
 var data = request.split("$");
-var user = parseInt(data[0]);
-var skip = parseInt(data[1]);
-var limit = parseInt(data[2]);
-var is18 = parseInt(data[3]);
+var user = parseInt(param.user);
+var skip = parseInt(param.skip);
+var limit = parseInt(param.limit);
+var is18 = parseInt(param.is18);
+var intDate = parseInt(param.date);
+
+if (!intDate)
+	intDate = 9999999999999;
+
+//console.log(intDate);
 
 var cur =new Array();
 
 var coll = dBase.collection('score'); 
-function addName(cur, coll, is18){
+function addName(cur, coll, is18, intDate){
 	debugger;
 if (is18 == 18){
-	coll.find({USER_ID: user, T18: { $exists: true, $nin: [ 0 ] } }).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){ 
+	coll.find({USER_ID: user, score_date: {$lt:intDate}, "T18": { "$exists": true, "$nin": [ 0 ] } }).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){ 
 		addCur(doc);
 	//returnRes(res, doc);	
 	});
 }else{
-	coll.find({USER_ID: user, $or:[{T18:0},{T18:null}]  } ).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){
+	coll.find({USER_ID: user, score_date: {$lt:intDate}, $or:[{T18:0},{T18:null}]  } ).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){
 		addCur(doc);
 	//returnRes(res, doc);	
 	});
@@ -312,7 +318,7 @@ function addCur(doc){
 		returnRes(res, cur);
 }
 
-addName(cur, coll, is18);
+addName(cur, coll, is18, intDate);
 
 }
 
