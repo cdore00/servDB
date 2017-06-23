@@ -38,8 +38,10 @@ console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]
 		var arrPath = url_parts.pathname.split("/");
 		var filePath = arrPath[arrPath.length - 1];
 		subWeb = arrPath[arrPath.length - 2] + '/';
-if (isLog)
-console.log(url_parts.pathname);
+	if (isLog){
+		console.log(url_parts.pathname);
+		console.log(url_parts.query);
+	}
 		if (req.method == 'POST') {
 			if (filePath == "listLog"){
 				tl.listLog2(req, res, Mailer.pass);
