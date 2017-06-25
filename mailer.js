@@ -3,7 +3,7 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 const jsonInfo = "mailInfo.json";
 var transporter = null;
-var subject, toMail, userM, passW;
+var toMail, userM, passW;
 
 var Mailer = {
 	user: "",
@@ -20,7 +20,6 @@ function initM(mailer, PARAM_DIR) {
 		console.log('Error reading mailInfo.json : ' + err.message);
     }else {
 		var mailInfo = JSON.parse(jsonInfo);
-		subject = mailInfo.subject;
 		toMail = mailInfo.to;
 
 		if (process.env.MAIL){
@@ -72,14 +71,14 @@ formattedBody = formattedBody.replace("%2", userPass);
 return formattedBody;
 }
 
-Mailer.sendMessage = function( res, userName, userMail, bodyMess, linkMess) {
+Mailer.sendMessage = function( res, subject, userMail, bodyMess, linkMess) {
 	// Message object
 	var message = {
 
 		// Comma separated list of recipients
 		to: userMail,
-		cc: toMail,
-		subject: subject + userName, //
+		bcc: toMail,
+		subject: subject, //
 
 		// HTML body
 		html: bodyMess ,
