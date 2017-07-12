@@ -58,8 +58,10 @@ MongoClient.connect(urlDB, function(err, db) {
 		var arrPath = url_parts.pathname.split("/");
 		var filePath = arrPath[arrPath.length - 1];
 		subWeb = arrPath[arrPath.length - 2] + '/';
-if (isLog)
-console.log(url_parts.pathname);
+	if (isLog){
+		console.log(url_parts.pathname);
+		console.log(url_parts.query);
+	}
 		if (req.method == 'POST') {
 			if (filePath == "listLog"){
 				tl.listLog2(req, res, Mailer.pass);
@@ -227,23 +229,29 @@ if (is18 == 18){
 function getGameList(req, res, param){
 var request = (decodeURI(param.data));
 var data = request.split("$");
-var user = parseInt(data[0]);
-var skip = parseInt(data[1]);
-var limit = parseInt(data[2]);
-var is18 = parseInt(data[3]);
+var user = parseInt(param.user);
+var skip = parseInt(param.skip);
+var limit = parseInt(param.limit);
+var is18 = parseInt(param.is18);
+var intDate = parseInt(param.date);
+
+if (!intDate)
+	intDate = 9999999999999;
+
+//console.log(intDate);
 
 var cur =new Array();
 
 var coll = dBase.collection('score'); 
-function addName(cur, coll, is18){
+function addName(cur, coll, is18, intDate){
 	debugger;
 if (is18 == 18){
-	coll.find({USER_ID: user, T18: { $exists: true, $nin: [ 0 ] } }).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){ 
+	coll.find({USER_ID: user, score_date: {$lt:intDate}, "T18": { "$exists": true, "$nin": [ 0 ] } }).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){ 
 		addCur(doc);
 	//returnRes(res, doc);	
 	});
 }else{
-	coll.find({USER_ID: user, $or:[{T18:0},{T18:null}]  } ).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){
+	coll.find({USER_ID: user, score_date: {$lt:intDate}, $or:[{T18:0},{T18:null}]  } ).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){
 		addCur(doc);
 	//returnRes(res, doc);	
 	});
@@ -257,7 +265,7 @@ function addCur(doc){
 		returnRes(res, cur);
 }
 
-addName(cur, coll, is18);
+addName(cur, coll, is18, intDate);
 
 }
 
@@ -472,6 +480,7 @@ var user = (decodeURI(param.user));
 var pass = (decodeURI(param.pass));
 
 debugger;
+
 	var coll = dBase.collection('users'); 
 coll.find({"courriel": user, "actif": true}, ["_id","Nom", "courriel", "motpass"]).toArray(function(err, docs) {
 	//debugger;
@@ -549,7 +558,7 @@ coll.find({"_id": o_id, "actif": true}).toArray(function(err, docs) {
 
 function sendConfMail(eMail, name){
 	var Mdata = Mailer.formatMailData( HOSTserv, eMail, "");
-	Mailer.sendMessage( false, name, eMail, Mdata, "");
+	Mailer.sendMessage( false, "Golf du Québec - Confirmer l'inscription de " + name, eMail, Mdata, "");
 }
 
 function confInsc(req, res, param){
@@ -606,7 +615,7 @@ var coll = dBase.collection('users');
   
 	function sendRecupPassMail(eMail, name, pass){
 		var Mdata = Mailer.formatMailPass( HOSTserv, name, eMail, pass);
-		Mailer.sendMessage( false, name, eMail, Mdata, "");
+		Mailer.sendMessage( false, "Golf du Québec - Récupérer mot de passe de " + name, eMail, Mdata, "");
 	}
 }
 
