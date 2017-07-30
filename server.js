@@ -281,13 +281,14 @@ if (is18 == 18){
 
 function getGameList(req, res, param){
 var request = (decodeURI(param.data));
-var data = request.split("$");
+//var data = request.split("$");
 var user = parseInt(param.user);
 var skip = parseInt(param.skip);
 var limit = parseInt(param.limit);
 var is18 = parseInt(param.is18);
 var intDate = parseInt(param.date);
-
+var intTele = parseInt(param.tele);
+//debugger;
 if (!intDate)
 	intDate = 9999999999999;
 
@@ -296,31 +297,56 @@ if (!intDate)
 var cur =new Array();
 
 var coll = dBase.collection('score'); 
-function addName(cur, coll, is18, intDate){
-	debugger;
+function addName(cur, coll, is18, intDate, intTele){
+	//debugger;
 if (is18 == 18){
 	coll.find({USER_ID: user, score_date: {$lt:intDate}, "T18": { "$exists": true, "$nin": [ 0 ] } }).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){ 
-		addCur(doc);
-	//returnRes(res, doc);	
+		addCur(doc, intTele);
 	});
 }else{
 	coll.find({USER_ID: user, score_date: {$lt:intDate}, $or:[{T18:0},{T18:null}]  } ).sort({score_date:-1}).skip(skip).limit(limit).forEach(function(doc){
-		addCur(doc);
-	//returnRes(res, doc);	
+		addCur(doc, intTele);
 	});
 }
 };  
 
-function addCur(doc){
+function addCur(doc, intTele){
 	doc.score_date = tl.getDateTime(doc.score_date);
 	cur[cur.length]=doc;
-	if (cur.length == limit)
-		returnRes(res, cur);
+	if (cur.length == limit){
+		if (intTele > 0){
+			res.setHeader('Content-type', 'text/plain');
+			res.charset = 'UTF-8';
+					debugger
+			if (intTele == 1){
+					const json2csv = require('json2csv');
+					var fields = ['name', 'score_date', 'T1', 'P1', 'L1', 'T2', 'P2', 'L2', 'T3', 'P3', 'L3', 'T4', 'P4', 'L4', 'T5', 'P5', 'L5', 'T6', 'P6', 'L6', 'T7', 'P7', 'L7', 'T8', 'P8', 'L8', 'T9', 'P9', 'L9', 'T10', 'P10', 'L10', 'T11', 'P11', 'L11', 'T12', 'P12', 'L12', 'T13', 'P13', 'L13', 'T14', 'P14', 'L14', 'T15', 'P15', 'L15', 'T16', 'P16', 'L16', 'T17', 'P17', 'L17', 'T18', 'P18', 'L18'];
+					try {
+					  var result = json2csv({ data: cur, fields: fields });
+					  //console.log(result);
+					} catch (err) {
+					  // Errors are thrown for bad options, or if the data is empty and no fields are provided.
+					  // Be sure to provide fields if it is possible that your data array will be empty.
+					  console.error(err);
+					}
+				res.setHeader('Content-disposition', 'attachment; filename=myScore.csv');
+				res.write(result);			
+			}	
+			if (intTele == 2){	
+				res.setHeader('Content-disposition', 'attachment; filename=myScore.json');
+				res.write(JSON.stringify(cur));
+			}
+			res.end();	
+		}else{
+			returnRes(res, cur);
+		}
+	}
+};
+
+addName(cur, coll, is18, intDate, intTele);
+
 }
 
-addName(cur, coll, is18, intDate);
-
-}
 
 function endDelGame(req, res, param){
 var request = (decodeURI(param.data));
