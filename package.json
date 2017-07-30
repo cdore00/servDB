@@ -7,6 +7,7 @@
     "mongodb": "^2.1.16",
     "object-assign":"4.1.0",
     "intl": "^1.2.5",
+    "json2csv": "^3.10.0",
     "nodemailer": "^1.8.0",
     "xmlhttprequest": "^1.8.0"
   },
