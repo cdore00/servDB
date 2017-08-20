@@ -131,6 +131,9 @@ console.log(url_parts.pathname);
 			  case "countUserGame":
 				countUserGame(req, res, url_parts.query);
 				break;
+			  case "delGame":
+				deleteGame(req, res, url_parts.query);
+				break
 				
 			  default:
 				var param = url_parts.query;
@@ -277,6 +280,25 @@ if (is18 == 18){
 		returnRes(res, count);	
 	});
 }
+};
+
+function deleteGame(req, res, param){
+var id = (decodeURI(param.id));
+
+if (parseInt(id) < 500)
+	var o_id = parseInt(id);
+else	
+	var o_id = new ObjectId(id);
+
+var coll = dBase.collection('score'); 
+
+coll.remove({_id: o_id}, function(err, result){ 
+	if (err) {
+		returnRes(res, err);
+	}
+	returnRes(res, result);	
+});
+
 };
 
 function getGameList(req, res, param){
