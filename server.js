@@ -412,7 +412,7 @@ else
 var coll = dBase.collection('score');
 coll.find({_id:o_id}).toArray(function(err, doc) {
 if (doc[0].score_date != null)
-	doc[0].score_date = tl.etDateTime(doc[0].score_date);
+	doc[0].score_date = tl.getDateTime(doc[0].score_date);
 getBloc(res, doc)
   });
 }
