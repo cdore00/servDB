@@ -809,31 +809,6 @@ var coll = dBase.collection('userFavoris');
   });	
 }
 
-/*function isGPS(res, clubDoc){
-	for (var p = 0; p < clubDoc[0].courses.length; p++) {
-		isCourseGPS(res, clubDoc, p);
-	}
-}
-
-function isCourseGPS(res, clubDoc, ID){
-var courseID = clubDoc[0].courses[ID]._id;
-	var coll = dBase.collection('golfGPS'); 
-coll.find({"Parcours_id": courseID }).toArray(function(err, GPSdoc) {
-	addGPSend(GPSdoc);
-  });
-
-function addGPSend(GPSdoc){
-	if (GPSdoc.length > 0){
-		clubDoc[0].courses[ID].GPS = true;
-	}else{
-		clubDoc[0].courses[ID].GPS = false;
-	}
-	if (ID == clubDoc[0].courses.length - 1)
-		returnRes(res, clubDoc);
-}
-}
-*/
-
 function updateFav(req, res, param){
 var query = (decodeURI(param.data));
 var ids = query.split('$');
@@ -842,22 +817,18 @@ var userID = ids[1];
 var action = ids[2];
 
 var coll = dBase.collection('userFavoris');
-//debugger;
-  // Find some documents
+
 if (action == "0"){
   coll.remove({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
-	   // console.log(docs);
-	returnRes(res);
+	returnRes(res, docs);
   });	
 }
 if (action == "1"){
   coll.insertOne({"CLUB_ID": parseInt(clubID) , "USER_ID": parseInt(userID)}, function(err, docs) {
-	    //console.log(docs);
-	returnRes(res);
+	returnRes(res, docs);
   });	
 }
 }
-
 
 function getBlocList(req, res, param){
 var query = (decodeURI(param.data));
