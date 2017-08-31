@@ -581,10 +581,8 @@ function authUser(req, res, param){
 var user = (decodeURI(param.user));
 var pass = (decodeURI(param.pass));
 
-debugger;
-
-	var coll = dBase.collection('users'); 
-coll.find({"courriel": user, "actif": true}, ["_id","Nom", "courriel", "motpass"]).toArray(function(err, docs) {
+var coll = dBase.collection('users'); 
+coll.find({"courriel": user, "actif": true}, ["_id","Nom", "courriel", "motpass", "niveau"]).toArray(function(err, docs) {
 	//debugger;
 	if (docs.length > 0){
 		checkPass(docs[0]);
@@ -596,6 +594,7 @@ coll.find({"courriel": user, "actif": true}, ["_id","Nom", "courriel", "motpass"
 	function checkPass(doc){
 		if (pass != "undefined"){
 			if (pass == doc.motpass){ 
+				delete doc.motpass;
 				returnRes(res, {resp: {"result":true, "user": doc} });
 			}else{
 				returnRes(res, {resp: {"result":false} });
