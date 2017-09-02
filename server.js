@@ -237,6 +237,7 @@ initDb(function(err){
 //
 //Request functions
 //
+
 function returnRes(res, docs){
 	
 	if (res.data){
@@ -286,7 +287,7 @@ if (is18 == 18){
 function deleteGame(req, res, param){
 var id = (decodeURI(param.id));
 
-if (parseInt(id) < 500)
+if (gID.length < 5)
 	var o_id = parseInt(id);
 else	
 	var o_id = new ObjectId(id);
@@ -405,7 +406,7 @@ var request = (decodeURI(param.data));
 var data = request.split("$");
 var gID = (data[0]);
 //var parc = parseInt(data[1]);
-if (parseInt(gID) < 500)
+if (gID.length < 5)
 	var o_id = parseInt(gID);
 else	
 	var o_id = new ObjectId(gID);
@@ -581,7 +582,9 @@ function authUser(req, res, param){
 var user = (decodeURI(param.user));
 var pass = (decodeURI(param.pass));
 
-var coll = dBase.collection('users'); 
+//debugger;
+
+	var coll = dBase.collection('users'); 
 coll.find({"courriel": user, "actif": true}, ["_id","Nom", "courriel", "motpass", "niveau"]).toArray(function(err, docs) {
 	//debugger;
 	if (docs.length > 0){
@@ -613,7 +616,7 @@ var user = (decodeURI(param.cour));
 var pass = (decodeURI(param.pass));
 var Npass = (decodeURI(param.newpass));
 
-if (parseInt(id) < 500)
+if (gID.length < 5)
 	var o_id = parseInt(id);
 else	
 	var o_id = new ObjectId(id);
@@ -808,6 +811,31 @@ var coll = dBase.collection('userFavoris');
   });	
 }
 
+/*function isGPS(res, clubDoc){
+	for (var p = 0; p < clubDoc[0].courses.length; p++) {
+		isCourseGPS(res, clubDoc, p);
+	}
+}
+
+function isCourseGPS(res, clubDoc, ID){
+var courseID = clubDoc[0].courses[ID]._id;
+	var coll = dBase.collection('golfGPS'); 
+coll.find({"Parcours_id": courseID }).toArray(function(err, GPSdoc) {
+	addGPSend(GPSdoc);
+  });
+
+function addGPSend(GPSdoc){
+	if (GPSdoc.length > 0){
+		clubDoc[0].courses[ID].GPS = true;
+	}else{
+		clubDoc[0].courses[ID].GPS = false;
+	}
+	if (ID == clubDoc[0].courses.length - 1)
+		returnRes(res, clubDoc);
+}
+}
+*/
+
 function updateFav(req, res, param){
 var query = (decodeURI(param.data));
 var ids = query.split('$');
@@ -829,6 +857,7 @@ if (action == "1"){
 }
 }
 
+
 function getBlocList(req, res, param){
 var query = (decodeURI(param.data));
 var ids = query.split('$');
@@ -847,7 +876,7 @@ var ids = query.split(',');
 ids = ids.map(function(id) { return parseInt(id); });
 var coll = dBase.collection('club');
 coll.find({_id: {$in: ids }}, {"_id": true,"nom": true, "adresse": true, "municipal": true, "telephone": true, "telephone2": true, "telephone3": true, "location": true, "courses.TROUS": true},{"sort": "nom"}).toArray(function(err, docs) {
-    console.log("Found the following list clubs");
+    //console.log("Found the following list clubs");
    // console.log(docs)
 returnRes(res, docs);
   });
