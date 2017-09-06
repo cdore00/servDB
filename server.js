@@ -950,55 +950,41 @@ coll.find({"PARCOURS_ID": courseID }, {"sort": "_id"}).toArray(function(err, doc
   });
 }
 
-
 function searchResult(req, res, param){
-var request = (decodeURI(param.data));
-var req = request.split("$");
+var qNom = param.qn;
+var qVille = param.qv;
+var qReg = param.qr;
+var lng = param.qlt;
+var lat = param.qln;
+var dist = param.qd;
+
 var coll = dBase.collection('club');
-	
-switch (req[0]) {
-  case "1":
-	listByName(req[1], req[2]);
-	break;
-  case "2":
-	listByRegion(req[1]);
-	break;
-  case "3":
-	listByDistance(parseFloat(req[1]), parseFloat(req[2]), parseInt(req[3]));
-	break;
-  default:
-	res.statusCode = 200;
-	res.end("No action");
-}
 
-function listByName(qNom, qVille){
+//var query = '{ $and:[';
+var qT = new Array();
 
-coll.find({ $or:[ {nom: {'$regex': new RegExp(qNom, "ig")} }, {municipal: {'$regex': new RegExp(qVille, "ig")} } ]}, {"sort": "nom"}).toArray(function(err, docs) {
+if (qNom)
+	var q1 = {"$or": [ {"nom": {"$regex": new RegExp(qNom, "ig") } } , {"municipal": {"$regex": new RegExp(qVille, "ig")} } ]};
+if (qReg)
+	var q2 = {region: eval(qReg) };
+if (lng)
+	var q3 = {"location": { "$near" : {"$geometry": { "type": "Point",  "coordinates": [ eval(lng) , eval(lat) ] }, "$maxDistance": eval(dist) }}};
+
+if (q1)
+	qT[qT.length] = q1;
+if (q2)
+	qT[qT.length] = q2;
+if (q3)
+	qT[qT.length] = q3;
+
+var query = { $and: qT };
+
+coll.find(query, {"sort": "nom"}).toArray(function(err, docs) {
 	returnRes(res, docs);
   });
-}
-	
-function listByRegion(query){
-var ids = query.split(',');
-debugger;
-ids = ids.map(function(id) { return parseInt(id); });
-
-coll.find({region: {$in: ids }}, {"sort": "nom"}).toArray(function(err, docs) {
-	returnRes(res, docs);
-  });
-}
-
-function listByDistance(lng, lat, dist){
-//console.log("lng=" + lng + "  lat=" + lat + "  dist=" + dist);
-coll.find({ "location": { "$near" : {"$geometry": { "type": "Point",  "coordinates": [ lng , lat ] }, "$maxDistance": dist }}}, {"sort": "nom"}).toArray(function(err, docs) {
-	if (err){
-		console.log(err.message);
-	}
-returnRes(res, docs);
-  });
-}
 
 }
+
 
 //
 // LOAD & format DATA
