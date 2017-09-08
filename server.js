@@ -959,29 +959,31 @@ var lat = param.qln;
 var dist = param.qd;
 
 var coll = dBase.collection('club');
-
-//var query = '{ $and:[';
+var posList = {};
 var qT = new Array();
 
-if (qNom)
+if (qNom){
 	var q1 = {"$or": [ {"nom": {"$regex": new RegExp(qNom, "ig") } } , {"municipal": {"$regex": new RegExp(qVille, "ig")} } ]};
+	qT[qT.length] = q1;
+	}
 if (qReg)
 	var q2 = {region: eval(qReg) };
+	qT[qT.length] = q2;
+	}
 if (lng)
 	var q3 = {"location": { "$near" : {"$geometry": { "type": "Point",  "coordinates": [ eval(lng) , eval(lat) ] }, "$maxDistance": eval(dist) }}};
-
-if (q1)
-	qT[qT.length] = q1;
-if (q2)
-	qT[qT.length] = q2;
-if (q3)
+	var posList = {"lng": eval(lng), "lat": eval(lat), "dist": eval(dist) };
 	qT[qT.length] = q3;
+	}
 
 var query = { $and: qT };
 
-coll.find(query, {"sort": "nom"}).toArray(function(err, docs) {
-	returnRes(res, docs);
-  });
+coll.find(query, {"sort": "nom"}).toArray( function(err, docs) {
+	var result = {};
+	result.posList = posList;
+	result.clubList = docs;
+	returnRes(res, result);
+  }.bind(posList));
 
 }
 
