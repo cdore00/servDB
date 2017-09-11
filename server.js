@@ -966,11 +966,11 @@ if (qNom){
 	var q1 = {"$or": [ {"nom": {"$regex": new RegExp(qNom, "ig") } } , {"municipal": {"$regex": new RegExp(qVille, "ig")} } ]};
 	qT[qT.length] = q1;
 	}
-if (qReg)
+if (qReg){
 	var q2 = {region: eval(qReg) };
 	qT[qT.length] = q2;
 	}
-if (lng)
+if (lng){
 	var q3 = {"location": { "$near" : {"$geometry": { "type": "Point",  "coordinates": [ eval(lng) , eval(lat) ] }, "$maxDistance": eval(dist) }}};
 	var posList = {"lng": eval(lng), "lat": eval(lat), "dist": eval(dist) };
 	qT[qT.length] = q3;
@@ -987,6 +987,78 @@ coll.find(query, {"sort": "nom"}).toArray( function(err, docs) {
 
 }
 
+function searchResultN2(req, res, param){
+var request = (decodeURI(param.data));
+var req = request.split("$");
+var coll = dBase.collection('club');
+	
+
+	listByName(req[1], req[2]);
+
+
+function listByName(qNom, qVille){
+var query = '{ $or:[ {nom: {"$regex": new RegExp("' + qNom + '", "ig")} }, {municipal: {"$regex": new RegExp("' + qVille + '", "ig")} } ]}';
+coll.find(query, {"sort": "nom"}).toArray(function(err, docs) {
+	returnRes(res, docs);
+  });
+}
+
+}
+
+function searchResultOLD(req, res, param){
+var qNom = param.qn;
+var qVille = param.qv;
+var qReg = param.qr;
+var lng = param.qlt;
+var lat = param.qln;
+var dist = param.qd;
+
+var coll = dBase.collection('club');
+	
+switch (req[0]) {
+  case "1":
+	listByName(req[1], req[2]);
+	break;
+  case "2":
+	listByRegion(req[1]);
+	break;
+  case "3":
+	listByDistance(parseFloat(req[1]), parseFloat(req[2]), parseInt(req[3]));
+	break;
+  default:
+	res.statusCode = 200;
+	res.end("No action");
+}
+
+function listByName(qNom, qVille){
+var query = {"$or": [ {"nom": {"$regex": new RegExp(qNom, "ig") } } , {"municipal": {"$regex": new RegExp(qVille, "ig")} } ]};
+coll.find(query, {"sort": "nom"}).toArray(function(err, docs) {
+	returnRes(res, docs);
+  });
+}
+	
+function listByRegion(query){
+var ids = query.split(',');
+debugger;
+ids = ids.map(function(id) { return parseInt(id); });
+
+coll.find({region: {$in: ids }}, {"sort": "nom"}).toArray(function(err, docs) {
+	returnRes(res, docs);
+  });
+}
+
+function listByDistance(lng, lat, dist){
+var query = '{ "location": { "$near" : {"$geometry": { "type": "Point",  "coordinates": ["' + eval(lng) + ' , ' + eval(lat) + ' ] }, "$maxDistance":' + eval(dist) + ' }}}';
+//console.log("lng=" + lng + "  lat=" + lat + "  dist=" + dist);
+coll.find(query, {"sort": "nom"}).toArray(function(err, docs) {
+	if (err){
+		console.log(err.message);
+	}
+returnRes(res, docs);
+  });
+}
+
+}
 
 //
 // LOAD & format DATA
