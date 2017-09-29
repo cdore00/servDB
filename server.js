@@ -237,189 +237,6 @@ initDb(function(err){
 //
 //Request functions
 //
-// servG4.js 
-// Google API server for Sheets (V4) and Gmail (V2)
-const http = require('http');
-const fs = require('fs'); 
-const url = require('url');
-
-const PARAM_DIR = './param/';
-var HOSTserv = 'http://127.0.0.1:3000/';
-var HOSTclient = 'https://cdore00.github.io/golf/';
-//'http://cdore.no-ip.biz/lou/';
-//'https://cdore00.github.io/golf/';
-//'file:///C:/data/node/';
-// For hyperlink in mails and user Web pages.
-
-const Mailer = require('./mailer.js');
-tl = require('./tools.js');
-var infoBup = new Array();
-//var subWeb = '';
-//var subNod = 'nod/';
-var isLog = false;
-
-const args = process.argv;
-if (args[2] && args[2] == 3000){
-	port = args[2];
-	//HOSTserv = 'http://cdore.no-ip.biz/nod/';
-	//HOSTclient = 'file:///C:/data/node/';
-}else{
-	var port = 8080;
-	HOSTserv = "https://nodejs-mongo-persistent-cd-serv.1d35.starter-us-east-1.openshiftapps.com/";
-	HOSTclient = 'https://cdore00.github.io/golf/';
-}
-console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]=" + args[2]);
-
-var MongoClient = require('mongodb').MongoClient
-  , assert = require('assert');
-var ObjectId = require('mongodb').ObjectId;
-
-// Connection URL
-var urlDB = 'mongodb://localhost:27017/golf';
-//var urlDB = 'mongodb://192.168.10.11:8080/golf';
-var dBase;
-
-// Use connect method to connect to the server
-MongoClient.connect(urlDB, function(err, db) {
-  assert.equal(null, err);
-  console.log("Connected successfully to MongoDB server");
-
-	dBase = db;	
-  //db.close();
-});
-
-
-
-// Instantiate Web Server
-	const server = http.createServer((req, res) => {
-			//debugger;
-		var url_parts = url.parse(req.url,true);
-		var arrPath = url_parts.pathname.split("/");
-		var filePath = arrPath[arrPath.length - 1];
-		subWeb = arrPath[arrPath.length - 2] + '/';
-	if (isLog){
-		console.log(url_parts.pathname);
-		console.log(url_parts.query);
-	}
-		if (req.method == 'POST') {
-			if (filePath == "listLog"){
-				tl.listLog2(req, res, Mailer.pass);
-			}else{
-			if (filePath == "commPic"){
-				sendImage(url_parts.query, req, res);
-			}else{
-				res.end();
-			}}
-		}else{  // method == 'GET'
-			switch (filePath) {
-			  case "logOnOff":
-				if (isLog)
-					isLog = false;
-				else
-					isLog = true;
-				console.log("Log " + isLog );
-				res.end("<h1>Log " + isLog + "</h1>");
-				break;
-			  case "identUser":
-				authUser(req, res, url_parts.query);
-				break;
-			  case "confInsc":
-				confInsc(req, res, url_parts.query);
-				break;	
-			  case "saveUser":
-				saveUser(req, res, url_parts.query);
-				break;
-			  case "getPass":
-				getPass(req, res, url_parts.query);
-				break;					
-			  case "getFav":
-				getUserFav(req, res, url_parts.query);
-				break;
-			  case "updateFav":
-				updateFav(req, res, url_parts.query);
-				break;
-			  case "getRegions":
-				getRegionList(req, res);
-				break;
-			  case "getClubParc":
-				getClubParcours(req, res, url_parts.query);
-				break;
-			  case "getBloc":
-				getBlocList(req, res, url_parts.query);
-				break;
-			  case "getClubList":
-				getClubList(req, res, url_parts.query);  //À réutiliser
-				break;
-			  case "getGolfGPS":
-				getGolfGPS(req, res, url_parts.query);
-				break;
-			  case "setGolfGPS":
-				setGolfGPS(req, res, url_parts.query);
-				break;
-			  case "getClubParcTrous":
-				getClubParcTrous(req, res, url_parts.query);
-				break;
-			  case "searchResult":
-				searchResult(req, res, url_parts.query);
-				break;				
-			  case "load":
-				loadF(req, res, url_parts.query);
-				break;					
-			  case "proc":
-				execProc(req, res, url_parts.query);
-				break;	
-			  case "delTable":
-				deleteColl(req, res, url_parts.query);
-				break;		
-			  case "getGame":
-				getGame(req, res, url_parts.query);
-				break;
-			  case "getGameTab":
-				getGameTab(req, res, url_parts.query);
-				break;
-			  case "updateGame":
-				updateGame(req, res, url_parts.query);
-				break;
-			  case "endDelGame":
-				endDelGame(req, res, url_parts.query);
-				break;	
-			  case "addUserIdent":
-				addUserIdent(req, res, url_parts.query);
-				break;	
-			  case "getGameList":
-				getGameList(req, res, url_parts.query);
-				break;		
-			  case "countUserGame":
-				countUserGame(req, res, url_parts.query);
-				break;
-			  case "delGame":
-				deleteGame(req, res, url_parts.query);
-				break;
-				
-			  default:
-				var param = url_parts.query;
-				if (param.code)  // New code received to obtain Token
-					getNewCode(req, res, url_parts)
-				else{  //Cancel unknow request
-					res.statusCode = 200;
-					res.end("<h1>Received DB</h1>");
-				}
-			}		
-
-		} //Fin GET
-	});
-	
-	
-// Start server listening request
-	server.listen(port, () => {
-		console.log('Server started on port ' + port);
-		tl.logFile('Server started on port ' + port);
-		Mailer.initMailer(Mailer,PARAM_DIR);  // Initialyse Mailer Object
-	});
-// END Web Server
-
-
-//
 
 function returnRes(res, docs){
 	
@@ -573,6 +390,7 @@ if (action == 0){
 }
 if (action == 1){
 	var dateTime = Date.now();
+	tl.logFile("End game: " + gID);
 	coll.update({_id:o_id}, { $set: { score_date: dateTime} }, function(err, docr) {
 		if (err) {
 			logErreur('Erreur end score _id : ');
@@ -753,7 +571,7 @@ function insertUser(){
 	}else{
 		sendConfMail(doc.ops[0].courriel, doc.ops[0].motpass);
 		returnRes(res, {"code":-1, message: "S0052"});
-		//console.log(doc.ops);
+		tl.logFile("Nouveau compte créé: " + doc.ops[0].courriel);
 	}
   });  
 }
@@ -799,7 +617,7 @@ var user = (decodeURI(param.cour));
 var pass = (decodeURI(param.pass));
 var Npass = (decodeURI(param.newpass));
 
-if (gID.length < 5)
+if (id.length < 5)
 	var o_id = parseInt(id);
 else	
 	var o_id = new ObjectId(id);
@@ -855,9 +673,10 @@ var data = (decodeURI(param.data));
   coll.find({"courriel": data}).toArray( function(err, docs) {
 	if (eval(docs[0].actif) == true ){ 
 		res.setHeader('Access-Control-Allow-Origin', '*');
-		res.end("S0053");
+		res.end("<h1>Le compte " + docs[0].courriel + " est d&eacute;j&agrave; actif.</h1>");
 	}else{	
 		activateAccount(loginUser(res, docs[0].courriel, docs[0].motpass));
+		tl.logFile("Nouveau compte activé: " + docs[0].courriel);
 	}
   });
 	
