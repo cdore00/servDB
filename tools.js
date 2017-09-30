@@ -84,14 +84,15 @@ exports.listLog2 = function (req, res, pass) {
 }
 
 // Show log file
-exports.showLog = function (param, res) {
-	fs.readFile('log/' + param.InfoArr[3], (err, html) => {
+exports.showLog = function (file, ip, res) {
+	var filePath = 'log/' + file;
+	fs.readFile(filePath, (err, html) => {
 		if(err){
 			this.logFile("Error showLog: " + err.message);
 			res.end();
 			//throw err;
 		}else{
-			this.logFile('Show log file: ' + param.InfoArr[2]);
+			this.logFile('Show log file: ' + filePath + " IP= " + ip);
 			if (res){
 				res.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"})
 				res.write(html, 'utf8');
@@ -99,6 +100,18 @@ exports.showLog = function (param, res) {
 			}
 		}
 	});
+}
+
+exports.getIP = function (req) {
+	var ip;
+	if (req.headers['x-forwarded-for']) {
+		ip = req.headers['x-forwarded-for'].split(",")[0];
+	} else if (req.connection && req.connection.remoteAddress) {
+		ip = req.connection.remoteAddress;
+	} else {
+		ip = req.ip;
+	}//console.log("client IP is *********************" + ip);
+return ip;
 }
 
 
