@@ -35,19 +35,20 @@ console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]
 	const server = http.createServer((req, res) => {
 			//debugger;
 		var url_parts = url.parse(req.url,true);
+		var param = url_parts.query;
 		var arrPath = url_parts.pathname.split("/");
 		var filePath = arrPath[arrPath.length - 1];
-		subWeb = arrPath[arrPath.length - 2] + '/';
+		//subWeb = arrPath[arrPath.length - 2] + '/';
 	if (isLog){
 		console.log(url_parts.pathname);
-		console.log(url_parts.query);
+		console.log(param);
 	}
 		if (req.method == 'POST') {
 			if (filePath == "listLog"){
 				tl.listLog2(req, res, Mailer.pass);
 			}else{
 			if (filePath == "commPic"){
-				sendImage(url_parts.query, req, res);
+				sendImage(param, req, res);
 			}else{
 				res.end();
 			}}
@@ -60,6 +61,12 @@ console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]
 					isLog = true;
 				console.log("Log " + isLog );
 				res.end("<h1>Log " + isLog + "</h1>");
+				break;
+			  case "listLog":
+				tl.listLog(res);
+				break;
+			  case "showLog":
+				tl.showLog(param.nam, tl.getIP(req), res);
 				break;
 			  case "identUser":
 				authUser(req, res, url_parts.query);
@@ -569,7 +576,11 @@ function insertUser(){
 		returnRes(res, err);
 		console.log(err);
 	}else{
-		sendConfMail(doc.ops[0].courriel, doc.ops[0].motpass);
+		if (doc.ops[0].Nom == "")
+			var name = doc.ops[0].courriel
+		else
+			var name = doc.ops[0].Nom
+		sendConfMail(doc.ops[0].courriel, name);
 		returnRes(res, {"code":-1, message: "S0052"});
 		tl.logFile("Nouveau compte créé: " + doc.ops[0].courriel);
 	}
@@ -1372,7 +1383,6 @@ var coll = dBase.collection('score');
 	console.log("Time created");
 }
 
-
 function deleteColl(req, res, param){
 var tableName = (decodeURI(param.data));
 	
@@ -1381,7 +1391,6 @@ collTable.drop();
 console.log( tableName + " removed");
 res.end();
 }
-
 
 
 function createIndex(res){
