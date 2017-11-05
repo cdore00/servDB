@@ -174,6 +174,7 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
 
 	  console.log("Old mongoHost=" + mongoHost);
 	mongoHost="172.30.109.38";  // Force IP
+	mongoPort="27017";
 	console.log("Redeclared mongoHost=" + mongoHost);
 	console.log("1 mongoPort=" + mongoPort);
 	console.log("2 mongoDatabase=" + mongoDatabase);
