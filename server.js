@@ -186,6 +186,8 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
 
   }
 }
+
+console.log("Result mongoURL= " + mongoURL);
 var db = null,
     dbDetails = new Object();
 var ObjectId = require('mongodb').ObjectId;
@@ -196,8 +198,11 @@ var initDb = function(callback) {
   var mongodb = require('mongodb');
   if (mongodb == null) return;
 
+console.log("Try connect mongoURL= " + mongoURL);
   mongodb.connect(mongoURL, function(err, conn) {
     if (err) {
+	    console.log("ERROR connect mongoURL");
+	    console.log("ERROR " + err.message);
       callback(err);
       return;
     }
