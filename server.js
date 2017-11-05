@@ -172,8 +172,13 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
       mongoPassword = process.env[mongoServiceName + '_PASSWORD']
       mongoUser = process.env[mongoServiceName + '_USER'];
 
+	  console.log("Old mongoHost=" + mongoHost);
 	mongoHost="172.30.109.38";  // Force IP
 	console.log("Redeclared mongoHost=" + mongoHost);
+	console.log("1 mongoPort=" + mongoPort);
+	console.log("2 mongoDatabase=" + mongoDatabase);
+	console.log("3 mongoPassword=" + mongoPassword);
+	console.log("4 mongoUser=" + mongoUser);
 	
   if (mongoHost && mongoPort && mongoDatabase) {
     mongoURLLabel = mongoURL = 'mongodb://';
