@@ -172,10 +172,12 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
       mongoPassword = process.env[mongoServiceName + '_PASSWORD']
       mongoUser = process.env[mongoServiceName + '_USER'];
 
-	  console.log("Old mongoHost=" + mongoHost);
-	mongoHost="172.30.109.38";  // Force IP
-	mongoPort="27017";
-	console.log("Redeclared mongoHost=" + mongoHost);
+	console.log("OLD mongoHost=" + mongoHost);
+	if (process.env[mongoServiceName + '_SERVICE']){
+		mongoHost=process.env[mongoServiceName + '_SERVICE'];  // Force IP
+		mongoPort=process.env[mongoServiceName + '_PORT'];
+		console.log("ENV mongoHost=" + mongoHost);
+	}
 	console.log("1 mongoPort=" + mongoPort);
 	console.log("2 mongoDatabase=" + mongoDatabase);
 	console.log("3 mongoPassword=" + mongoPassword);
