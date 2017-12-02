@@ -1,8 +1,8 @@
 {
   "name": "nodejs-ex",
   "version": "0.0.1",
-  "description": "Node.js sample app for OpenShift 3",
-  "main": "server.js",
+  "description": "Node.js server app for Golf of Quebec",
+  "main": "servDB.js",
   "dependencies": {
     "mongodb": "^2.1.16",
     "object-assign":"4.1.0",
