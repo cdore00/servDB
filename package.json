@@ -16,7 +16,7 @@
     "npm": "*"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "node servDB.js",
     "test": "echo \"Error: aucun test \" && exit 0"
   },
   "repository": {
