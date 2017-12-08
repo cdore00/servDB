@@ -7,90 +7,29 @@ const url = require('url');
 const PARAM_DIR = './param/';
 var HOSTserv = 'http://127.0.0.1:3000/';
 var HOSTclient = 'https://cdore00.github.io/golf/';
+//'http://cdore.no-ip.biz/lou/';
+//'https://cdore00.github.io/golf/';
+//'file:///C:/data/node/';
 // For hyperlink in mails and user Web pages.
 
 const Mailer = require('./mailer.js');
 tl = require('./tools.js');
-var subWeb = '';
+var infoBup = new Array();
+//var subWeb = '';
+//var subNod = 'nod/';
 var isLog = false;
 
 const args = process.argv;
 if (args[2] && args[2] == 3000){
 	port = args[2];
+	//HOSTserv = 'http://cdore.no-ip.biz/nod/';
+	//HOSTclient = 'file:///C:/data/node/';
 }else{
 	var port = 8080;
 	HOSTserv = "https://nodejs-mongo-persistent-cd-serv.1d35.starter-us-east-1.openshiftapps.com/";
 	HOSTclient = 'https://cdore00.github.io/golf/';
 }
 console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]=" + args[2]);
-
-var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 3000,
-    ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
-    mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
-    mongoURLLabel = "";
-
-if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
-  var mongoServiceName = process.env.DATABASE_SERVICE_NAME.toUpperCase(),
-      mongoHost = process.env[mongoServiceName + '_SERVICE_HOST'],
-      mongoPort = process.env[mongoServiceName + '_SERVICE_PORT'],
-      mongoDatabase = process.env[mongoServiceName + '_DATABASE'],
-      mongoPassword = process.env[mongoServiceName + '_PASSWORD']
-      mongoUser = process.env[mongoServiceName + '_USER'];
-
-	console.log("OLD mongoHost=" + mongoHost);
-	if (process.env[mongoServiceName + '_SERVICE']){
-		mongoHost=process.env[mongoServiceName + '_SERVICE'];  // Force IP
-		mongoPort=process.env[mongoServiceName + '_PORT'];
-		console.log("ENV mongoHost=" + mongoHost);
-	}
-/*	console.log("1 mongoPort=" + mongoPort);
-	console.log("2 mongoDatabase=" + mongoDatabase);
-	console.log("3 mongoPassword=" + mongoPassword);
-	console.log("4 mongoUser=" + mongoUser);*/
-	
-  if (mongoHost && mongoPort && mongoDatabase) {
-    mongoURLLabel = mongoURL = 'mongodb://';
-    if (mongoUser && mongoPassword) {
-      mongoURL += mongoUser + ':' + mongoPassword + '@';
-    }
-    // Provide UI label that excludes user id and pw
-    mongoURLLabel += mongoHost + ':' + mongoPort + '/' + mongoDatabase;
-    mongoURL += mongoHost + ':' +  mongoPort + '/' + mongoDatabase;
-
-  }
-}
-
-if (!mongoURL){
-	mongoURL = "mongodb://localhost:27017/golf";
-}
-console.log("Result mongoURL= " + mongoURL);
-
-var dBase = null;
-var ObjectId = require('mongodb').ObjectId;
-
-var initDb = function(callback) {
-  if (mongoURL == null) return;
-
-  var mongodb = require('mongodb');
-  if (mongodb == null) return;
-
-  console.log("Try connect mongoURL= " + mongoURL);
-  mongodb.connect(mongoURL, function(err, conn) {
-    if (err) {
-      callback(err);
-      return;
-    }
-
-    dBase = conn;
-	console.log("Connection BD mongoServiceName=" + mongoServiceName);
-    console.log('Connected to MongoDB at: %s', mongoURL);
-  });
-};
-
-initDb(function(err){
-  console.log('Error connecting to Mongo. Message:\n'+err);
-});
-
 
 // Instantiate Web Server
 	const server = http.createServer((req, res) => {
@@ -124,7 +63,7 @@ initDb(function(err){
 				res.end("<h1>Log " + isLog + "</h1>");
 				break;
 			  case "listLog":
-				tl.listLog(res, subWeb);
+				tl.listLog(res);
 				break;
 			  case "showLog":
 				tl.showLog(param.nam, tl.getIP(req), res);
@@ -219,6 +158,72 @@ initDb(function(err){
 	});
 // End  Instantiate Web Server
 
+var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 3000,
+    ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
+    mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
+    mongoURLLabel = "";
+
+if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
+  var mongoServiceName = process.env.DATABASE_SERVICE_NAME.toUpperCase(),
+      mongoHost = process.env[mongoServiceName + '_SERVICE_HOST'],
+      mongoPort = process.env[mongoServiceName + '_SERVICE_PORT'],
+      mongoDatabase = process.env[mongoServiceName + '_DATABASE'],
+      mongoPassword = process.env[mongoServiceName + '_PASSWORD']
+      mongoUser = process.env[mongoServiceName + '_USER'];
+
+	console.log("OLD mongoHost=" + mongoHost);
+	if (process.env[mongoServiceName + '_SERVICE']){
+		mongoHost=process.env[mongoServiceName + '_SERVICE'];  // Force IP
+		mongoPort=process.env[mongoServiceName + '_PORT'];
+		console.log("ENV mongoHost=" + mongoHost);
+	}
+/*	console.log("1 mongoPort=" + mongoPort);
+	console.log("2 mongoDatabase=" + mongoDatabase);
+	console.log("3 mongoPassword=" + mongoPassword);
+	console.log("4 mongoUser=" + mongoUser);*/
+	
+  if (mongoHost && mongoPort && mongoDatabase) {
+    mongoURLLabel = mongoURL = 'mongodb://';
+    if (mongoUser && mongoPassword) {
+      mongoURL += mongoUser + ':' + mongoPassword + '@';
+    }
+    // Provide UI label that excludes user id and pw
+    mongoURLLabel += mongoHost + ':' + mongoPort + '/' + mongoDatabase;
+    mongoURL += mongoHost + ':' +  mongoPort + '/' + mongoDatabase;
+
+  }
+}
+
+if (!mongoURL){
+	mongoURL = "mongodb://localhost:27017/golf";
+}
+console.log("Result mongoURL= " + mongoURL);
+
+var dBase = null;
+var ObjectId = require('mongodb').ObjectId;
+
+var initDb = function(callback) {
+  if (mongoURL == null) return;
+
+  var mongodb = require('mongodb');
+  if (mongodb == null) return;
+
+  console.log("Try connect mongoURL= " + mongoURL);
+  mongodb.connect(mongoURL, function(err, conn) {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    dBase = conn;
+	console.log("Connection BD mongoServiceName=" + mongoServiceName);
+    console.log('Connected to MongoDB at: %s', mongoURL);
+  });
+};
+
+initDb(function(err){
+  console.log('Error connecting to Mongo. Message:\n'+err);
+});
 
 // Start server listening request
 	server.listen(port, () => {
@@ -1271,7 +1276,7 @@ function addLoc(){
 // Add Geo lat, lng
 var coll = dBase.collection('club');
     coll.find().forEach(function(doc){
-         coll.update({_id:doc._id}, {$set:{"location": {type: "Point", coordinates: [ doc.longitude, doc.latitude ]} }});
+         coll.update({_id:doc._id}, {$set:{"location": {y: doc.longitude, x: doc.latitude} }});
     });
 	console.log("Location created");
 }
