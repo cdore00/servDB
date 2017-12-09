@@ -1,4 +1,4 @@
-// server.js V1 
+// server.js v2
 
 const http = require('http');
 const fs = require('fs'); 
@@ -158,7 +158,8 @@ console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]
 	});
 // End  Instantiate Web Server
 
-var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 3000,
+
+var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
     mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
     mongoURLLabel = "";
@@ -177,10 +178,6 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
 		mongoPort=process.env[mongoServiceName + '_PORT'];
 		console.log("ENV mongoHost=" + mongoHost);
 	}
-/*	console.log("1 mongoPort=" + mongoPort);
-	console.log("2 mongoDatabase=" + mongoDatabase);
-	console.log("3 mongoPassword=" + mongoPassword);
-	console.log("4 mongoUser=" + mongoUser);*/
 	
   if (mongoHost && mongoPort && mongoDatabase) {
     mongoURLLabel = mongoURL = 'mongodb://';
@@ -199,7 +196,8 @@ if (!mongoURL){
 }
 console.log("Result mongoURL= " + mongoURL);
 
-var dBase = null;
+var db = null,
+    dbDetails = new Object();
 var ObjectId = require('mongodb').ObjectId;
 
 var initDb = function(callback) {
@@ -208,18 +206,38 @@ var initDb = function(callback) {
   var mongodb = require('mongodb');
   if (mongodb == null) return;
 
-  console.log("Try connect mongoURL= " + mongoURL);
+console.log("Try connect mongoURL= " + mongoURL);
   mongodb.connect(mongoURL, function(err, conn) {
     if (err) {
+	    console.log("ERROR connect mongoURL");
+	    console.log("ERROR " + err.message);
       callback(err);
       return;
     }
 
-    dBase = conn;
-	console.log("Connection BD mongoServiceName=" + mongoServiceName);
+    db = conn;
+    dbDetails.databaseName = db.databaseName;
+    dbDetails.url = mongoURLLabel;
+    dbDetails.type = 'MongoDB';
+
     console.log('Connected to MongoDB at: %s', mongoURL);
+	console.log("Connection BD mongoServiceName=" + mongoServiceName);
+	initBD();
   });
 };
+
+var dBase;
+
+function initBD(){
+
+  if (!db) {
+    initDb(function(err){});
+  }
+  if (db) {
+    var col = db.collection('counts');
+	dBase = db;
+  }
+}
 
 initDb(function(err){
   console.log('Error connecting to Mongo. Message:\n'+err);
