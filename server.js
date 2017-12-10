@@ -1,4 +1,4 @@
-// server.js V1.3
+// server.js V1.4
 
 const http = require('http');
 const fs = require('fs'); 
@@ -192,7 +192,8 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
 }
 
 if (!mongoURL){
-	mongoURL = "mongodb://localhost:27017/golf";
+	var mongoURL = "mongodb://localhost:27017/golf";
+	port = 3000;
 }
 console.log("Result mongoURL= " + mongoURL);
 var dBase = null;
