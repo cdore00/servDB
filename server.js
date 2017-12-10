@@ -1,4 +1,4 @@
-// server.js V1.0
+// server.js V1.1
 
 const http = require('http');
 const fs = require('fs'); 
@@ -178,10 +178,6 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
 		mongoPort=process.env[mongoServiceName + '_PORT'];
 		console.log("ENV mongoHost=" + mongoHost);
 	}
-	console.log("1 mongoPort=" + mongoPort);
-	console.log("2 mongoDatabase=" + mongoDatabase);
-	console.log("3 mongoPassword=" + mongoPassword);
-	console.log("4 mongoUser=" + mongoUser);
 	
   if (mongoHost && mongoPort && mongoDatabase) {
     mongoURLLabel = mongoURL = 'mongodb://';
@@ -222,12 +218,7 @@ console.log("Try connect mongoURL= " + mongoURL);
 
     console.log('Connected to MongoDB at: %s', mongoURL);
 	console.log("Connection BD mongoServiceName=" + mongoServiceName);
-	console.log("mongoHost=" + mongoHost);
-	console.log("mongoPort=" + mongoPort);
-	console.log("mongoDatabase=" + mongoDatabase);
-	console.log("mongoPassword=" + mongoPassword);
-	console.log("mongoUser=" + mongoUser);
-	console.log("mongoAdmin=" + process.env[mongoServiceName + '_ADMIN_PASSWORD']);
+
 	initBD();
   });
 };
