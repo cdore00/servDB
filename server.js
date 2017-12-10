@@ -1,4 +1,4 @@
-// server.js V1.1
+// server.js V1.2
 
 const http = require('http');
 const fs = require('fs'); 
@@ -191,11 +191,11 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
   }
 }
 
+if (!mongoURL){
+	mongoURL = "mongodb://localhost:27017/golf";
+}
 console.log("Result mongoURL= " + mongoURL);
-var db = null,
-    dbDetails = new Object();
-var ObjectId = require('mongodb').ObjectId;
-
+var db = null;
 var initDb = function(callback) {
   if (mongoURL == null) return;
 
@@ -212,9 +212,6 @@ console.log("Try connect mongoURL= " + mongoURL);
     }
 
     db = conn;
-    dbDetails.databaseName = db.databaseName;
-    dbDetails.url = mongoURLLabel;
-    dbDetails.type = 'MongoDB';
 
     console.log('Connected to MongoDB at: %s', mongoURL);
 	console.log("Connection BD mongoServiceName=" + mongoServiceName);
