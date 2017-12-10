@@ -1,4 +1,4 @@
-// servDB.js v1
+// servDB.js 
 
 const http = require('http');
 const fs = require('fs'); 
@@ -195,9 +195,8 @@ if (!mongoURL){
 	mongoURL = "mongodb://localhost:27017/golf";
 }
 console.log("Result mongoURL= " + mongoURL);
-
-var dBase;
-
+var db = null,
+    dbDetails = new Object();
 var ObjectId = require('mongodb').ObjectId;
 
 var initDb = function(callback) {
@@ -215,15 +214,30 @@ console.log("Try connect mongoURL= " + mongoURL);
       return;
     }
 
-    dBase = conn;
+    db = conn;
+    dbDetails.databaseName = db.databaseName;
+    dbDetails.url = mongoURLLabel;
+    dbDetails.type = 'MongoDB';
 
     console.log('Connected to MongoDB at: %s', mongoURL);
 	console.log("Connection BD mongoServiceName=" + mongoServiceName);
-	//initBD();
+
+	initBD();
   });
 };
 
+var dBase;
 
+function initBD(){
+
+  if (!db) {
+    initDb(function(err){});
+  }
+  if (db) {
+    var col = db.collection('counts');
+	dBase = db;
+  }
+}
 
 initDb(function(err){
   console.log('Error connecting to Mongo. Message:\n'+err);
