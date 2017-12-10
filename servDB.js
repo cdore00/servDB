@@ -1,4 +1,4 @@
-// server.js V1.4
+// servDB.js V1.1
 
 const http = require('http');
 const fs = require('fs'); 
@@ -1277,7 +1277,7 @@ function addLoc(){
 // Add Geo lat, lng
 var coll = dBase.collection('club');
     coll.find().forEach(function(doc){
-         coll.update({_id:doc._id}, {$set:{"location": {y: doc.longitude, x: doc.latitude} }});
+         coll.update({_id:doc._id}, {$set:{"location": {type: "Point", coordinates: [ doc.longitude, doc.latitude ]} }});
     });
 	console.log("Location created");
 }
