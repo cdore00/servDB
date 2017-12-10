@@ -1,4 +1,4 @@
-// server.js V1.1
+// server.js V1.0
 
 const http = require('http');
 const fs = require('fs'); 
@@ -159,7 +159,7 @@ console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]
 // End  Instantiate Web Server
 
 
-var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 3000,
+var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
     mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
     mongoURLLabel = "";
@@ -178,6 +178,10 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
 		mongoPort=process.env[mongoServiceName + '_PORT'];
 		console.log("ENV mongoHost=" + mongoHost);
 	}
+	console.log("1 mongoPort=" + mongoPort);
+	console.log("2 mongoDatabase=" + mongoDatabase);
+	console.log("3 mongoPassword=" + mongoPassword);
+	console.log("4 mongoUser=" + mongoUser);
 	
   if (mongoHost && mongoPort && mongoDatabase) {
     mongoURLLabel = mongoURL = 'mongodb://';
@@ -191,9 +195,6 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
   }
 }
 
-if (!mongoURL){
-	mongoURL = "mongodb://localhost:27017/golf";
-}
 console.log("Result mongoURL= " + mongoURL);
 var db = null,
     dbDetails = new Object();
@@ -221,7 +222,12 @@ console.log("Try connect mongoURL= " + mongoURL);
 
     console.log('Connected to MongoDB at: %s', mongoURL);
 	console.log("Connection BD mongoServiceName=" + mongoServiceName);
-
+	console.log("mongoHost=" + mongoHost);
+	console.log("mongoPort=" + mongoPort);
+	console.log("mongoDatabase=" + mongoDatabase);
+	console.log("mongoPassword=" + mongoPassword);
+	console.log("mongoUser=" + mongoUser);
+	console.log("mongoAdmin=" + process.env[mongoServiceName + '_ADMIN_PASSWORD']);
 	initBD();
   });
 };
