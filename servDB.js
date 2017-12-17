@@ -24,7 +24,7 @@ if (args[2] && args[2] == 3000){
 }
 console.log(HOSTserv + " args[0]=" + args[0] + " args[1]=" + args[1] + " args[2]=" + args[2]);
 
-var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 3000,
+var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
     ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0',
     mongoURL = process.env.OPENSHIFT_MONGODB_DB_URL || process.env.MONGO_URL,
     mongoURLLabel = "";
@@ -62,6 +62,7 @@ if (mongoURL == null && process.env.DATABASE_SERVICE_NAME) {
 
 if (!mongoURL){
 	mongoURL = "mongodb://localhost:27017/golf";
+	port = 3000;
 }
 console.log("Result mongoURL= " + mongoURL);
 
