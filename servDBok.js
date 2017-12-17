@@ -197,6 +197,7 @@ if (!mongoURL){
 }
 console.log("Result mongoURL= " + mongoURL);
 var dBase = null;
+var ObjectId = require('mongodb').ObjectId;
 var initDb = function(callback) {
   if (mongoURL == null) return;
 
