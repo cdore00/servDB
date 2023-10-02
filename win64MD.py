@@ -883,7 +883,7 @@ class dbaseObj():
         self.dbase = ""
         self.server = {
             "Local": "mongodb://localhost:27017",
-            "Vultr": "mongodb://cdore:925@cdore.ddns.net:6600/?authSource=admin&ssl=false"
+            "Vultr": "mongodb://..."
             }
         self.isConnect = False
 
