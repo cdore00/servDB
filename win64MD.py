@@ -1,5 +1,7 @@
-#https://stackoverflow.com/questions/71677889/create-a-scrollbar-to-a-full-window-tkinter-in-python
 # coding=utf-8
+#https://stackoverflow.com/questions/71677889/create-a-scrollbar-to-a-full-window-tkinter-in-python
+#https://pyinstaller.org/en/stable/usage.html#cmdoption-hidden-import
+#pyinstaller main.py --onefile --name test --icon test.ico --noconsole
 #C:\Users\charl\AppData\Local\Programs\Python\Python39\Scripts
 #scripts\pyinstaller --onefile code\win64MD.py
 import pdb
@@ -14,7 +16,7 @@ from call_function_with_timeout import SetTimeoutDecorator
 
 from tkinter import *
 import tkinter as tk
-#from tkinter import tix
+
 from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
 from tkinter.tix import *
@@ -218,16 +220,14 @@ class editerRecette():
     def annuler(self):
         self.pop.destroy()
         
+    #recPrep = tk.Entry(recframe, textvariable=varPrep, state="readonly", width=20, validate="key", validatecommand=(self.win.register(self.validate), '%P', 10))
+    #valMax20 = (self.win.register(self.validate), '%P', 10)
     def validate(self, P, maxlen):
         #pdb.set_trace()
         if len(P) <= int(maxlen):
-            # empty Entry is ok
             return True
-            #elif len(P) == 1 and P.isdigit():
-            # Entry with 1 digit is ok
-            #return True
         else:
-            # Anything else, reject it
+            self.win.bell()
             return False
 
 
@@ -290,29 +290,7 @@ class editerRecette():
             winEdit = editWin(self.pop, "Éditer " + section, [self,self.recData["prep"], self.PREP])
         winEdit.showDialog()
         
-    def showImg(self, event, localPath = ""):
 
-        self.pop.unbind("<Enter>")
-        self.pop.config(cursor="watch")
-        ht = 140
-        if localPath :
-            self.labImg.destroy()
-            self.labImg = Label(self.imgframe)
-            self.recImage=Image.open(localPath)
-        else:
-            cover = self.recData["imgURL"]
-            raw_data = urllib.request.urlopen(cover).read()
-            self.recImage = Image.open(io.BytesIO(raw_data))
-        image = ImageTk.PhotoImage(self.recImage)
-        lg = int(image.width() * (ht/image.height()))
-        img=self.recImage.resize(( lg, ht))
-        image = ImageTk.PhotoImage(img)
-        self.labImg.config(image=image)
-        self.labImg.config(cursor="hand2")
-        self.labImg.photo = image
-        self.labImg.grid(row=0, column=0)  
-        self.labImg.bind("<Button-1>", self.showImage)
-        self.pop.config(cursor="")
  
     def showRecette(self):
     
@@ -333,13 +311,13 @@ class editerRecette():
 
         self.objMess = cdc.messageObj(self.scrollframe.interior, self.pop)
         
-
-        recframe = tk.Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
-        recframe.pack(expand= True, fill=BOTH, padx=0, pady=0)
-        self.editFrame = recframe
               
-        recframe = tk.Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
-        recframe.pack(expand= True, fill=BOTH, padx=10, pady=10)
+        #recframe = tk.Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
+        #recframe.pack(expand= True, fill=BOTH)
+        
+        recframe = cdc.resizeFrame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
+        #recframe.pack(expand= True, fill=BOTH)
+        
         self.editFrame = recframe
         
         sdc = cdc.milliToDate(self.recData["dateC"])
@@ -361,10 +339,12 @@ class editerRecette():
         ttk.Label(recframe, text='Nom:').grid(column=0, row=1, sticky=tk.W, padx=5, pady=3)
         self.varNom = StringVar()
         self.varNom.set(self.recData["nom"])
-        recName = tk.Entry(recframe, textvariable=self.varNom, state="readonly", width=30)
+        #recName = tk.Entry(recframe, textvariable=self.varNom, state="readonly", width=30)
+        recName = cdc.editEntry(recframe, textvariable=self.varNom, state="readonly", width=30, maxlen=50)
         recName.focus()
         recName.grid(column=1, row=1, sticky=tk.W, padx=5, pady=3)
         editArr.append(("varNom", self.varNom))
+        #cdc.menuEdit(self.win, recName)
         
         ttk.Label(recframe, text='Categorie:').grid(column=0, row=2, sticky=tk.W, padx=5, pady=3) 
         varCat = StringVar()
@@ -378,30 +358,35 @@ class editerRecette():
         ttk.Label(recframe, text='Préparation:').grid(column=0, row=3, sticky=tk.W, padx=5, pady=3)
         varPrep = StringVar()
         varPrep.set(self.recData["temp"])
-        recPrep = tk.Entry(recframe, textvariable=varPrep, state="readonly", width=20, validate="key", validatecommand=valMax20)
+        #recPrep = tk.Entry(recframe, textvariable=varPrep, state="readonly", width=20, validate="key", validatecommand=(self.win.register(self.validate), '%P', 10))
+        recPrep = cdc.editEntry(recframe, textvariable=varPrep, state="readonly", width=20, validate="key", maxlen=15)
         recPrep.grid(column=1, row=3, sticky=tk.W, padx=5, pady=3)
         editArr.append(("varPrep", varPrep))
+        #cdc.menuEdit(self.win, recPrep)
         
         ttk.Label(recframe, text='Temps de cuisson:').grid(column=0, row=4, sticky=tk.W, padx=5, pady=3)
         varCuis = StringVar()
         varCuis.set(self.recData["cuis"])
-        recCuis = tk.Entry(recframe, textvariable=varCuis, state="readonly", width=20)
+        recCuis = cdc.editEntry(recframe, textvariable=varCuis, state="readonly", width=20, maxlen=15)
         recCuis.grid(column=1, row=4, sticky=tk.W, padx=5, pady=3)
         editArr.append(("varCuis", varCuis))
+        cdc.menuEdit(self.win, recCuis)
         
         ttk.Label(recframe, text='Portions:').grid(column=0, row=5, sticky=tk.W, padx=5, pady=3)
         varPort = StringVar()
         varPort.set(self.recData["port"])
-        recPort = tk.Entry(recframe, textvariable=varPort, state="readonly", width=20)
+        recPort = cdc.editEntry(recframe, textvariable=varPort, state="readonly", width=20, maxlen=15)
         recPort.grid(column=1, row=5, sticky=tk.W, padx=5, pady=3)
         editArr.append(("varPort", varPort))
+        cdc.menuEdit(self.win, recPort)
         
         ttk.Label(recframe, text='Source URL:').grid(column=0, row=6, sticky=tk.W, padx=5, pady=3)
         varURL = StringVar()
         varURL.set(self.recData["url"])
-        recURL = tk.Entry(recframe, textvariable=varURL, state="readonly", width=90)
+        recURL = cdc.editEntry(recframe, textvariable=varURL, state="readonly", width=90, maxlen=200)
         recURL.grid(column=1, row=6, columnspan=2, sticky=tk.W, padx=5, pady=3)
         editArr.append(("varURL", varURL))
+        cdc.menuEdit(self.win, recURL)
         
         ttk.Label(recframe, text='Publié:').grid(column=0, row=7, sticky=tk.W, padx=5, pady=3)
         indPublie = tk.StringVar()
@@ -501,6 +486,7 @@ class editerRecette():
             ingr = tk.Entry(self.ingrFrame, textvariable= (ingVal[rown - 1]), state="readonly")
             ingr.pack(expand= True, fill=BOTH, padx=5, pady=3)
             ingr.bind("<FocusIn>", self.handle_focus)
+            cdc.menuEdit(self.win, ingr)
             rown += 1
 
         
@@ -533,6 +519,7 @@ class editerRecette():
             prepVal[rown - 1] = [ self.recData["prep"][rown - 1], prep]
             prep.pack(expand= True, fill=BOTH, padx=5, pady=3)
             prep.bind("<FocusIn>", self.handle_focus)
+            cdc.menuEdit(self.win, prep)
             rown += 1
         
         self.prepFrame.pack(expand= True, fill=BOTH, padx=10, pady=10)
@@ -629,6 +616,8 @@ class master_form_find():
                 colB = ["Nom du club", "Nombre de parcours", "Nombre de trous", "Adresse du club", "Ville du club", "Région du club"]
 
             mess = str(len(listItems)) + (" recettes trouvées " if self.isRec else " clubs trouvés ")
+            if len(listItems) <= 1:
+                mess = str(len(listItems)) + (" recette trouvé " if self.isRec else " club trouvé ")
             if wrd:
                 mess += "où"
                 if oData["ph"]:
@@ -645,7 +634,7 @@ class master_form_find():
             if len(self.gridFrame.interior.slaves()) > 0:
                 self.gridFrame.interior.slaves()[0].destroy()
             
-            gridframe = ttk.Frame(self.gridFrame.interior)
+            gridframe = tk.Frame(self.gridFrame.interior)
             gridframe.pack(expand= True, side=LEFT, fill=X, padx=10)
 
             gridframe.grid_columnconfigure(0, weight=colW[0], uniform="True")
@@ -694,10 +683,11 @@ class master_form_find():
             rowN = 1
             if self.isRec:
                 for x in listItems:
-                    lbl = tk.Label(gridframe, text= x["nom"], pady=1, borderwidth = 1, relief=RIDGE, anchor=W)
+                    lbl = tk.Label(gridframe, text= x["nom"], font= ('Segoe 9 underline'), fg="#0000FF", pady=1, borderwidth = 1, relief=RIDGE, anchor=W)
+                    #lbl = tk.Label(gridframe, text= x["nom"], pady=1, borderwidth = 1, relief=RIDGE, anchor=W)
                     lbl.grid(row= rowN, column=0, sticky="WE")        
                     lbl._values = x["_id"]
-                    lbl.bind("<Double-Button-1>", self.gridCall)
+                    lbl.bind("<Button-1>", self.gridCall)
                     lbl = tk.Label(gridframe, text= x["cat"]["desc"], pady=1, borderwidth = 1, relief=RIDGE, anchor=W)
                     lbl.grid(row= rowN, column=1, sticky="WE")        
                     lbl._values = x["_id"]
@@ -805,12 +795,43 @@ class master_form_find():
             comboLbl = 'Région:'
             ind_lbl = '(rechercher parmi les villes)'
         
+        def popup(event):
+            try:
+                menu.tk_popup(event.x_root,event.y_root) # Pop the menu up in the given coordinates
+            finally:
+                menu.grab_release() # Release it once an option is selected
+
+        def cut():
+            self.keyword.event_generate("<<Cut>>")
+            
+        def paste():
+            #clipboard = self.win.clipboard_get() # Get the copied item from system clipboard
+            #self.keyword.insert('end',clipboard) # Insert the item into the entry widget
+            self.keyword.event_generate("<<Paste>>")
+
+        def copy():
+            #inp = self.keyword.get() # Get the text inside entry widget
+            #self.win.clipboard_clear() # Clear the tkinter clipboard
+            #self.win.clipboard_append(inp) # Append to system clipboard
+            self.keyword.event_generate("<<Copy>>")
+
+
+        menu = Menu(self.win,tearoff=0) # Create a menu
+        menu.add_command(label='Couper',command=cut) # Create labels and commands
+        menu.add_command(label='Copier',command=copy) # Create labels and commands
+        menu.add_command(label='Coller',command=paste)
+
+
+
         # Mots clés recherche
         ttk.Label(formframe, text='Mots clés:').grid(column=0, row=0, sticky=tk.W)
         self.keyword = ttk.Entry(formframe, width=30)
         self.keyword.focus()
         self.keyword.grid(column=1, row=0, sticky=tk.W)
         self.keyword.bind("<Return>", self.getDataList)
+        #self.keyword.bind('<Button-3>',popup) # Bind a func to right click
+        cdc.menuEdit(self.win, self.keyword)
+        
         button = cdc.RoundedButton(formframe, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.resetForm)
         button.create_text(12,11, text="x", fill="black", font=('Helvetica 15 '))
         button.grid(column=2, row=0)
@@ -851,7 +872,7 @@ class master_form_find():
 
         formframe = Frame(self.frame)
         ttk.Button(formframe, text='Rechercher', command=self.getDataList).grid(column=0, row=0)
-        ttk.Button(formframe, text='Login', command=self.login).grid(column=0, row=3)
+        ttk.Button(formframe, text='Connecter', command=self.login).grid(column=0, row=3)
         
         ttk.Button(formframe, text='Fermer', command=self.closeRec).grid(column=0, row=4)
         ttk.Button(formframe, text="Quitter", command=self.quitForm).grid(column=0, row=5)
@@ -869,7 +890,7 @@ class master_form_find():
         self.frame.quit()
 
     def login(self):
-        dial = loginDialog(self.win, "Login : app - location", self.mainApp)
+        dial = loginDialog(self.win, "Connecter : app - location", self.mainApp)
         dial.showDialog()
         
     def setGrid(self, listFrame):
@@ -883,7 +904,7 @@ class dbaseObj():
         self.dbase = ""
         self.server = {
             "Local": "mongodb://localhost:27017",
-            "Vultr": "mongodb://..."
+            "Vultr": "mongodb://"
             }
         self.isConnect = False
 
@@ -925,7 +946,6 @@ class dbaseObj():
         
         def searchString(qNom, qIngr, qCat, mode = 0):
             qT = []
-            #pdb.set_trace()
             
             Fnom, Fingr = 'nom','ingr'
             if mode == 1:
@@ -957,13 +977,13 @@ class dbaseObj():
             return { "$and": qT }
 
         # Begin function
-        #pdb.set_trace()
+
         qNom, qIngr, qCat = '', '', None
         qNom = wrd
         if ingr == 1:
             qIngr = wrd
         qCat = cat
-        #pdb.set_trace()
+
         col = self.data.recettes
         query = searchString(qNom, qIngr, qCat)
         
@@ -1003,7 +1023,7 @@ class dbaseObj():
             
         def searchString(qNom, qVille, qReg, mode = 0):
             qT = []
-            #pdb.set_trace()
+
             Fnom, FVille = 'nom', 'municipal'
             if mode == 1:
                 Fnom = 'nomU'
@@ -1038,16 +1058,16 @@ class dbaseObj():
             return { "$and": qT }
 
         # Begin function
-
+        
         qNom, qVille, qReg = '', '', None
         qNom = wrd
-        if qVille == 1:
+        if ville == 1:
             qVille = wrd
         qReg = region        
         col = self.data.club
         
         query = searchString(qNom, qVille, qReg)
-        #pdb.set_trace()
+
         docs = col.find(query).collation({"locale": "fr","strength": 1}).sort("nom")
         #print("MODE = 0 " + str(query))
         li = list(docs)
@@ -1115,6 +1135,8 @@ class editWin(cdc.modalDialogWin):
         self.section = self.obj[2]
         
         editList = ScrolledText(self.dframe)
+        cdc.menuEdit(self.win, editList)
+        
         elemList = ""
 
         for elem in self.dataElem:
@@ -1207,16 +1229,17 @@ class loginDialog(cdc.modalDialogWin):
 
 
 class createMasterForm():
-    def __init__(self, win, *args, **kwargs):
+    def __init__(self, win, connectOn = True, *args, **kwargs):
         self.win = win
         self.dbObj = dbaseObj()
         self.appdbName = { "Golf": "golf",
                             "Recettes": "resto"}
         self.listRecettes = None
         self.mForm = None
-        self.setApp()
+
+        self.setApp(connectApp = connectOn)
     
-    def setApp(self, serv = "Local", appName = "Recettes"):
+    def setApp(self, serv = "Local", appName = "Recettes", connectApp = True):
         self.actAppDB = appName + " - " + serv
         self.win.update_idletasks()       
         self.win.title(self.actAppDB)
@@ -1226,20 +1249,23 @@ class createMasterForm():
         slavelist = self.win.slaves()
         for elem in slavelist:
             elem.destroy()
-        if appName == "Recettes":
-            self.win.geometry("550x500")
-        else:
-            self.win.geometry("600x500") 
+            
         self.win.objMainMess = cdc.messageObj(self.win)
         self.win.objMainMess.showMess("Connexion...")
         self.win.update_idletasks() 
-        
+        #pdb.set_trace()
+        if connectApp:
+            self.dbObj.connectTo(serv, self.appdbName[appName])
+        self.win.objMainMess.clearMess()
+
+        if appName == "Recettes":
+            self.win.geometry("550x500")
+        else:
+            self.win.geometry("600x500")
+ 
         self.masterForm = Frame(self.win, borderwidth = 1, relief=RIDGE)
         self.masterForm.pack( fill=X, padx=10, pady=10)
-        
-        self.dbObj.connectTo(serv, self.appdbName[appName])
-        self.win.objMainMess.clearMess()
-        
+                
         self.mForm = master_form_find(self)        
         self.listRecettes = cdc.VscrollFrame(self.win)
         self.listRecettes.pack(expand= True, fill=BOTH)
@@ -1254,9 +1280,8 @@ def create_main_window():
     win.iconbitmap(APPICON)
     l = int(win.winfo_screenwidth() / 2)
     win.geometry(f"+{l}+100")
-    #win.geometry("550x400")
     
-    createMasterForm(win)
+    createMasterForm(win, connectOn = True)
 
     win.mainloop()
 

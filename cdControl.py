@@ -1,6 +1,6 @@
 #https://www.youtube.com/watch?v=I2wwyOTtIe4
 # coding=utf-8
-#import pdb
+import pdb
 #; pdb.set_trace()
 import sys, os, io, re, cgi, csv, urllib.parse
 import urllib.request
@@ -363,3 +363,64 @@ class modifRecImg(modalDialogWin):
         if answer:
             self.close()
             self.obj.deleteImage()
+            
+            
+class menuEdit():
+    def __init__(self, parentWin, inputToBind, *args, **kwargs):
+        self.win = parentWin
+        self.inputToBind = inputToBind  #Object to right click to pop menuEdit
+        self.menu = Menu(self.win,tearoff=0) # Create a menu
+        self.menu.add_command(label='Couper',command=self.cut) # Create labels and commands
+        self.menu.add_command(label='Copier',command=self.copy) 
+        self.menu.add_command(label='Coller',command=self.paste)
+        self.menu.add_command(label='Sélectionner tout',command=self.selectAll)
+        
+        self.inputToBind.bind('<Button-3>',self.popup) # Bind to right click
+
+    def popup(self, event):
+        try:
+            self.menu.tk_popup(event.x_root,event.y_root) # Pop the menu up in the given coordinates
+        finally:
+            self.menu.grab_release() # Release it once an option is selected
+
+    def cut(self):
+        self.inputToBind.event_generate("<<Cut>>")
+        
+    def paste(self):
+        self.inputToBind.event_generate("<<Paste>>")
+
+    def copy(self):
+        self.inputToBind.event_generate("<<Copy>>")
+
+    def selectAll(self):
+        if isinstance(self.inputToBind, tk.Entry):
+            self.inputToBind.select_range(0, 'end')
+        else:
+            #lines = len(self.inputToBind.get("1.0", "end").split('\n'))
+            self.inputToBind.tag_add('sel', '{}.0'.format(1), '{}.end'.format(1))
+            #print(str(lines))
+
+
+class editEntry(tk.Entry):
+    def __init__(self, parent=None, width=None, textvariable=None, state=None, validate="key", maxlen=None):
+        tk.Entry.__init__(self, parent, textvariable=textvariable, width=width, state=state, validate=validate)
+        self.win = parent.win
+        menuEdit(parent.win, self)
+        if maxlen:
+            self.config(validatecommand=(parent.register(self.validate), '%P', maxlen))
+        
+    def validate(self, P, maxlen):
+        #pdb.set_trace()
+        if len(P) <= int(maxlen):
+            return True
+        else:
+            self.win.bell()
+            return False
+            
+            
+class resizeFrame(tk.Frame):
+    def __init__(self, parent=None, borderwidth = None, relief=None, bg = None, pack = True):
+        tk.Frame.__init__(self, parent, borderwidth = borderwidth, relief=relief, bg=bg)
+        self.win = parent
+        if pack:
+            self.pack(expand=YES, fill=BOTH)            
