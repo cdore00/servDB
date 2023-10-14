@@ -10,7 +10,10 @@ from tkinter.constants import *
 from tkinter import *
 from PIL import ImageTk, Image
 from tkinter import filedialog
+from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
+from tkcalendar import Calendar
+from idlelib.tooltip import Hovertip
 
 from bson import ObjectId
 import time 
@@ -80,6 +83,7 @@ class modalDialogWin():
     def createDialog(self):
         self.pop = Toplevel(self.win)
         self.pop.title(self.title)
+        self.pop.bind("<KeyRelease>", self.checkKey)
         #self.pop.geometry("300x150")
         self.pop.attributes('-toolwindow', True)  #Removing minimize/maximize buttons    
         self.pop.bind('<Destroy>', self.closemodal)
@@ -103,7 +107,7 @@ class modalDialogWin():
         button1.grid(row=2, column=1)
  
         
-    def showDialog(self):
+    def showDialog(self, event=None):
         self.createDialog()
         x = self.win.winfo_x()
         y = self.win.winfo_y()
@@ -111,6 +115,7 @@ class modalDialogWin():
         self.pop.geometry(pos)
         self.createWidget()
         self.dframe.pack(expand= True, fill=BOTH, padx=5, pady=3, anchor=CENTER)
+        self.pop.focus()
         
     def close(self, event = None):
         self.closepop()
@@ -125,7 +130,13 @@ class modalDialogWin():
         self.closepop()
         self.showDialog()
 
-
+    def checkKey(self, event):
+        print(event.keysym, event.keysym=='a')
+        print(event)
+        if event.keycode==27:
+            self.close()
+    
+    
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, width, height, cornerradius, padding, color, bg, command=None, cursor=None):
         tk.Canvas.__init__(self, parent, borderwidth=0, 
@@ -396,8 +407,9 @@ class menuEdit():
         if isinstance(self.inputToBind, tk.Entry):
             self.inputToBind.select_range(0, 'end')
         else:
-            #lines = len(self.inputToBind.get("1.0", "end").split('\n'))
-            self.inputToBind.tag_add('sel', '{}.0'.format(1), '{}.end'.format(1))
+            lines = len(self.inputToBind.get("1.0", "end").split('\n'))
+            for nl in range(1,lines):
+                self.inputToBind.tag_add('sel', '{}.0'.format(nl), '{}.end'.format(nl))
             #print(str(lines))
 
 
@@ -405,6 +417,8 @@ class editEntry(tk.Entry):
     def __init__(self, parent=None, width=None, textvariable=None, state=None, validate="key", maxlen=None):
         tk.Entry.__init__(self, parent, textvariable=textvariable, width=width, state=state, validate=validate)
         self.win = parent.win
+        self.cntTry = 0
+        self.maxlen = maxlen
         menuEdit(parent.win, self)
         if maxlen:
             self.config(validatecommand=(parent.register(self.validate), '%P', maxlen))
@@ -415,6 +429,14 @@ class editEntry(tk.Entry):
             return True
         else:
             self.win.bell()
+            if self.cntTry > 2:
+                messagebox.showinfo(
+                    title="Maximum atteint",
+                    message=f"Ce champ a une longeur maximale de " + str(self.maxlen) + " caractères.") 
+                self.cntTry = 0
+            else:
+                self.cntTry += 1
+                
             return False
             
             
@@ -423,4 +445,52 @@ class resizeFrame(tk.Frame):
         tk.Frame.__init__(self, parent, borderwidth = borderwidth, relief=relief, bg=bg)
         self.win = parent
         if pack:
-            self.pack(expand=YES, fill=BOTH)            
+            self.pack(expand=YES, fill=BOTH, padx=10, pady=10)            
+            
+            
+            
+class selectDate(modalDialogWin):
+    def __init__(self, win, title = "Dialogue modal", optionalObject = None, geometry = None, theDate = None):
+        modalDialogWin.__init__(self, win=win, title = title, optionalObject = optionalObject, geometry = geometry)
+        self.theDate = theDate
+
+        #geometry = 1, 1.5, 2 , 2,3, 3...
+        adjX = 1 + geometry / 10
+        retX, retY, tFont, wh = int(-1 * geometry * adjX), int(-6 * geometry), int(12 * geometry)+1, int(10 * geometry)
+        canvas = tk.Canvas(optionalObject, bg="white", borderwidth = 2, relief="raised")
+        canvas.grid()
+        txtid = canvas.create_text(retX, retY, text='📅', fill='blue', font=('Segoe', tFont), anchor='nw')  
+        bbox = canvas.bbox(txtid)  
+        canvas.configure(width=wh, height=wh) 
+        canvas.grid(row=0, column=0) 
+        Hovertip(canvas,"Calendrier")
+        canvas.bind("<Button-1>", self.showDialog )
+         
+
+    
+    def createWidget(self):
+        self.pop.bind("<Double-Button-1>", self.selDate)
+        self.seldate = self.obj
+        self.cal = Calendar(self.pop, selectmode = 'day',date_pattern="y-mm-dd")
+        self.cal.pack()
+        
+        butFrame = tk.Frame(self.pop)
+        butFrame.pack(pady = 5)
+        buttonC = ttk.Button(butFrame, text="Ok", command=self.selDate, width=10)
+        buttonC.grid(row=0, column=0, padx = 15) 
+        buttonC = ttk.Button(butFrame, text="Annuler", command=self.close, width=10)
+        buttonC.grid(row=0, column=1, padx = 15)        
+
+    def selDate(self, event = None):
+        seldate = self.cal.get_date()
+        if isinstance(self.theDate, StringVar):
+            self.theDate.set(seldate)
+        if isinstance(self.seldate, str):
+            self.theDate = seldate    
+        if isinstance(self.seldate, list):
+            self.theDate.append(seldate)
+            self.theDate.append(datetime.datetime.strptime(seldate, "%Y-%m-%d"))
+        #pdb.set_trace()
+        print(self.theDate)
+        dt = datetime.datetime.strptime(seldate, "%Y-%m-%d")
+        self.close()            

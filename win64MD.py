@@ -21,7 +21,7 @@ from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
 from tkinter.tix import *
 from tkinter.scrolledtext import ScrolledText
-import tkinterwidgets as tkw 
+#import tkinterwidgets as tkw 
 from idlelib.tooltip import Hovertip
 
 import urllib
@@ -29,7 +29,9 @@ import urllib.request
 import dropbox, base64
 from PIL import ImageTk, Image
 import webbrowser
+
 import cdControl as cdc
+import winGolf as wg
 
 # JSON
 from bson import ObjectId
@@ -144,7 +146,7 @@ class editerRecette():
     def modify(self, forNew = False):
         #pdb.set_trace()
         self.butEdit.pack_forget()
-        self.butModif = Frame(self.butframe)
+        self.butModif = tk.Frame(self.butframe)
         self.butModif.pack()
         butAnn = ttk.Button(self.butModif, text="Annuler", command=self.annuler, width=20 )  #.pack()
         butAnn.grid(row=0, column=0, padx=5, sticky="WE")        
@@ -188,7 +190,7 @@ class editerRecette():
         
         slavelist = self.ingrFrame.slaves()
         for elem in slavelist:
-            if not isinstance(elem, Frame):
+            if not isinstance(elem, tk.Frame):
                 elem.destroy()
 
 
@@ -220,6 +222,8 @@ class editerRecette():
     def annuler(self):
         self.pop.destroy()
         
+        
+    """    
     #recPrep = tk.Entry(recframe, textvariable=varPrep, state="readonly", width=20, validate="key", validatecommand=(self.win.register(self.validate), '%P', 10))
     #valMax20 = (self.win.register(self.validate), '%P', 10)
     def validate(self, P, maxlen):
@@ -229,7 +233,7 @@ class editerRecette():
         else:
             self.win.bell()
             return False
-
+    """
 
     def handle_focus(self, event):
         if event.widget == self.pop:
@@ -294,8 +298,7 @@ class editerRecette():
  
     def showRecette(self):
     
-        valMax20 = (self.win.register(self.validate), '%P', 10)
-        
+        #valMax20 = (self.win.register(self.validate), '%P', 10)
         editArr = []
 
         self.pop = tk.Toplevel(self.win)
@@ -303,8 +306,6 @@ class editerRecette():
         self.masterForm.recetteWin.append(self.pop)
         self.pop.title(self.recData["nom"])
         self.pop.iconbitmap(APPICON)
-        
-        #self.pop.bind("<FocusIn>", self.handle_focus)
   
         self.scrollframe = cdc.VscrollFrame(self.pop)
         self.scrollframe.pack(expand= True, fill=BOTH) 
@@ -370,7 +371,7 @@ class editerRecette():
         recCuis = cdc.editEntry(recframe, textvariable=varCuis, state="readonly", width=20, maxlen=15)
         recCuis.grid(column=1, row=4, sticky=tk.W, padx=5, pady=3)
         editArr.append(("varCuis", varCuis))
-        cdc.menuEdit(self.win, recCuis)
+        #cdc.menuEdit(self.win, recCuis)
         
         ttk.Label(recframe, text='Portions:').grid(column=0, row=5, sticky=tk.W, padx=5, pady=3)
         varPort = StringVar()
@@ -378,7 +379,7 @@ class editerRecette():
         recPort = cdc.editEntry(recframe, textvariable=varPort, state="readonly", width=20, maxlen=15)
         recPort.grid(column=1, row=5, sticky=tk.W, padx=5, pady=3)
         editArr.append(("varPort", varPort))
-        cdc.menuEdit(self.win, recPort)
+        #cdc.menuEdit(self.win, recPort)
         
         ttk.Label(recframe, text='Source URL:').grid(column=0, row=6, sticky=tk.W, padx=5, pady=3)
         varURL = StringVar()
@@ -386,7 +387,7 @@ class editerRecette():
         recURL = cdc.editEntry(recframe, textvariable=varURL, state="readonly", width=90, maxlen=200)
         recURL.grid(column=1, row=6, columnspan=2, sticky=tk.W, padx=5, pady=3)
         editArr.append(("varURL", varURL))
-        cdc.menuEdit(self.win, recURL)
+        #cdc.menuEdit(self.win, recURL)
         
         ttk.Label(recframe, text='Publié:').grid(column=0, row=7, sticky=tk.W, padx=5, pady=3)
         indPublie = tk.StringVar()
@@ -403,7 +404,7 @@ class editerRecette():
 
         editArr.append( ( "ingr", self.add_ingr() ) )
         
-        self.prepFrame = Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
+        self.prepFrame = tk.Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
         lbl = ttk.Label(self.prepFrame, text=self.PREP, font=('Calibri 15 bold'))
         lbl.pack(expand= True, fill=BOTH, padx=10, anchor=W)
         
@@ -423,9 +424,9 @@ class editerRecette():
         self.prepFrame.pack(expand= True, fill=BOTH, padx=10, pady=10)
         
         
-        self.butframe = Frame(self.scrollframe.interior)
+        self.butframe = tk.Frame(self.scrollframe.interior)
         self.butframe.pack(expand= True, fill=BOTH, anchor=CENTER)
-        self.butEdit = Frame(self.butframe)
+        self.butEdit = tk.Frame(self.butframe)
         self.butEdit.pack()
         butAnn = ttk.Button(self.butEdit, text="Annuler", command=self.annuler, width=15 ) 
         butAnn.grid(row=0, column=0, padx=5, sticky="WE")        
@@ -466,10 +467,11 @@ class editerRecette():
                 #pdb.set_trace()
                 self.modifControl(self.ingrFrame.slaves()) 
         else:               # Premier appel
-            self.ingrFrame = Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
+            self.ingrFrame = cdc.resizeFrame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE, pack=False)
+            #self.ingrFrame = tk.Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
             self.ingrFrame.pack(expand= True, fill=BOTH, padx=10, pady=10)
         
-            headFrm = Frame(self.ingrFrame)
+            headFrm = tk.Frame(self.ingrFrame)
             headFrm.pack(expand= True, fill=X, padx=10, anchor=W)
             lbl=ttk.Label(headFrm, text=self.INGR, font=('Calibri 15 bold'), width=10)
             lbl.grid(column=0, row=0, sticky=tk.W, padx=5)
@@ -483,19 +485,20 @@ class editerRecette():
             ingVal.append(self.recData["ingr"][rown - 1])
             ingVal[rown - 1] = tk.StringVar()
             ingVal[rown - 1].set(self.recData["ingr"][rown - 1])
-            ingr = tk.Entry(self.ingrFrame, textvariable= (ingVal[rown - 1]), state="readonly")
+            ingr = cdc.editEntry(self.ingrFrame, textvariable= (ingVal[rown - 1]), state="readonly", maxlen=100)
+            #ingr = tk.Entry(self.ingrFrame, textvariable= (ingVal[rown - 1]), state="readonly")
             ingr.pack(expand= True, fill=BOTH, padx=5, pady=3)
             ingr.bind("<FocusIn>", self.handle_focus)
-            cdc.menuEdit(self.win, ingr)
+            #cdc.menuEdit(self.win, ingr)
             rown += 1
 
         
         return ingVal
         
     def add_prep(self, forNew = False):
-        #self.prepFrame = Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
+        #self.prepFrame = tk.Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
 
-        headFrm = Frame(self.prepFrame)
+        headFrm = tk.Frame(self.prepFrame)
         headFrm.pack(expand= True, fill=X, padx=10, anchor=W)
         lbl=ttk.Label(headFrm, text=self.PREP, font=('Calibri 15 bold'), width=10)
         lbl.grid(column=0, row=0, sticky=tk.W, padx=5)
@@ -531,6 +534,7 @@ class master_form_find():
         self.win = self.mainApp.win
         self.frame = self.mainApp.masterForm
         self.data = self.mainApp.dbObj
+        self.winGame = None
         self.recetteWin = []
         self.comboList = {}
         self.comboData = {}
@@ -786,7 +790,7 @@ class master_form_find():
         
     def add_input_frame(self):
 
-        formframe = Frame(self.frame)
+        formframe = tk.Frame(self.frame)
         
         if self.isRec:
             comboLbl = 'Catégorie:'
@@ -795,33 +799,6 @@ class master_form_find():
             comboLbl = 'Région:'
             ind_lbl = '(rechercher parmi les villes)'
         
-        def popup(event):
-            try:
-                menu.tk_popup(event.x_root,event.y_root) # Pop the menu up in the given coordinates
-            finally:
-                menu.grab_release() # Release it once an option is selected
-
-        def cut():
-            self.keyword.event_generate("<<Cut>>")
-            
-        def paste():
-            #clipboard = self.win.clipboard_get() # Get the copied item from system clipboard
-            #self.keyword.insert('end',clipboard) # Insert the item into the entry widget
-            self.keyword.event_generate("<<Paste>>")
-
-        def copy():
-            #inp = self.keyword.get() # Get the text inside entry widget
-            #self.win.clipboard_clear() # Clear the tkinter clipboard
-            #self.win.clipboard_append(inp) # Append to system clipboard
-            self.keyword.event_generate("<<Copy>>")
-
-
-        menu = Menu(self.win,tearoff=0) # Create a menu
-        menu.add_command(label='Couper',command=cut) # Create labels and commands
-        menu.add_command(label='Copier',command=copy) # Create labels and commands
-        menu.add_command(label='Coller',command=paste)
-
-
 
         # Mots clés recherche
         ttk.Label(formframe, text='Mots clés:').grid(column=0, row=0, sticky=tk.W)
@@ -835,7 +812,7 @@ class master_form_find():
         button = cdc.RoundedButton(formframe, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.resetForm)
         button.create_text(12,11, text="x", fill="black", font=('Helvetica 15 '))
         button.grid(column=2, row=0)
-        #Hovertip(button,"Blanchir le formulaire")
+        Hovertip(button,"Blanchir le formulaire")
 
         
         self.indIngr = tk.StringVar()
@@ -864,13 +841,23 @@ class master_form_find():
         
         for widget in formframe.winfo_children():
             widget.grid(padx=5, pady=5)
+            
+        if not self.isRec:
+            ttk.Button(formframe, text='Parties', command=self.getGames).grid(column=2, row=4)
 
         return formframe
-        
+
+    def getGames(self):
+        #pdb.set_trace()
+        if self.winGame is None or self.winGame.isDestroy:
+            self.winGame = wg.listGames(self)
+        else:
+            self.winGame.winDim()
+
  
     def add_button_frame(self):
 
-        formframe = Frame(self.frame)
+        formframe = tk.Frame(self.frame)
         ttk.Button(formframe, text='Rechercher', command=self.getDataList).grid(column=0, row=0)
         ttk.Button(formframe, text='Connecter', command=self.login).grid(column=0, row=3)
         
@@ -901,10 +888,11 @@ class master_form_find():
  
 class dbaseObj():
     def __init__(self, *args, **kwargs):
+        self.data = None
         self.dbase = ""
         self.server = {
             "Local": "mongodb://localhost:27017",
-            "Vultr": "mongodb://"
+            "Vultr": "mongodb://cdore:925@cdore.ddns.net:6600/?authSource=admin&ssl=false"
             }
         self.isConnect = False
 
@@ -1143,10 +1131,11 @@ class editWin(cdc.modalDialogWin):
             elemList += elem + "\n"
         editList.insert('1.0',elemList)
         editList.pack( padx=5, pady=3)  #fill=BOTH,     expand= True, fill=X, anchor=CENTER, padx=5, pady=3
+        editList.focus()
 
-        butframe = Frame(self.dframe, pady=5, padx=5)
+        butframe = tk.Frame(self.dframe, pady=5, padx=5)
         butframe.pack(fill=X)
-        butEdit = Frame(butframe)
+        butEdit = tk.Frame(butframe)
         butEdit.pack( padx=15)
         buttonC = ttk.Button(butEdit, text="Ok", command=  lambda: self.saveListElem(editList), width=10) 
         buttonC.grid(row=1, column=0, padx=5, sticky="WE") 
@@ -1239,7 +1228,7 @@ class createMasterForm():
 
         self.setApp(connectApp = connectOn)
     
-    def setApp(self, serv = "Local", appName = "Recettes", connectApp = True):
+    def setApp(self, serv = "Local", appName = "Golf", connectApp = True):
         self.actAppDB = appName + " - " + serv
         self.win.update_idletasks()       
         self.win.title(self.actAppDB)
@@ -1263,7 +1252,7 @@ class createMasterForm():
         else:
             self.win.geometry("600x500")
  
-        self.masterForm = Frame(self.win, borderwidth = 1, relief=RIDGE)
+        self.masterForm = tk.Frame(self.win, borderwidth = 1, relief=RIDGE)
         self.masterForm.pack( fill=X, padx=10, pady=10)
                 
         self.mForm = master_form_find(self)        
