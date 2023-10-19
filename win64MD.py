@@ -2,26 +2,30 @@
 #https://stackoverflow.com/questions/71677889/create-a-scrollbar-to-a-full-window-tkinter-in-python
 #https://pyinstaller.org/en/stable/usage.html#cmdoption-hidden-import
 #pyinstaller main.py --onefile --name test --icon test.ico --noconsole
+#Mise à jour et sécurité/Sécurité Windows/Protection contre les virus/Gérer les paramètres/Protection en temps réel
+#Scripts\pyinstaller win64MD.py --onefile --name golf --noconsole
+#Scripts\pyinstaller  -F --add-data C:\Users\charl\AppData\Local\Programs\Python\Python39\tcl\tix8.4.3;tcl\tix8.4.3 win64MD.py
 #C:\Users\charl\AppData\Local\Programs\Python\Python39\Scripts
 #scripts\pyinstaller --onefile code\win64MD.py
 import pdb
 #; pdb.set_trace()
+
 import sys, os, io, re, cgi, csv, urllib.parse
 import json
 import time 
 import datetime
-import asyncio
-from call_function_with_timeout import SetTimeout
-from call_function_with_timeout import SetTimeoutDecorator
+from sys import argv
+
+from bson.json_util import dumps
 
 from tkinter import *
 import tkinter as tk
+from tkinter import * 
+from tkinter import tix
 
 from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
-from tkinter.tix import *
 from tkinter.scrolledtext import ScrolledText
-#import tkinterwidgets as tkw 
 from idlelib.tooltip import Hovertip
 
 import urllib
@@ -35,8 +39,9 @@ import winGolf as wg
 
 # JSON
 from bson import ObjectId
-from bson.json_util import dumps
-from bson.json_util import loads
+
+#from bson.json_util import dumps
+#from bson.json_util import loads
 import json
 import phonetics
 
@@ -44,7 +49,7 @@ import phonetics
 import pymongo
 from pymongo import MongoClient
 
-
+EDITOK = False
 APPICON = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
 
 class editerRecette():
@@ -82,6 +87,7 @@ class editerRecette():
         
         self.recData["nomU"] = cdc.scanName(self.recData["nom"])
         self.recData["nomP"] = phonetics.metaphone(self.recData["nom"])
+        self.pop.title(self.recData["nom"])
         
         #Ingrédients
         #pdb.set_trace()
@@ -181,6 +187,9 @@ class editerRecette():
         for elem in slavelist:
             if isinstance(elem, tk.Entry) or isinstance(elem, ttk.Checkbutton) or isinstance(elem, ttk.Combobox) :
                 elem['state'] = 'normal'
+                elem.bind("<FocusIn>", self.handle_focus)
+                if isinstance(elem, ttk.Combobox):
+                    elem.config(state="readonly")
 
     
     def newRec(self):
@@ -214,26 +223,16 @@ class editerRecette():
         self.editList["ingr"] = []
         self.recData["prep"] = []
         self.editList["prep"] = []   
-        self.recData.pop("hist")
+        if "hist" in self.recData:
+            self.recData.pop("hist")
+        self.imageObj.deleteImage()
         
         self.winDim()
 
                 
-    def annuler(self):
+    def annuler(self):   
         self.pop.destroy()
         
-        
-    """    
-    #recPrep = tk.Entry(recframe, textvariable=varPrep, state="readonly", width=20, validate="key", validatecommand=(self.win.register(self.validate), '%P', 10))
-    #valMax20 = (self.win.register(self.validate), '%P', 10)
-    def validate(self, P, maxlen):
-        #pdb.set_trace()
-        if len(P) <= int(maxlen):
-            return True
-        else:
-            self.win.bell()
-            return False
-    """
 
     def handle_focus(self, event):
         if event.widget == self.pop:
@@ -242,7 +241,7 @@ class editerRecette():
         else:
             self.focusElem = event.widget
             #print("I have gained the focus:   Widget=" + str(event.widget))
-
+        self.objMess.clearMess()
 
     def addElem(self, section):
         #pdb.set_trace()
@@ -297,7 +296,7 @@ class editerRecette():
 
  
     def showRecette(self):
-    
+
         #valMax20 = (self.win.register(self.validate), '%P', 10)
         editArr = []
 
@@ -305,12 +304,13 @@ class editerRecette():
         #self.pop.attributes('-fullscreen', True)
         self.masterForm.recetteWin.append(self.pop)
         self.pop.title(self.recData["nom"])
-        self.pop.iconbitmap(APPICON)
+        if os.path.exists(APPICON):
+            self.pop.iconbitmap(APPICON)
   
         self.scrollframe = cdc.VscrollFrame(self.pop)
         self.scrollframe.pack(expand= True, fill=BOTH) 
 
-        self.objMess = cdc.messageObj(self.scrollframe.interior, self.pop)
+        self.objMess = cdc.messageObj(self.scrollframe.interior)
         
               
         #recframe = tk.Frame(self.scrollframe.interior, borderwidth = 1, relief=RIDGE)
@@ -428,14 +428,18 @@ class editerRecette():
         self.butframe.pack(expand= True, fill=BOTH, anchor=CENTER)
         self.butEdit = tk.Frame(self.butframe)
         self.butEdit.pack()
-        butAnn = ttk.Button(self.butEdit, text="Annuler", command=self.annuler, width=15 ) 
-        butAnn.grid(row=0, column=0, padx=5, sticky="WE")        
-        butMod = ttk.Button(self.butEdit, text="Modifier", command=self.modify, width=15 ) 
-        butMod.grid(row=0, column=1, padx=5, sticky="WE") 
-        butNew = ttk.Button(self.butEdit, text="Ajouter", command=self.newRec, width=15 ) 
-        butNew.grid(row=0, column=2, padx=5, sticky="WE") 
-        butDel = ttk.Button(self.butEdit, text="Supprimer", command=self.delRec, width=15 ) 
-        butDel.grid(row=0, column=3, padx=5, sticky="WE") 
+        if EDITOK:
+            butAnn = ttk.Button(self.butEdit, text="Annuler", command=self.annuler, width=15 ) 
+            butAnn.grid(row=0, column=0, padx=5, sticky="WE")        
+            butMod = ttk.Button(self.butEdit, text="Modifier", command=self.modify, width=15 ) 
+            butMod.grid(row=0, column=1, padx=5, sticky="WE") 
+            butNew = ttk.Button(self.butEdit, text="Ajouter", command=self.newRec, width=15 ) 
+            butNew.grid(row=0, column=2, padx=5, sticky="WE") 
+            butDel = ttk.Button(self.butEdit, text="Supprimer", command=self.delRec, width=15 ) 
+            butDel.grid(row=0, column=3, padx=5, sticky="WE") 
+        else:
+            butAnn = ttk.Button(self.butEdit, text="Fermer", command=self.annuler, width=15 ) 
+            butAnn.grid(row=0, column=0, padx=5, sticky="WE")            
 
         self.editList = dict(editArr)
         
@@ -558,18 +562,18 @@ class master_form_find():
     def loadCombo(self, comboObj = None, val = None):
         if self.data.isConnect:    
             if comboObj != None:
-                 #pdb.set_trace()
                  cat_list = list(self.comboList.keys())
                  comboObj["values"] = cat_list
                  if val != None:
                     comboObj.current(cat_list.index(val))
             else:
                 if self.isRec:
-                    li = loads(self.data.getCat())
+                    li = (self.data.getCat())
                     fld = "desc"
                 else:
-                    li = loads(self.data.getReg())
+                    li = (self.data.getReg())
                     fld = "Nom"
+                #pdb.set_trace()
                 self.comboData = li
                 arg, lst = [], []
                 arg.append("Toutes")
@@ -599,7 +603,7 @@ class master_form_find():
             else:
                 cat = self.comboList[cat]
                 
-            if wrd == '' and cat == 0:
+            if wrd == '' and cat == 0 and not self.isRec:
                 messagebox.showinfo(
                     title="Recherche",
                     message=f"Veuillez sélectionner critère ")             
@@ -607,13 +611,13 @@ class master_form_find():
                 
                 
             if self.isRec:
-                oData = loads(self.data.searchRecettes(wrd, indI, cat))
+                oData = (self.data.searchRecettes(wrd, indI, cat))
                 listItems = oData["data"]
                 colW = [10, 3, 3, 3, 3, 1]
                 colH = ["Nom", "Catégorie", "Temps prép.", "Cuisson", "Portion", "Publié"]
                 colB = ["Nom de la recette", "Catégorie de la recette", "Temps de préparation", "Temps de cuission", "Nombre de portions", "Non publié"]
             else:         
-                oData = loads(self.data.searchClubs(wrd, indI, cat))
+                oData = (self.data.searchClubs(wrd, indI, cat))
                 listItems = oData["data"]                             
                 colW = [4, 1, 1, 7, 3, 3]
                 colH = ["Club", "Parc.", "Trous", "Adresse", "Ville", "Région"]
@@ -779,7 +783,7 @@ class master_form_find():
         id = e.widget._values
         #print(str(id))
         rec = self.data.getReccette(id)
-        winEdit = editerRecette(self, loads(rec)[0])
+        winEdit = editerRecette(self, (rec)[0])
 
     def resetForm(self):
         self.keyword.delete(0, END)
@@ -892,7 +896,7 @@ class dbaseObj():
         self.dbase = ""
         self.server = {
             "Local": "mongodb://localhost:27017",
-            "Vultr": "mongodb://cdore:925@cdore.ddns.net:6600/?authSource=admin&ssl=false"
+            "Vultr": ""
             }
         self.isConnect = False
 
@@ -905,7 +909,6 @@ class dbaseObj():
             
             DBclient.server_info()
             self.data = DBclient[self.dbase]
-            #self.getCat()
             self.isConnect = True
         except:
             self.isConnect = False
@@ -914,14 +917,14 @@ class dbaseObj():
     def getCat(self, info = False):    
         col = self.data.categorie
         docs = col.find({})
-        res = dumps(docs)
-        return res
+        #res = (docs)
+        return list(docs)
 
     def getReg(self, info = False):    
         col = self.data.regions
         docs = col.find({})
-        res = dumps(docs)
-        return res
+        #res = (docs)
+        return list(docs)
 
     def searchRecettes(self, wrd = '', ingr = 0, cat = 0):
 
@@ -993,7 +996,7 @@ class dbaseObj():
         #pdb.set_trace()
         #res=li
         res["data"]=li
-        return dumps(res)
+        return (res)
 
     def searchClubs(self, wrd = '', ville = 0, region = 0):
        
@@ -1073,7 +1076,7 @@ class dbaseObj():
                 #print("MODE = 2 " + str(query))
                 res["ph"] = True
         res["data"]=li
-        return dumps(res)
+        return (res)
         
         
     def getRecList(self, info = ""): 
@@ -1084,7 +1087,7 @@ class dbaseObj():
         fields = {"_id": 1,"nom": 1, "cat": 1, "temp": 1, "cuis": 1, "port": 1, "state": 1}
         docs = col.find(query, fields).collation({"locale": "fr","strength": 1}).sort("nom")
 
-        res = dumps(docs)
+        res = (docs)
         return res        
 
     def getReccette(self, info = ""): 
@@ -1095,26 +1098,26 @@ class dbaseObj():
         #fields = {"_id": 1,"nom": 1, "cat": 1, "temp": 1, "cuis": 1, "port": 1, "state": 1}
         docs = col.find(query).collation({"locale": "fr","strength": 1}).sort("nom")
 
-        res = dumps(docs)
+        res = (docs)
         return res      
 
     def saveRecette(self, oRec):
         col = self.data.recettes
         oID = oRec["_id"]
         doc = col.update_one({ '_id': oID}, { '$set': oRec },  upsert=True )
-        return dumps(doc.raw_result)
+        return (doc.raw_result)
 
     def addRecette(self, oRec):
         col = self.data.recettes
 
         doc = col.insert_one(oRec, {"new":True})
-        return dumps({'n': 0, 'ok': 1.0})
+        return ({'n': 0, 'ok': 1.0})
         
     def deleteRecette(self, oID):
         col = self.data.recettes
 
         doc = col.delete_one({"_id": oID })
-        return dumps(doc.raw_result)
+        return (doc.raw_result)
 
 class editWin(cdc.modalDialogWin):
     def createWidget(self):
@@ -1228,7 +1231,7 @@ class createMasterForm():
 
         self.setApp(connectApp = connectOn)
     
-    def setApp(self, serv = "Local", appName = "Golf", connectApp = True):
+    def setApp(self, serv = "Vultr", appName = "Recettes", connectApp = True):
         self.actAppDB = appName + " - " + serv
         self.win.update_idletasks()       
         self.win.title(self.actAppDB)
@@ -1263,10 +1266,11 @@ class createMasterForm():
 
 def create_main_window():
 
-    win = tk.Tk()
+    win = tix.Tk()
     win.minsize(480,300)
     #win.resizable(0, 0)
-    win.iconbitmap(APPICON)
+    if os.path.exists(APPICON):
+        win.iconbitmap(APPICON)
     l = int(win.winfo_screenwidth() / 2)
     win.geometry(f"+{l}+100")
     
@@ -1275,6 +1279,13 @@ def create_main_window():
     win.mainloop()
 
 if __name__ == "__main__": 
-  
+    if len(argv) > 1:
+        arg = [x for x in argv]
+        param = arg[1]
+        if param.isnumeric():
+            Pvalid = 260658 + datetime.datetime.today().day
+            if int(param) == Pvalid:
+                EDITOK = True
+              
     create_main_window()
     

@@ -14,6 +14,7 @@ from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
 from tkcalendar import Calendar
 from idlelib.tooltip import Hovertip
+from collections import defaultdict
 
 from bson import ObjectId
 import time 
@@ -131,8 +132,8 @@ class modalDialogWin():
         self.showDialog()
 
     def checkKey(self, event):
-        print(event.keysym, event.keysym=='a')
-        print(event)
+        #print(event.keysym, event.keysym=='a')
+        #print(event)
         if event.keycode==27:
             self.close()
     
@@ -346,7 +347,7 @@ class modifRecImg(modalDialogWin):
     def createWidget(self):
 
         datURL = self.obj.localImage if self.obj.localImage else self.obj.imgURL
-        print(datURL)
+        #print(datURL)
         if datURL == '' or datURL == 'undefined' :
             txt = "Ajouter..."
         else:
@@ -491,6 +492,82 @@ class selectDate(modalDialogWin):
             self.theDate.append(seldate)
             self.theDate.append(datetime.datetime.strptime(seldate, "%Y-%m-%d"))
         #pdb.set_trace()
-        print(self.theDate)
+        #print(self.theDate)
         dt = datetime.datetime.strptime(seldate, "%Y-%m-%d")
         self.close()            
+        
+        
+class sortGridObj():
+    def __init__(self, headFrame, headLabels, headConfig):
+        self.colNbr = len(headLabels)
+        self.headLabels = headLabels
+        self.gridframe = None
+        self.colHeadObj = []
+            
+        for col in range(self.colNbr):
+            lbl = tk.Label(headFrame, text= headLabels[col], bg="lightgrey", pady=10, width= headConfig[col]["length"], borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=0, column= col, sticky=tk.NSEW) 
+            self.colHeadObj.append(lbl)
+                   
+        for col in range(self.colNbr):
+            self.colHeadObj[col].bind("<Button-1>", lambda event, colHeadObj = self.colHeadObj, labels = headLabels, col= col, typ=headConfig[col]["type"]: self.sortCol(event, colHeadObj, labels, col, typ)) 
+
+    def setGridframe(self, gridframe):
+        self.gridframe = gridframe      
+        
+    def sortGrid(self, colSort, typ="N", reverse=False):
+        otherCol = "col_labels_list"
+        colNbr = self.colNbr
+        #print(reverse)
+        #get data
+        sort_label = self.gridframe.grid_slaves(column=colSort)
+        for col in range(colNbr):
+            globals()[otherCol + str(col)] = self.gridframe.grid_slaves(column=col)
+
+        lenList = len(sort_label)
+        label_values=[]
+        data=defaultdict(list)
+        #pdb.set_trace()
+        for idx,_ in enumerate(sort_label):
+            label=self.gridframe.grid_slaves(row=idx,column=colSort)[0]
+            data[label].append(label['text'])
+            if typ=="N":
+                label_values.append(int(label['text']))
+            else:
+                label_values.append(label['text'])
+
+        #sort data grid
+        sort=sorted(label_values,reverse=reverse)
+        arrPos = []
+        for idx,value in enumerate(sort):
+            pos=0
+            for v in globals()[otherCol + str(colSort)]:
+                if v["text"] == str(value) and not pos in arrPos:
+                    #label.grid(row=idx, column=colSort)
+                    for col in range(colNbr):
+                        globals()[otherCol + str(col)][pos].grid(row=idx, column=col)
+
+                    arrPos.append(pos)
+                    break
+                pos += 1   
+        #pdb.set_trace()
+        x=2
+            
+
+    def sortCol(self, event, colHeadObj, labels, col, typ):
+        #pdb.set_trace()
+        colNbr = len(labels)
+        
+        if "▲" in event.widget["text"]:
+            event.widget["text"] = labels[col] + "▼"
+            reverse=True
+        else:
+            event.widget["text"] = labels[col] + "▲"
+            reverse=False  
+
+        for colN in range(colNbr):
+            if colN != col:
+                colHeadObj[colN]["text"] = labels[colN]
+            
+        self.sortGrid(col, typ, reverse)
+        x=1
