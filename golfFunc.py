@@ -456,7 +456,7 @@ def searchResult(param, self):
                 docs = col.find(query).collation({"locale": "fr","strength": 1}).sort("nom")
                 li = list(docs)
                 print("MODE = 2 " + str(query))
-        res["ph"] = True
+                res["ph"] = True
         res["data"]=li
         col = dataBase.regions
         res["regions"] = col.find({})
@@ -688,11 +688,11 @@ def countUserGame(param, self):
             if (is18 == 18):
                 count = coll.count_documents({"USER_ID": user, "T18": { "$exists": True, "$nin": [ 0 ] }})
                 if withGroup == True:
-                    group = coll.aggregate([ {"$match" : {"USER_ID": user, "T18": { "$exists": True, "$nin": [ 0 ] }}}, {"$group" : {"_id":{"name":"$name","parcours":"$PARCOURS_ID"}, "count":{"$sum":1}}} ])
+                    group = coll.aggregate([ {"$match" : {"USER_ID": user, "T18": { "$exists": True, "$nin": [ 0 ] }}}, {"$group" : {"_id":{"name":"$name","parcours":"$PARCOURS_ID"}, "count":{"$sum":1}}}, { "$sort" : {"_id" : 1 } } ])
             else:
                 count = coll.count_documents({"USER_ID": user, "$or":[{"T18":0},{"T18":None}]  } )
                 if withGroup == True:
-                    group = coll.aggregate([ {"$match" : {"USER_ID": user, "$or":[{"T18":0},{"T18":None}]  }}, {"$group" : {"_id":{"name":"$name","parcours":"$PARCOURS_ID"}, "count":{"$sum":1}}} ])
+                    group = coll.aggregate([ {"$match" : {"USER_ID": user, "$or":[{"T18":0},{"T18":None}]  }}, {"$group" : {"_id":{"name":"$name","parcours":"$PARCOURS_ID"}, "count":{"$sum":1}}}, { "$sort" : {"_id" : 1 } } ])
             if withGroup == True:
                 return ('{"count":' + str(count) + ',"group":' + dumps(group) + '}')
             else:

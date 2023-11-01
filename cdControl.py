@@ -19,8 +19,8 @@ from collections import defaultdict
 from bson import ObjectId
 import time 
 import datetime
-#import winsound
-#winsound.Beep(500, 60)
+import webbrowser
+
 import dropbox, base64
 
 def milliToDate(milli, showTime = False):
@@ -38,17 +38,31 @@ def scanName(name):
             pos = C_WA.find(car)
             name = name.replace(car, C_NA[pos:pos+1], 1)
     return name.upper()
+
+def showWebURL(url):
+    webbrowser.open_new_tab(url)
     
+def webCallClub(e, val = 0):
+    id = e.widget._values
+    if val:
+        url = id[val]
+    else:
+        url = "https://cdore.ddns.net/ficheClub.html?data=" + str(id[val])
+    
+    showWebURL(url)    
+
+
 class VscrollFrame(ttk.Frame):
     def __init__(self, parent, *args, **kw):
         ttk.Frame.__init__(self, parent, *args, **kw)
-        
+        self.win = parent
         #Create a canvas object and a vertical scrollbar for scrolling it.
         vscrollbar = ttk.Scrollbar(self, orient=VERTICAL)
         vscrollbar.pack(fill=Y, side=RIGHT, expand=FALSE)
         self.canvas = tk.Canvas(self, bd=0, highlightthickness=0,
-                                width = 200, height = 300,
+                                width = 200, height = 100,
                                 yscrollcommand=vscrollbar.set)
+                                
         self.canvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
         vscrollbar.config(command = self.canvas.yview)
         
@@ -71,7 +85,11 @@ class VscrollFrame(ttk.Frame):
             #Update the inner frame's width to fill the canvas
             self.canvas.itemconfigure(self.interior_id, width=self.canvas.winfo_width())
             
+    def scroll(self, scrollTo = '1'):
+        self.win.update_idletasks()
+        self.canvas.yview_moveto(str(scrollTo))
         
+            
 class modalDialogWin():
     def __init__(self, win, title = "Dialogue modal", optionalObject = None, geometry = None, *args, **kwargs):
         self.win = win              #Parent window
@@ -179,15 +197,21 @@ class RoundedButton(tk.Canvas):
             self.command()
             
 class messageObj():
-    def __init__(self, parent, objToBind = None, *args, **kwargs):
+    def __init__(self, parent, objToBind = None, height=0):
         self.parent = parent
+        self.height = height
         self.objToBind = objToBind  #Object to click to clear message
         self.messLabel = None
-        self.messframe = tk.Frame(self.parent, height=0)
+        self.messframe = tk.Frame(self.parent, height=height)
         self.messframe.pack(fill=X)
+        self.showMess(" ")
 
-    def showMess(self, message, color = '#f00'):
+    def showMess(self, message, type = "E", color = ""):
         #pdb.set_trace()
+        if color == "" :
+            color = '#f00' # color = rouge par défaut
+            if type == "I":
+                color = "#22B14C"   # Si type = Information: color = vert
         self.clearMess()
         self.messLabel = tk.Label(self.messframe, font=('Calibri 12'), fg= color)
         self.messLabel.config(text= message)
@@ -204,7 +228,7 @@ class messageObj():
             self.objToBind.unbind("<Button-1>")
         if not self.messLabel is None:
             self.messLabel.destroy()
-            self.messframe.config(height=1)
+            self.messframe.config(height=self.height)
             self.messframe.update_idletasks()
         
         
@@ -415,8 +439,11 @@ class menuEdit():
 
 
 class editEntry(tk.Entry):
-    def __init__(self, parent=None, width=None, textvariable=None, state=None, validate="key", maxlen=None):
-        tk.Entry.__init__(self, parent, textvariable=textvariable, width=width, state=state, validate=validate)
+    def __init__(self, parent=None, width=None, textvariable=None, state=None, validate="key", maxlen=None, font='', fg='black', bg='white'):
+        if font:
+            tk.Entry.__init__(self, parent, textvariable=textvariable, width=width, state=state, validate=validate, font=font, fg=fg, bg=bg)
+        else:
+            tk.Entry.__init__(self, parent, textvariable=textvariable, width=width, state=state, validate=validate)
         self.win = parent.win
         self.cntTry = 0
         self.maxlen = maxlen
@@ -498,7 +525,7 @@ class selectDate(modalDialogWin):
         
         
 class sortGridObj():
-    def __init__(self, headFrame, headLabels, headConfig):
+    def __init__(self, headFrame, headLabels, headConfig, toolTip = []):
         self.colNbr = len(headLabels)
         self.headLabels = headLabels
         self.gridframe = None
@@ -506,7 +533,10 @@ class sortGridObj():
             
         for col in range(self.colNbr):
             lbl = tk.Label(headFrame, text= headLabels[col], bg="lightgrey", pady=10, width= headConfig[col]["length"], borderwidth = 1, relief=RIDGE )
-            lbl.grid(row=0, column= col, sticky=tk.NSEW) 
+            lbl.grid(row=0, column= col, sticky=tk.NSEW)
+            tt = toolTip[col] + "\n" if toolTip else ""
+            tt += "Cliquer pour trier"
+            Hovertip(lbl,tt)
             self.colHeadObj.append(lbl)
                    
         for col in range(self.colNbr):
