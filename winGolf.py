@@ -28,9 +28,6 @@ import pymongo
 from pymongo import MongoClient
 
 
-APPICON = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
-
-
 blocksCol = {"BOr": ["black", "gold"],
             "BArgent": ["white", "silver"],
             "BBronze": ["white", "#A67D3D"],
@@ -46,7 +43,69 @@ blocksCol = {"BOr": ["black", "gold"],
             "BNormale": ["black", "#eee"],
             "BHdcp": ["black", "#eee"]}
 
+def getBlocsArr(blocColl):
+    blocsArray = []
+    #pdb.set_trace()
+    for x in blocColl:
+        if x["Bloc"] != "Normale" and x["Bloc"] != "Hdcp":
+            blocsArray.append(x["Bloc"])
+    return blocsArray
 
+def calculTot(Tval, is18):
+    totO, totI = 0, 0
+    for tr in range(0,9):
+        v = Tval[tr].get()
+        if v:
+            totO += int(v)       
+    if is18:
+        for tr in range(9,18):
+            v = Tval[tr].get()
+            if v:
+                totI += int(v)
+    return totO, totI
+
+def getGameScore(TG, PG, LG, dat, is18):
+    def isValid(v):
+        if not v.isnumeric():
+            return False
+        else:
+            return True
+                
+    for tr in range(0,9):
+        v = TG[tr].get()
+        if not isValid(v):
+            return False
+        dat["T" + str(tr+1)] = int(v)
+        v = PG[tr].get()
+        if not isValid(v):
+            return False
+        dat["P" + str(tr+1)] = int(v)
+        v = LG[tr].get()
+        if v == "":
+            dat["L" + str(tr+1)] = 0
+        else:
+            if not isValid(v):
+                return False
+            dat["L" + str(tr+1)] = int(v)
+    if is18:
+        for tr in range(9,18):
+            v = TG[tr].get()
+            if not isValid(v):
+                return False
+            dat["T" + str(tr+1)] = int(v)
+            v = PG[tr].get()
+            if not isValid(v):
+                return False
+            dat["P" + str(tr+1)] = int(v)
+            v = LG[tr].get()
+            if v == "":
+                dat["L" + str(tr+1)] = 0
+            else:
+                if not isValid(v):
+                    return False
+                dat["L" + str(tr+1)] = int(v)
+    return True
+                    
 class listGames():
     def __init__(self, masterForm, *args, **kwargs):
         #pdb.set_trace()
@@ -68,12 +127,12 @@ class listGames():
     def showGames(self):
     
         self.pop = tk.Toplevel(self.win)
+        #self.pop.overrideredirect(True)
         #second_win.protocol('WM_DELETE_WINDOW',lambda: onclose(second_win))
         self.pop.protocol('WM_DELETE_WINDOW',self.destroyRef)
 
         self.pop.title("Parties")
-        if os.path.exists(APPICON):
-            self.pop.iconbitmap(APPICON)       
+        self.pop.iconbitmap(GOLFICON)   
         
         # Search form 
         self.formFrame = tk.Frame(self.pop, borderwidth = 1, relief=RIDGE)
@@ -164,9 +223,9 @@ class listGames():
                 if cnt < 10:
                     h += i
                 cnt += 1
-
+            cnt = 1 if cnt == 0 else cnt
             handi = ("Hand.: " + str(round(h/10,1)) if r==20 else "")
-            return handi, ("Moy.: " + str(round(m/cnt,1)))    
+            return handi, ("Moy.: " + str(round(m/cnt,1)))
     
         
         # Grid score games
@@ -242,7 +301,7 @@ class listGames():
         lbl.grid(row=0, column=2, sticky=tk.NSEW)        
 
         
-    def nextGame(self):
+    def nextGame(self, noskip = False):
         intDat = 0
         parcours = self.comboClubVal[self.comboClub.current()]
         trou = self.comboTrouVal[self.comboTrou.current()]
@@ -254,8 +313,12 @@ class listGames():
         if dat != '':
             dt = datetime.datetime.strptime(dat, "%Y-%m-%d")
             intDat = dt.timestamp() * 1000
-        
-        self.listGamesScore( user=80, parc=parcours, skip=self.skip, limit=nbr, is18=trou, intDate=intDat)
+        if noskip:
+            self.skip -= nbr
+        if self.skip < 0:
+            self.skip = 0
+            
+        self.listGamesScore( user=USER_ID, parc=parcours, skip=self.skip, limit=nbr, is18=trou, intDate=intDat)
         
     
     def clearForm(self):
@@ -279,7 +342,7 @@ class listGames():
     def loadClubCombo(self, event=None):
         
         is18 = self.comboTrou.current() == 0
-        dataList = self.countUserGame(is18=is18)
+        dataList = self.countUserGame(USER_ID, is18=is18)
         #pdb.set_trace()
         self.comboClubVal, clubList = [], []
         self.comboClubVal.append(0)
@@ -292,7 +355,7 @@ class listGames():
         self.comboClub["values"] = clubList
        
     
-    def getGameList(self, user=80, parc=0, skip=0, limit=20, is18=18, intDate=0):
+    def getGameList(self, user, parc=0, skip=0, limit=20, is18=18, intDate=0):
         #pdb.set_trace()
         if intDate == 0:   # ou 0 ???
             intDate = 9999999999999
@@ -310,7 +373,7 @@ class listGames():
 
         return list(docs)
         
-    def countUserGame(self, is18=True, user=80):
+    def countUserGame(self, user, is18=True):
         """
         param = param["data"][0]
         para = [x for x in param.split("$")]
@@ -375,7 +438,9 @@ class listGames():
         self.pop.geometry(f"{w}x{h}") 
         my = self.masterForm.win.winfo_x() - w - 5
         my = 0 if my < 0 else my
-        self.pop.geometry(f"+{my}+0")
+        mt = self.masterForm.win.winfo_y()
+        self.pop.geometry(f"+{my}+{mt}")        
+        #self.pop.geometry(f"+{my}+0")
         self.win.update_idletasks()
         self.pop.attributes('-topmost', True)
         self.pop.attributes('-topmost', False)
@@ -394,18 +459,25 @@ class listGames():
              
     def showGame(self, event):
         id = event.widget._values
-        #pdb.set_trace()
-        dat = self.getGame(str(id))
-        winGame = winShowGame(self.pop, dat)
+        winGame = winShowGame(self, id)
         
         
 class winShowGame():
-    def __init__(self, winListGames, Gdata):
-       
-        is18 = "T18" in Gdata and type(Gdata["T18"]) == int
-
-        self.pop = tk.Toplevel(winListGames)
+    def __init__(self, winListGames, id):
+        
+        self.winListGames = winListGames
+        self.blocColl = None
+        Gdata = winListGames.getGame(str(id))
         #print(Gdata)
+        self.gameID = Gdata["_id"]
+        self.Gdata = Gdata
+        is18 = "T18" in Gdata and type(Gdata["T18"]) == int
+        self.is18 = is18
+
+        self.pop = tk.Toplevel(winListGames.pop)
+        self.pop.iconbitmap(GOLFICON)
+        self.objMess = cdc.messageObj(self.pop, height=25)
+
         titleFrame = tk.Frame(self.pop)
         titleFrame.pack()
         lbl = tk.Label(titleFrame, text= Gdata['score_date'] + " : ")
@@ -417,13 +489,11 @@ class winShowGame():
         
         recframe = tk.Frame(self.pop, borderwidth = 1, relief=RIDGE, padx=10, pady=5)
         recframe.pack(expand= True, fill=BOTH)
+        self.recframe = recframe
+        self.recframe.win = self.pop
         
         # Trou
-        if not 'bloc' in Gdata:
-            bn, bg, fg = "Trou#", "#eee", "#eee"
-        else:
-            bn, bg, fg = Gdata['bloc'][1:], blocksCol[Gdata['bloc']][1], blocksCol[Gdata['bloc']][0]
-        lbl = tk.Label(recframe, text= bn, bg= bg, fg= fg , borderwidth = 1, relief=RIDGE )
+        lbl = tk.Label(recframe, text= 'Trou', borderwidth = 1, relief=RIDGE )
         lbl.grid(row=0, column=0, sticky="WE")        
         for tr in range(1,10):
             lbl = tk.Label(recframe, text= str(tr), borderwidth = 1, relief=RIDGE, width = 3 )
@@ -439,8 +509,8 @@ class winShowGame():
                 lbl.grid(row=0, column=tr-1, sticky="WE")        
             lbl = tk.Label(recframe, text= "IN", borderwidth = 1, width = 4, relief=RIDGE )
             lbl.grid(row=0, column=20, sticky="WE")  
-        lbl = tk.Label(recframe, text= "Total", borderwidth = 1, width = 4, relief=RIDGE )
-        lbl.grid(row=0, column=21, sticky="WE")
+            lbl = tk.Label(recframe, text= "Total", borderwidth = 1, width = 4, relief=RIDGE )
+            lbl.grid(row=0, column=21, sticky="WE")
         
         #pdb.set_trace()
         # Par
@@ -465,13 +535,19 @@ class winShowGame():
                 pIN += int(Pdat["T" +str(tr-2)])
             lbl = tk.Label(recframe, text= str(pIN), borderwidth = 1, relief=RIDGE )
             lbl.grid(row=r, column=20, sticky="WE")                
-        lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
-        lbl.grid(row=r, column=21, sticky="WE")
+            lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")
 
         # Score
         r = 2
         pOUT, pIN = 0, 0
-        lbl = tk.Label(recframe, text= 'Score', borderwidth = 1, relief=RIDGE )
+        if not 'bloc' in Gdata:
+            bn, bg, fg = "Trou#", "#eee", "#eee"
+        else:
+            bn, bg, fg = Gdata['bloc'][1:], blocksCol[Gdata['bloc']][1], blocksCol[Gdata['bloc']][0]
+        lbl = tk.Label(recframe, text= bn, bg= bg, fg= fg , borderwidth = 1, relief=RIDGE )
+        
+        
         lbl.grid(row=r, column=0, sticky="WE")        
         for tr in range(1,10):
             lbl = tk.Label(recframe, text= Gdata["T" +str(tr)], borderwidth = 1, relief=RIDGE )
@@ -489,8 +565,8 @@ class winShowGame():
                 pIN += int(Gdata["T" +str(tr-2)])
             lbl = tk.Label(recframe, text= str(pIN), borderwidth = 1, relief=RIDGE )
             lbl.grid(row=r, column=20, sticky="WE")                
-        lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
-        lbl.grid(row=r, column=21, sticky="WE")  
+            lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")  
 
          # Diff
         r = 3
@@ -518,16 +594,40 @@ class winShowGame():
                 pIN += diff
             lbl = tk.Label(recframe, text= str(pIN), borderwidth = 1, relief=RIDGE )
             lbl.grid(row=r, column=20, sticky="WE")                
-        lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
-        lbl.grid(row=r, column=21, sticky="WE")
+            lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")
         
-        # Pénalité
+        # Puts
         r = 4
+        pOUT, pIN = 0, 0
+        lbl = tk.Label(recframe, text= 'Putts', borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=0, sticky="WE")        
+        for tr in range(1,10):
+            lbl = tk.Label(recframe, text= Gdata["P" +str(tr)], borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=tr, sticky="WE")
+            pOUT += int(Gdata["P" +str(tr)])
+        if not is18:
+            lbl = tk.Label(recframe, text= str(pOUT), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=10, sticky="WE")            
+        else:
+            lbl = tk.Label(recframe, text= str(pOUT), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=10, sticky="WE")        
+            for tr in range(12,21):
+                lbl = tk.Label(recframe, text= Gdata["P" +str(tr-2)], borderwidth = 1, relief=RIDGE )
+                lbl.grid(row=r, column=tr-1, sticky="WE")   
+                pIN += int(Gdata["P" +str(tr-2)])
+            lbl = tk.Label(recframe, text= str(pIN), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=20, sticky="WE")                
+            lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")  
+
+        # Pénalité
+        r = 5
         pOUT, pIN = 0, 0
         lbl = tk.Label(recframe, text= 'Pénalité', borderwidth = 1, relief=RIDGE )
         lbl.grid(row=r, column=0, sticky="WE")        
         for tr in range(1,10):
-            lbl = tk.Label(recframe, text= Gdata["L" +str(tr)], borderwidth = 1, relief=RIDGE )
+            lbl = tk.Label(recframe, text= ("" if self.Gdata["L" +str(tr)] == 0 else self.Gdata["L" +str(tr)]), borderwidth = 1, relief=RIDGE )
             lbl.grid(row=r, column=tr, sticky="WE")
             pOUT += int(Gdata["L" +str(tr)])
         if not is18:
@@ -537,17 +637,146 @@ class winShowGame():
             lbl = tk.Label(recframe, text= str(pOUT), borderwidth = 1, relief=RIDGE )
             lbl.grid(row=r, column=10, sticky="WE")        
             for tr in range(12,21):
-                lbl = tk.Label(recframe, text= Gdata["L" +str(tr-2)], borderwidth = 1, relief=RIDGE )
+                lbl = tk.Label(recframe, text= ("" if self.Gdata["L" +str(tr-2)] == 0 else self.Gdata["L" +str(tr-2)]), borderwidth = 1, relief=RIDGE )
                 lbl.grid(row=r, column=tr-1, sticky="WE")   
                 pIN += int(Gdata["L" +str(tr-2)])
             lbl = tk.Label(recframe, text= str(pIN), borderwidth = 1, relief=RIDGE )
             lbl.grid(row=r, column=20, sticky="WE")                
-        lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
-        lbl.grid(row=r, column=21, sticky="WE")  
+            lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")
+            
+        r = 6
+        lbl = tk.Label(recframe, text= "Carte", font= ('Segoe 9 underline'), fg="#0000FF")
+        lbl._values = [Gdata["PARCOURS_ID"], Gdata['bloc']]
+        lbl.bind("<Button-1>", self.showCard)
+        lbl.grid(row=r, column=0, columnspan=22, sticky="WE")
 
-        butClose = ttk.Button(self.pop, text="Fermer", command=self.close, width=15 ) 
-        butClose.pack()
-        x=2
+        butFrame = tk.Frame(self.pop, pady=5)
+        butFrame.pack(expand= True, side=LEFT, fill=X, anchor=CENTER)
+        self.butEdit = tk.Frame(butFrame)
+        self.butEdit.pack()
+        butClose = ttk.Button(self.butEdit, text="Fermer", command=self.close, width=15) 
+        butClose.grid(row=0, column=0, sticky="WE", padx=5)
+
+        if self.winListGames.masterForm.userRole == "ADM" or self.winListGames.masterForm.userRole == "MEA"  or self.winListGames.masterForm.userRole == "MEM":        
+            butEdit = ttk.Button(self.butEdit, text="Éditer", command=self.editGame, width=15) 
+            butEdit.grid(row=0, column=1, sticky="WE", padx=5)
+
+            
+    def delGame(self):
+        answer = askyesno(title='Suppression',
+            message='Supprimer la partie')
+        if answer:
+            #print("Delete: " + str(self.gameID))
+            coll = self.winListGames.data.score
+            docr = coll.delete_one({"_id": self.gameID})
+            self.winListGames.nextGame(noskip=True)
+            self.close()
+            
+        
+    def editGame(self):
+        #print("Éditer")
+        
+        TG, PG, LG = [], [], []
+        self.TG, self.PG, self.LG = TG, PG, LG
+        butClose = ttk.Button(self.butEdit, text="Annuler", command=self.close, width=15) 
+        butClose.grid(row=0, column=0, sticky="WE", padx=5)        
+        butEdit = ttk.Button(self.butEdit, text="Enregistrer", command=self.savegame, width=15) 
+        butEdit.grid(row=0, column=1, sticky="WE")       
+        butDel = ttk.Button(self.butEdit, text="Supprimer", command=self.delGame, width=15) 
+        butDel.grid(row=0, column=2, sticky="WE", padx=5)
+        r = 2
+
+        blocColl = self.getParcBlocs(self.Gdata['PARCOURS_ID'])
+        self.blocCollVal = getBlocsArr(blocColl)
+        
+        self.comboBloc = ttk.Combobox( self.recframe, state="readonly", width=5)
+        self.comboBloc["values"] = self.blocCollVal
+        self.comboBloc.current(self.blocCollVal.index(self.Gdata['bloc'][1:]))
+        self.comboBloc.grid(row=r, column=0, sticky=tk.W)         
+        
+        for tr in range(1,10):        
+            TG.append(self.Gdata["T" +str(tr)])
+            TG[tr - 1] = tk.StringVar()
+            TG[tr - 1].set(self.Gdata["T" +str(tr)])
+            fld = cdc.editEntry(self.recframe, width=2, textvariable= (TG[tr - 1]), isNum=True, maxlen=2)        
+            fld.grid(row=r, column=tr, sticky="WE")
+            fld.bind("<KeyRelease>", lambda event, Tval=TG , row=r: self.calcTot(event, Tval, row))
+        if self.is18:
+            for tr in range(10,19):        
+                TG.append(self.Gdata["T" +str(tr)])
+                TG[tr - 1] = tk.StringVar()
+                TG[tr - 1].set(self.Gdata["T" +str(tr)])
+                fld = cdc.editEntry(self.recframe, width=2, textvariable= (TG[tr - 1]), isNum=True, maxlen=2)        
+                fld.grid(row=r, column=tr+1, sticky="WE")
+                fld.bind("<KeyRelease>", lambda event, Tval=TG , row=r: self.calcTot(event, Tval, row))
+            lbl = tk.Label(self.recframe, text= " ", borderwidth = 1, relief=RIDGE )
+            
+            lbl.grid(row=r+1, column=0, columnspan=22, sticky="WE") 
+
+        r = 4
+        for tr in range(1,10):        
+            PG.append(self.Gdata["P" +str(tr)])
+            PG[tr - 1] = tk.StringVar()
+            PG[tr - 1].set(self.Gdata["P" +str(tr)])
+            fld = cdc.editEntry(self.recframe, width=2, textvariable= (PG[tr - 1]), isNum=True, maxlen=2)        
+            fld.grid(row=r, column=tr, sticky="WE")
+            fld.bind("<KeyRelease>", lambda event, Tval=PG , row=r: self.calcTot(event, Tval, row))
+        if self.is18:
+            for tr in range(10,19):        
+                PG.append(self.Gdata["P" +str(tr)])
+                PG[tr - 1] = tk.StringVar()
+                PG[tr - 1].set(self.Gdata["P" +str(tr)])
+                fld = cdc.editEntry(self.recframe, width=2, textvariable= (PG[tr - 1]), isNum=True, maxlen=2)        
+                fld.grid(row=r, column=tr+1, sticky="WE")
+                fld.bind("<KeyRelease>", lambda event, Tval=PG , row=r: self.calcTot(event, Tval, row))
+            lbl = tk.Label(self.recframe, text= " ", borderwidth = 1, relief=RIDGE )        
+        
+        r = 5
+        for tr in range(1,10):        
+            LG.append(self.Gdata["L" +str(tr)])
+            LG[tr - 1] = tk.StringVar()
+            LG[tr - 1].set(("" if self.Gdata["L" +str(tr)] == 0 else self.Gdata["L" +str(tr)]))
+            fld = cdc.editEntry(self.recframe, width=2, textvariable= (LG[tr - 1]), isNum=True, maxlen=2)        
+            fld.grid(row=r, column=tr, sticky="WE")
+            fld.bind("<KeyRelease>", lambda event, Tval=LG , row=r: self.calcTot(event, Tval, row))
+        if self.is18:
+            for tr in range(10,19):        
+                LG.append(self.Gdata["L" +str(tr)])
+                LG[tr - 1] = tk.StringVar()
+                LG[tr - 1].set(("" if self.Gdata["L" +str(tr)] == 0 else self.Gdata["L" +str(tr)]))
+                fld = cdc.editEntry(self.recframe, width=2, textvariable= (LG[tr - 1]), isNum=True, maxlen=2)        
+                fld.grid(row=r, column=tr+1, sticky="WE")
+                fld.bind("<KeyRelease>", lambda event, Tval=LG , row=r: self.calcTot(event, Tval, row))
+            lbl = tk.Label(self.recframe, text= " ", borderwidth = 1, relief=RIDGE )   
+
+
+    def savegame(self):
+               
+        dat = {}
+        dat["bloc"] = "B" + self.comboBloc.get()
+        #pdb.set_trace()
+        if not getGameScore(self.TG, self.PG, self.LG, dat, self.is18):
+            self.objMess.showMess("Une valeur numérique est requise.")
+        else:
+            coll = self.winListGames.data.score
+            docr = coll.update_one({"_id": self.gameID}, { "$set": dat })
+            self.objMess.showMess("Enregistré!", type = "I")
+        #print(dat)
+        
+    def calcTot(self, event, Tval, r):
+        self.objMess.clearMess()
+        totO, totI = calculTot(Tval, self.is18)
+
+        lbl = tk.Label(self.recframe, text= str(totO), borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=10, sticky="WE")   
+        
+        if self.is18:
+            lbl = tk.Label(self.recframe, text= str(totI), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=20, sticky="WE")   
+            lbl = tk.Label(self.recframe, text= str(totO + totI), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")            
+
         
     def getDiffColor(self, diff):
         color = "#AAAAAA"
@@ -567,6 +796,45 @@ class winShowGame():
     def close(self):
         self.pop.destroy()
 
+    def getParcBlocs(self, parcID):
+        if self.blocColl is None:
+            coll = self.winListGames.data.blocs
+            Bdoc = coll.find({"PARCOURS_ID": parcID })
+            self.blocColl = list(Bdoc) 
+        return self.blocColl     
+        
+    def showCard(self, event):
+        #pdb.set_trace()
+        pid, bloc = event.widget._values[0], event.widget._values[1][1:]
+
+        blocColl = self.getParcBlocs(pid)
+        
+        r = 6
+        for x in blocColl:
+            #x['Blocs'] = self.getBloc(x["_id"]) 
+            if x['Bloc'] != 'Normale':
+                bn, bg, fg = x['Bloc'][1:], blocksCol["B" + x['Bloc']][1], blocksCol["B" + x['Bloc']][0]
+                #print(x)
+                lbl = tk.Label(self.recframe, text= x["Bloc"], bg= bg, fg= fg , borderwidth = 1, relief=RIDGE )            
+                lbl.grid(row=r, column=0, sticky="WE")            
+                for tr in range(1,10):
+                    lbl = tk.Label(self.recframe, text= x["T" +str(tr)], bg= bg, fg= fg, borderwidth = 1, relief=RIDGE )
+                    lbl.grid(row=r, column=tr, sticky="WE")
+                if not self.is18:
+                    lbl = tk.Label(self.recframe, text= x["Aller"], bg= bg, fg= fg, font= ('Segoe 9 bold'), borderwidth = 1, relief=RIDGE )
+                    lbl.grid(row=r, column=10, sticky="WE")                 
+                else:
+                    lbl = tk.Label(self.recframe, text= x["Aller"], bg= bg, fg= fg, borderwidth = 1, relief=RIDGE )
+                    lbl.grid(row=r, column=10, sticky="WE")        
+                    for tr in range(12,21):
+                        lbl = tk.Label(self.recframe, text= x["T" +str(tr-2)], bg= bg, fg= fg, borderwidth = 1, relief=RIDGE )
+                        lbl.grid(row=r, column=tr-1, sticky="WE")   
+                    lbl = tk.Label(self.recframe, text= x["Retour"], bg= bg, fg= fg, borderwidth = 1, relief=RIDGE )
+                    lbl.grid(row=r, column=20, sticky="WE")  
+                    lbl = tk.Label(self.recframe, text= x["Total"], font= ('Segoe 9 bold'), bg= bg, fg= fg, borderwidth = 1, relief=RIDGE, width = 5 )
+                    lbl.grid(row=r, column=21, sticky="WE")
+                r += 1
+
 
 class showClubWin():
     def __init__(self, masterForm, clubID):
@@ -578,20 +846,20 @@ class showClubWin():
         #print(str(clubID))
         self.showClub(clubID)
         
+
+    def getBloc(self, parcID):
+        coll = self.data.blocs
+        Bdoc = coll.find({"PARCOURS_ID": parcID })
+        return list(Bdoc)
+
     def getClubParc(self, clubID):
 
-        def getBloc(parcID):
-            coll = self.data.blocs
-            Bdoc = coll.find({"PARCOURS_ID": parcID })
-            return list(Bdoc)
-            
         coll = self.data.club
         docs = coll.find({"_id": clubID })
         doc = list(docs)[0]
         for x in doc["courses"]:
-            x['Blocs'] = getBloc(x["_id"])
-        
-        
+            x['Blocs'] = self.getBloc(x["_id"])
+
         return doc
         
     def showClub(self, clubID):
@@ -606,6 +874,7 @@ class showClubWin():
         #print(clubData)
         self.pop = tk.Toplevel(self.win)
         self.pop.title(clubData["nom"])
+        self.pop.iconbitmap(GOLFICON)
         self.masterForm.childWin.append(self.pop)
         
         # Club info
@@ -691,6 +960,9 @@ class showClubWin():
             det += str(Pdata["TROUS"]) + " trous"
             lbl = tk.Label(titleParcFrame, text= det, font= ('Segoe 9 bold'), anchor=W)
             lbl.grid(row=0, column=0, sticky=tk.W)
+            if self.masterForm.userRole == "ADM" or self.masterForm.userRole == "MEA"  or self.masterForm.userRole == "MEM":
+                butAddGame = ttk.Button(titleParcFrame, text="Ajouter une partie", command= lambda Pdata=Pdata, nom=clubData["nom"]: self.addGame(Pdata, nom)) 
+                butAddGame.grid(row=0, column=1, sticky=tk.W)
             
             # Blocs
 
@@ -758,6 +1030,8 @@ class showClubWin():
                     lbl = tk.Label(blocsFrame, text= Bdata["Slope"], bg= bg, fg= fg, borderwidth = 1, relief=RIDGE, width = 5)
                     lbl.grid(row=r, column=23, sticky=tk.W)
                 r += 1
+        
+        
         self.srcFrame.update()
 
 
@@ -770,6 +1044,10 @@ class showClubWin():
         self.gameWinDim()
         x=1
         #print(clubData)
+
+    def addGame(self, Pdata, nom):
+        addGameWin(self, Pdata, nom)
+        #print(str(parcID) + nom)
         
     def close(self):
         self.pop.destroy()
@@ -790,3 +1068,266 @@ class showClubWin():
         #print(" hi=" + str(hi) + " hb=" + str(hb) + " ht=" + str(ht))
         self.pop.geometry(f"{wt}x{ht}")    
        
+
+class addGameWin():
+    def __init__(self, masterForm, Pdata, nom):
+        self.win = masterForm.win
+        self.masterForm = masterForm.masterForm
+        
+        self.data = masterForm.data
+        #print(str(Pdata) + nom)
+        
+        self.showAddGame(Pdata, nom)
+        
+
+    def showAddGame(self, Pdata, nom):
+        TG, PG, LG = [], [], []
+        self.TG, self.PG, self.LG = TG, PG, LG
+        
+        self.pop = tk.Toplevel(self.win)
+        self.pop.title("Ajouter une partie")
+        self.pop.iconbitmap(GOLFICON)
+        self.masterForm.childWin.append(self.pop)
+        self.nomClub = nom
+        self.parcID = Pdata["_id"]
+        self.objMess = cdc.messageObj(self.pop, height=25)
+        
+        # Club info
+        self.infoFrame = tk.Frame(self.pop, padx=5)
+        self.infoFrame.pack(fill=X)
+               
+        infoParc = tk.Frame(self.infoFrame)
+        infoParc.pack(fill=X)
+        lbl = tk.Label(infoParc, text= "Club: ", anchor=W)
+        lbl.grid(row=0, column=0, sticky=tk.W)
+        lbl = tk.Label(infoParc, text= nom, anchor=W)
+        lbl.grid(row=0, column=1, sticky=tk.W)
+        if Pdata['PARCOURS'] != "":
+            lbl = tk.Label(infoParc, text= " - Parcours: " + Pdata['PARCOURS'], anchor=W)
+            lbl.grid(row=0, column=2, sticky=tk.W)
+
+        lbl = tk.Label(infoParc, text= "Date: ", anchor=W)
+        lbl.grid(row=1, column=0, sticky=tk.W)
+        self.varDate = StringVar()
+        self.varDate.set(time.strftime("%Y-%m-%d"))
+        recDate = Entry(infoParc, textvariable=self.varDate, width=14)
+        recDate.focus()
+        recDate.grid(row=1, column=1, sticky=tk.W, pady=3)
+        recDate.bind("<Button-1>", self.objMess.clearMess)
+        
+        calFrame = tk.Frame(infoParc)
+        cal = cdc.selectDate(self.pop, "Sélectionner la date de la partie", calFrame, 2, theDate=self.varDate)
+        calFrame.grid(row=1, column=2, sticky=tk.W, padx=0, pady=3)
+        
+        self.blocCollVal = getBlocsArr(Pdata['Blocs'])
+
+        lbl = tk.Label(infoParc, text= "Bloc: ", anchor=W)
+        lbl.grid(row=2, column=0, sticky=tk.W)        
+        self.comboBloc = ttk.Combobox( infoParc, state="readonly", width=10)
+        self.comboBloc["values"] = self.blocCollVal
+        self.comboBloc.current(0)
+        self.comboBloc.grid(row=2, column=1, sticky=tk.W)
+        self.comboBloc.bind("<<ComboboxSelected>>", self.setBloc)
+        
+
+        #Game info
+        is18 = True if Pdata["TROUS"] == 18 else False
+        self.is18 = is18
+
+        recframe = tk.Frame(self.pop, borderwidth = 1, relief=RIDGE, padx=10, pady=5)
+        recframe.pack(expand= True, fill=BOTH)
+        self.recframe = recframe
+        self.recframe.win = self.pop
+        
+        # Trou
+        lbl = tk.Label(recframe, text= 'Trou', borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=0, column=0, sticky="WE")        
+        for tr in range(1,10):
+            lbl = tk.Label(recframe, text= str(tr), borderwidth = 1, relief=RIDGE, width = 3 )
+            lbl.grid(row=0, column=tr, sticky="WE")
+        if not is18:
+            lbl = tk.Label(recframe, text= "Total", borderwidth = 1, width = 4, relief=RIDGE )
+            lbl.grid(row=0, column=10, sticky="WE")            
+        else:
+            lbl = tk.Label(recframe, text= "OUT", borderwidth = 1, width = 4, relief=RIDGE )
+            lbl.grid(row=0, column=10, sticky="WE")        
+            for tr in range(12,21):
+                lbl = tk.Label(recframe, text= str(tr-2), borderwidth = 1, width = 3, relief=RIDGE )
+                lbl.grid(row=0, column=tr-1, sticky="WE")        
+            lbl = tk.Label(recframe, text= "IN", borderwidth = 1, width = 4, relief=RIDGE )
+            lbl.grid(row=0, column=20, sticky="WE")  
+            lbl = tk.Label(recframe, text= "Total", borderwidth = 1, width = 4, relief=RIDGE )
+            lbl.grid(row=0, column=21, sticky="WE")
+
+        # Par
+        r = 1
+        pOUT, pIN = 0, 0
+        Pdat = Pdata['Blocs']
+        #pdb.set_trace()
+        Pdat = self.getBloc(Pdata['Blocs'], 'Normale')
+        lbl = tk.Label(recframe, text= 'Par', borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=0, sticky="WE")        
+        for tr in range(1,10):
+            lbl = tk.Label(recframe, text= Pdat["T" +str(tr)], borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=tr, sticky="WE")
+            pOUT += int(Pdat["T" +str(tr)])
+        if not is18:
+            lbl = tk.Label(recframe, text= str(pOUT), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=10, sticky="WE")            
+        else:
+            lbl = tk.Label(recframe, text= str(pOUT), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=10, sticky="WE")        
+            for tr in range(12,21):
+                lbl = tk.Label(recframe, text= Pdat["T" +str(tr-2)], borderwidth = 1, relief=RIDGE )
+                lbl.grid(row=r, column=tr-1, sticky="WE")   
+                pIN += int(Pdat["T" +str(tr-2)])
+            lbl = tk.Label(recframe, text= str(pIN), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=20, sticky="WE")                
+            lbl = tk.Label(recframe, text= str(pOUT + pIN), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")
+
+        # Score
+        r = 2
+        self.lblScore = tk.Label(recframe, text= 'Score', borderwidth = 1, relief=RIDGE )
+        self.lblScore.grid(row=r, column=0, sticky="WE")        
+        for tr in range(1,10):        
+            TG.append(Pdat["T" +str(tr)])
+            TG[tr - 1] = tk.StringVar()
+            TG[tr - 1].set(Pdat["T" +str(tr)])
+            fld = cdc.editEntry(self.recframe, width=2, textvariable= (TG[tr - 1]), isNum=True, maxlen=2)        
+            fld.grid(row=r, column=tr, sticky="WE")
+            fld.bind("<KeyRelease>", lambda event, Tval=TG , row=r: self.calcTot(event, Tval, row))
+        lbl = tk.Label(recframe, text= Pdat["Aller"], borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=10, sticky="WE")
+        if is18:
+            for tr in range(10,19):        
+                TG.append(Pdat["T" +str(tr)])
+                TG[tr - 1] = tk.StringVar()
+                TG[tr - 1].set(Pdat["T" +str(tr)])
+                fld = cdc.editEntry(self.recframe, width=2, textvariable= (TG[tr - 1]), isNum=True, maxlen=2)        
+                fld.grid(row=r, column=tr+1, sticky="WE")
+                fld.bind("<KeyRelease>", lambda event, Tval=TG , row=r: self.calcTot(event, Tval, row))
+            lbl = tk.Label(recframe, text= Pdat["Retour"], borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=20, sticky="WE")
+            lbl = tk.Label(recframe, text= Pdat["Total"], borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")
+        self.setBloc()
+
+        # Putts
+        r = 3
+        lbl = tk.Label(recframe, text= 'Putts', borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=0, sticky="WE")        
+        for tr in range(1,10):        
+            PG.append("2")
+            PG[tr - 1] = tk.StringVar()
+            PG[tr - 1].set("2")
+            fld = cdc.editEntry(self.recframe, width=2, textvariable= (PG[tr - 1]), isNum=True, maxlen=2)        
+            fld.grid(row=r, column=tr, sticky="WE")
+            fld.bind("<KeyRelease>", lambda event, Tval=PG , row=r: self.calcTot(event, Tval, row))
+        lbl = tk.Label(recframe, text= "18", borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=10, sticky="WE")
+        if is18:
+            for tr in range(10,19):        
+                PG.append("2")
+                PG[tr - 1] = tk.StringVar()
+                PG[tr - 1].set("2")
+                fld = cdc.editEntry(self.recframe, width=2, textvariable= (PG[tr - 1]), isNum=True, maxlen=2)        
+                fld.grid(row=r, column=tr+1, sticky="WE")
+                fld.bind("<KeyRelease>", lambda event, Tval=PG , row=r: self.calcTot(event, Tval, row))
+            lbl = tk.Label(recframe, text= "18", borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=20, sticky="WE")
+            lbl = tk.Label(recframe, text= "36", borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")
+
+        # Pénalité
+        r = 4
+        lbl = tk.Label(recframe, text= 'Pénalité', borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=0, sticky="WE")        
+        for tr in range(1,10):        
+            LG.append("0")
+            LG[tr - 1] = tk.StringVar()
+            LG[tr - 1].set("")
+            fld = cdc.editEntry(self.recframe, width=2, textvariable= (LG[tr - 1]), isNum=True, maxlen=2)        
+            fld.grid(row=r, column=tr, sticky="WE")
+            fld.bind("<KeyRelease>", lambda event, Tval=LG , row=r: self.calcTot(event, Tval, row))
+        lbl = tk.Label(recframe, text= "0", borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=10, sticky="WE")
+        if is18:
+            for tr in range(10,19):        
+                LG.append("0")
+                LG[tr - 1] = tk.StringVar()
+                LG[tr - 1].set("")
+                fld = cdc.editEntry(self.recframe, width=2, textvariable= (LG[tr - 1]), isNum=True, maxlen=2)        
+                fld.grid(row=r, column=tr+1, sticky="WE")
+                fld.bind("<KeyRelease>", lambda event, Tval=LG , row=r: self.calcTot(event, Tval, row))
+            lbl = tk.Label(recframe, text= "0", borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=20, sticky="WE")
+            lbl = tk.Label(recframe, text= "0", borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE")
+
+        butFrame = tk.Frame(self.pop, pady=5)
+        butFrame.pack(expand= True, side=LEFT, fill=X, anchor=CENTER)
+        self.butEdit = tk.Frame(butFrame)
+        self.butEdit.pack()
+        butClose = ttk.Button(self.butEdit, text="Fermer", command=self.close, width=15) 
+        butClose.grid(row=0, column=0, sticky="WE", padx=5)
+        butEdit = ttk.Button(self.butEdit, text="Enregistrer", command=self.saveGame, width=15) 
+        butEdit.grid(row=0, column=1, sticky="WE", padx=5)        
+
+    def saveGame(self):
+        dat = {}
+        
+        dat["USER_ID"] = USER_ID
+        dat["PARCOURS_ID"] = self.parcID
+        dat["bloc"] = "B" +self.comboBloc.get()
+        dat["name"] = self.nomClub
+        gameDate = self.varDate.get()
+        if gameDate == '':
+            self.objMess.showMess("La date de la partie est requise.")
+            return
+        else:
+            try:
+                dt = datetime.datetime.strptime(gameDate, "%Y-%m-%d")
+                dat["score_date"] = dt.timestamp() * 1000
+            except ValueError:
+                self.objMess.showMess("Le format de la date de la partie est invalide: AAAA-MM-JJ.")
+                return
+                
+        if not getGameScore(self.TG, self.PG, self.LG, dat, self.is18):
+            self.objMess.showMess("Une valeur numérique est requise.")
+        else:
+            coll = self.data.score
+            doc = coll.update_one({"score_date": dat["score_date"]}, { "$set": dat },  upsert=True )
+            self.objMess.showMess("Enregistré!", type = "I")
+            
+        #print(dat)
+        
+    def calcTot(self, event, Tval, r):
+        #self.objMess.clearMess()
+        totO, totI = calculTot(Tval, self.is18)
+
+        lbl = tk.Label(self.recframe, text= str(totO), borderwidth = 1, relief=RIDGE )
+        lbl.grid(row=r, column=10, sticky="WE")   
+        
+        if self.is18:
+            lbl = tk.Label(self.recframe, text= str(totI), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=20, sticky="WE")   
+            lbl = tk.Label(self.recframe, text= str(totO + totI), borderwidth = 1, relief=RIDGE )
+            lbl.grid(row=r, column=21, sticky="WE") 
+
+    def setBloc(self, event = None):
+        color = blocksCol["B" + self.comboBloc.get()]
+        #print(color)
+        self.lblScore.config(foreground= color[0])
+        self.lblScore.config(background= color[1])
+        self.objMess.clearMess()
+            
+    def close(self):
+        self.pop.destroy()
+        
+    def getBloc(self, blocColl, blocName):
+        #pdb.set_trace()
+        for x in blocColl:
+            if x["Bloc"] == blocName:
+                return x
+                break

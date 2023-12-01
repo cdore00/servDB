@@ -15,6 +15,7 @@ import json
 import time 
 import datetime
 from sys import argv
+import codecs
 
 from bson.json_util import dumps
 from bson.json_util import loads
@@ -38,6 +39,7 @@ from PIL import ImageTk, Image
 import cdControl as cdc
 import winGolf as wg
 import winRec  as wr
+import winUser  as wu
 
 # JSON
 from bson import ObjectId
@@ -49,8 +51,23 @@ import phonetics
 import pymongo
 from pymongo import MongoClient
 
+USER_ID = 0
+
+def set_userid(USER_ID):
+    wg.USER_ID = USER_ID
+    wr.USER_ID = USER_ID
+set_userid(USER_ID)
+
 EDITOK  = False
-APPICON = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
+wg.EDITOK = EDITOK
+RECICON  = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
+if not os.path.exists(RECICON):
+    RECICON = ''
+wr.RECICON = RECICON
+GOLFICON = 'C:/Users/charl/github/golf/images/golf.ico'
+if not os.path.exists(GOLFICON):
+    GOLFICON = ''
+wg.GOLFICON = GOLFICON
 CONFFILE = "winApp.conf"
 APPG    = "Golf"
 APPGBD  = "golf"
@@ -58,13 +75,16 @@ APPR    = "Recettes"
 APPRBD  = "resto"
 LSERV   = "Local"
 VSERV   = "Vultr"
+BUPDIR  = "./bupdata/"
+
         
 class master_form_find():
     def __init__(self, mainWin, *args, **kwargs):
         self.win = mainWin
         self.data = dbaseObj()
-        self.appdbName = { APPG: APPGBD,
-                            APPR: APPRBD}  
+        self.user = [""]
+        self.userName = ""
+        self.userRole = ""
         self.actApp   = APPR 
         self.actServ  = LSERV
         initInfo = self.readConfFile()
@@ -72,6 +92,7 @@ class master_form_find():
             self.actApp   = initInfo["init"][0] 
             self.actServ  = initInfo["init"][1]                             
         self.winGame = None
+        self.winUsers = None
         self.childWin = []
         self.comboList = {}
         self.comboData = {}
@@ -80,36 +101,55 @@ class master_form_find():
 
         self.setApp(self.actServ, self.actApp)
 
-
+    def quitter(self, e):
+        print("Quit")
+        self.win.quit
+    
     def setApp(self, serv, appName):
         self.actApp   = appName 
         self.actServ  = serv
         self.win.update_idletasks() 
         actAppDB = appName + " - " + serv
         self.win.title(actAppDB)
-
+        if self.actApp == APPR:
+            self.win.iconbitmap(RECICON)
+        if self.actApp == APPG:
+            self.win.iconbitmap(GOLFICON)
+            
         self.closeRec()
         slavelist = self.win.slaves()
         for elem in slavelist:
             elem.destroy()
         
         
+        # Création du menu
+        zoneMenu = Frame(self.win)
+        zoneMenu.pack(fill=X, anchor=W)
+        menuFichier = Menubutton(zoneMenu, text='Fichier', width='10', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
+        menuFichier.grid(row=0,column=0)
+        menuEdit = Button(zoneMenu, text='Quitter', width='10', font= ('Segoe 9 bold'), pady=1, borderwidth=2, relief = RAISED, command=self.win.quit)  #, command=self.win.quit  , Postcommand=self.win.quit
+        menuEdit.grid(row=0,column=1)    
+
+        menu_file = Menu(menuFichier, tearoff = 0)
+        menu_file.add_cascade(label='Connecter...', command = self.login)   #, activebackground='lightblue', activeforeground='black'
+        menu_file.add_separator()
+        menu_file.add_cascade(label='Authentifier...', command = self.authentif)
+        menu_file.add_cascade(label='Changer mot de passe...', command = self.changePass)
+
+        menuFichier.configure(menu=menu_file)            
+        
+        # Progress bar frame
+        self.pbFrame = tk.Frame(self.win)
+        self.pbFrame.pack(fill=X)
+
+        # Zone de message
         self.win.objMainMess = cdc.messageObj(self.win)
         self.win.objMainMess.showMess("Connexion...")
         self.win.update_idletasks() 
-        #pdb.set_trace()
 
-        if self.data.connectTo(serv, self.appdbName[appName]):
-            self.win.title(actAppDB + " : Connecté.")
-        else:
-            messagebox.showinfo(
-                title="Non connecté",
-                message=f"Veuillez sélectionner une autre connexion.")
-            self.win.title(actAppDB + " : Non connecté.")
-                
+        isConnected = self.data.connectTo(serv, appName)
         self.win.objMainMess.clearMess()    
-    
-    
+        
         mainFrame = tk.Frame(self.win, borderwidth = 1, relief=RIDGE)
         mainFrame.pack( fill=X, padx=10, pady=10)        
         mainFrame.columnconfigure(0, weight=1)
@@ -122,7 +162,22 @@ class master_form_find():
         formframe.grid(column=0, row=0)
         formframe = self.add_button_frame(mainFrame)
         formframe.grid(column=1, row=0) 
-        
+
+        if isConnected:
+            self.afficherTitre()
+        else:
+            messagebox.showinfo(
+                title="Non connecté",
+                message=f"Veuillez sélectionner une autre connexion.")
+            self.win.title(actAppDB + " : Non connecté.")
+        if not self.user:
+            menu_file.delete(3)
+        if self.userRole == "ADM":
+            menu_file.add_cascade(label='Gérer les utilisateurs...', command = self.getUsers)
+            menu_file.add_separator()
+            menu_file.add_command(label='Exporter...', command = self.makeBackup_db)
+            menu_file.add_command(label='Importer...', command = self.loadBackup_db)            
+            
         self.getDataList()
         
         if self.actApp == APPR:
@@ -130,10 +185,14 @@ class master_form_find():
         if self.actApp == APPG:
             self.win.geometry("600x500")        
 
-
+    
+    def afficherTitre(self):
+        self.win.title(self.actApp + " - " + self.actServ + " : Connecté " + ( "" if len(self.user) == 1 else " - " + self.userName))
+    
     def loadCombo(self, comboObj = None, val = None):
         if self.data.isConnect:    
             if comboObj != None:
+                 #pdb.set_trace()
                  cat_list = list(self.comboList.keys())
                  comboObj["values"] = cat_list
                  if val != None:
@@ -162,26 +221,32 @@ class master_form_find():
 
     def readConfFile(self):
         if os.path.exists(CONFFILE):
-            f = open(CONFFILE, 'r')
-            return loads(f.read())
-            f.close()
+            #pdb.set_trace()
+            with open(CONFFILE, encoding='utf8') as f:
+                js = eval(f.read())
+                return (js)            
         else:
             return {}
 
-    def setConfFile(self, param):
-         
+    def setConfFile(self, param = None):        
         #pdb.set_trace()
-        initInfo = self.readConfFile()
+        initInfo = (self.readConfFile())
+        
         initInfo["init"] = [self.actApp, self.actServ]
         initInfo[(self.actApp+self.actServ)] = {} 
         initInfo[(self.actApp+self.actServ)]["keyword"] = self.keyword.get()
         initInfo[(self.actApp+self.actServ)]["indIngr"] = self.indIngr.get()
-        initInfo[(self.actApp+self.actServ)]["comboCat"] = self.comboCat.current()        
+        initInfo[(self.actApp+self.actServ)]["comboCat"] = self.comboCat.current()
+        #if self.user != "":
+        initInfo[(self.actApp+self.actServ)]["user"] = self.user
+        #if param:
+        #    ke=list(param.keys())
+        #    initInfo[(self.actApp+self.actServ)][ke[0]] = param[ke[0]]       
 
-        f = open(CONFFILE, 'w+')
-        f.write(dumps(initInfo))
-        f.close()
-        #print("Info= " + str(initInfo))
+        with open(CONFFILE, 'w', encoding='utf-8') as f:
+            f.write(str(initInfo))
+            #f.close()
+
 
     def setDefault(self, initInfo = None):
         if (not initInfo is None and self.actApp+self.actServ) in initInfo:
@@ -189,19 +254,36 @@ class master_form_find():
             self.keyword.delete(0,END)
             self.keyword.insert(0,actInfo["keyword"])
             self.indIngr.set(actInfo["indIngr"])
-            self.comboCat.current(actInfo["comboCat"])    
+            self.comboCat.current(actInfo["comboCat"]) 
+            #pdb.set_trace()
+            if "user" in actInfo:
+                dt = datetime.datetime.now()    #Date actuelle
+                dtAct = dt.timestamp() * 1000
+                dt2day = (dtAct + 172800000)  #Date actuelle + 2 jours
+                
+                if len(actInfo["user"]) == 1 or actInfo["user"][1] < dtAct or dt2day < actInfo["user"][1]:
+                    del actInfo['user']
+                    self.user, self.userName, self.userRole = [""], "", ""
+                    return
+                else:
+                    self.user = actInfo["user"]
+                    userInfo = self.data.getUserInfo(self.user[0])
+                    self.userName = userInfo["Nom"]
+                    self.userRole = userInfo["niveau"]
+                    set_userid(userInfo["_id"])
+                    #print(userInfo)
+            else:
+                self.user, self.userName, self.userRole = [""], "", ""
         
     def getDataList(self, event = None):
-        #pdb.set_trace()
-        #print("self.data.isConnect:" + str(self.data.isConnect))
         
         if self.data.isConnect:
             wrd = self.keyword.get()
             indI = int(self.indIngr.get())
             cat = self.comboCat.get()
-            
-            self.setConfFile({"combCat": cat})
 
+            self.setConfFile()
+            
             if cat == "Toutes":
                 cat = 0
             else:
@@ -400,7 +482,7 @@ class master_form_find():
         button.grid(column=2, row=1)
         Hovertip(button,"Blanchir le formulaire")
         
-        self.indIngr = tk.StringVar()
+        self.indIngr = IntVar()
         self.indIngr.set(1)
         ind_check = ttk.Checkbutton(
             formframe,
@@ -436,12 +518,124 @@ class master_form_find():
 
         return formframe
 
+    def makeBackup_db(self):
+        answer = False        
+        collections = []
+        if self.actServ == VSERV :
+            app = cdc.logonWin(self.win)
+            res = app.showLogonBD()
+            #print("makeBackup_db" + str(res))
+            if not res is None:
+                answer = self.data.connectTo(self.actServ, self.actApp, res)
+                if answer:
+                    database = self.data.data
+                    collections = database.list_collection_names()
+                else:
+                    self.win.objMainMess.showMess("Échec de l'authentification!")
+                self.data.connectTo(self.actServ, self.actApp)
+        else:
+            answer = askyesno(title='Exporter', message='Exporter les données ? ')
+        database = self.data.data
+        if answer:
+            self.pb = cdc.progressBarObj(self.pbFrame)
+            self.pb.showBar()
+            self.win.objMainMess.showMess("Exportation des données: \n", "I")
+            
+            #pdb.set_trace()
+            if len(collections) == 0:
+                collections = database.list_collection_names()
+            percent = int(100 / len(collections))
+            cwd = os.getcwd()
+            buppath = cwd + "/" + BUPDIR            
+            if not os.path.exists(BUPDIR):
+                os.makedirs(buppath)
+
+            for i, collection_name in enumerate(collections):
+                self.pb.progress(percentVal = percent)
+                time.sleep(0.5)
+                #pdb.set_trace()
+                col = getattr(database,collections[i])
+                collection = col.find()
+                data = list(collection)
+                jsonName = collection_name + ".json"
+                jsonpath = BUPDIR + jsonName
+                with io.open(jsonpath, 'w', encoding='utf-8-sig') as fout:
+                    fout.write(str(data))
+                    fout.close()
+                self.win.objMainMess.addMess(jsonName + ", ", "I")
+            self.win.objMainMess.addMess("\nCOMPLÉTÉ: " + buppath, "I")
+            self.pb.kill()
+
+    def loadBackup_db(self):
+        answer = False        
+        collections = []
+        if self.actServ == VSERV :
+            app = cdc.logonWin(self.win)
+            res = app.showLogonBD()
+            
+            if not res is None:
+                answer = self.data.connectTo(self.actServ, self.actApp, res)
+                if answer:
+                    database = self.data.data
+                    collections = database.list_collection_names()
+                else:
+                    self.win.objMainMess.showMess("Échec de l'authentification!")
+                self.data.connectTo(self.actServ, self.actApp)
+        else:    
+            answer = askyesno(title='Importer', message='Importer les données ? ')
+        database = self.data.data
+        if answer:
+            self.pb = cdc.progressBarObj(self.pbFrame)
+            self.pb.showBar()
+            if len(collections) == 0:
+                collections = database.list_collection_names()
+            percent = int(100 / len(collections))
+            if not os.path.exists(BUPDIR):
+                self.win.objMainMess.showMess("Répertoire des fichiers absent: " + BUPDIR)
+            else:
+                self.win.objMainMess.showMess("Importation des données: \n", "I")
+                for i, collection_name in enumerate(collections):
+                    self.pb.progress(percentVal = percent)
+                    time.sleep(0.5)
+                    col = getattr(database,collections[i])
+                    jsonName = collection_name + ".json"
+                    jsonpath = BUPDIR + jsonName
+                    if os.path.exists(jsonpath):
+                        try:
+                            f = open(jsonpath, encoding='utf-8-sig')
+                            cache = f.read()
+                            f.close()
+                            #pdb.set_trace()
+                            data = eval(cache)
+                            res = col.delete_many({})
+                            res = col.insert_many(data)
+                            self.win.objMainMess.addMess(jsonName + ", ", "I")
+                        except ValueError:
+                            
+                            return
+                    else:
+                        self.win.objMainMess.addMess(jsonName + " ABSENT, ", "I")
+                self.win.objMainMess.addMess("\nCOMPLÉTÉ", "I")
+                self.pb.kill()
+
+        
     def getGames(self):
         #pdb.set_trace()
         if self.winGame is None or self.winGame.isDestroy:
             self.winGame = wg.listGames(self)
         else:
             self.winGame.winDim()
+
+    def getUsers(self):
+        #pdb.set_trace()
+        if self.winUsers is None or self.winUsers.isDestroy:
+            if self.actApp == APPG:
+                wu.APPICON = GOLFICON
+            if self.actApp == APPR:
+                wu.APPICON = RECICON
+            self.winUsers = wu.listUsers(self)
+        else:
+            self.winUsers.winDim()
 
     def showClub(self, e):
         id = e.widget._values
@@ -452,8 +646,6 @@ class master_form_find():
 
         formframe = tk.Frame(mainFrame)
         ttk.Button(formframe, text='Rechercher', command=self.getDataList).grid(column=0, row=0)
-        ttk.Button(formframe, text='Connecter...', command=self.login).grid(column=0, row=3)
-        
         ttk.Button(formframe, text='Fermer', command=self.closeRec).grid(column=0, row=4)
         ttk.Button(formframe, text="Quitter", command=mainFrame.quit).grid(column=0, row=5)
 
@@ -469,6 +661,21 @@ class master_form_find():
     def login(self):
         dial = loginDialog(self.win, "Connecter : app - location", self)
         dial.showDialog()
+
+    def authentif(self):
+        app = cdc.logonWin(self.win, self.data.data)
+        userIdent = "" if self.user == "" else self.user[0]
+        res = app.showAPPdialog(userIdent)
+        if not res is None:
+            self.user, self.userName, self.userRole, USER_ID = [res[0], res[1]], res[2], res[3], res[4]
+            self.setConfFile()
+            self.afficherTitre()
+            set_userid(USER_ID)
+
+    def changePass(self):
+        app = cdc.logonWin(self.win, self.data.data)
+        userIdent = "" if self.user == "" else self.user[0]
+        res = app.showChangePassdialog(userIdent)
         
     def setGrid(self, listFrame):
         self.gridFrame = listFrame
@@ -479,6 +686,8 @@ class dbaseObj():
     def __init__(self, *args, **kwargs):
         self.data = None
         self.dbase = ""
+        self.appdbName = { APPG: APPGBD,
+                            APPR: APPRBD}        
         self.server = {
             "Local": "mongodb://localhost:27017/",
             VSERV: ""
@@ -486,10 +695,13 @@ class dbaseObj():
         self.DBconnect = None
         self.isConnect = False
 
-    def connectTo(self, Server = "Local", dbName = "resto"):
+    def connectTo(self, Server = "Local", appName = APPR, userPass = None):
         #pdb.set_trace()
-        self.dbase = dbName
-        uri = self.server[Server]
+        self.dbase = self.appdbName[appName]
+        if userPass is None:
+            uri = self.server[Server]
+        else:
+            uri = """mongodb://%s:%s@cdore.ddns.net:6600/?authSource=admin&ssl=false"""  % (userPass[0], userPass[1])
         if Server == "Local":
             timeout = 2000
         else:
@@ -503,7 +715,7 @@ class dbaseObj():
             self.DBconnect = MongoClient(uri,socketTimeoutMS=timeout,
                         connectTimeoutMS=timeout,
                         serverSelectionTimeoutMS=timeout,)
-            
+
             self.DBconnect.server_info()
             #print(str(self.DBconnect.server_info()))
             if "ok" in self.DBconnect.server_info():
@@ -512,6 +724,12 @@ class dbaseObj():
         except:
             self.isConnect = False
         return self.isConnect
+
+    def getUserInfo(self, ident):
+        col = self.data.users
+        dat = col.find({"courriel": ident})
+        return list(dat)[0]
+
         
     def getCat(self, info = False):    
         col = self.data.categorie
@@ -778,8 +996,7 @@ def create_main_window():
     win = tix.Tk()
     win.minsize(480,300)
     #win.resizable(0, 0)
-    if os.path.exists(APPICON):
-        win.iconbitmap(APPICON)
+
     l = int(win.winfo_screenwidth() / 2)
     win.geometry(f"+{l}+100")
 
@@ -794,6 +1011,7 @@ if __name__ == "__main__":
             Pvalid = 260658 + datetime.datetime.today().day
             if int(param) == Pvalid:
                 EDITOK = True
-              
+                wg.EDITOK = True
+                
     create_main_window()
     

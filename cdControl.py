@@ -4,10 +4,12 @@ import pdb
 #; pdb.set_trace()
 import sys, os, io, re, cgi, csv, urllib.parse
 import urllib.request
+import shutil
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter.constants import *
 from tkinter import *
+from tkinter import simpledialog
 from PIL import ImageTk, Image
 from tkinter import filedialog
 from tkinter import messagebox, TclError, ttk
@@ -204,7 +206,8 @@ class messageObj():
         self.messLabel = None
         self.messframe = tk.Frame(self.parent, height=height)
         self.messframe.pack(fill=X)
-        self.showMess(" ")
+        self.messValue = " "
+        self.showMess(self.messValue)
 
     def showMess(self, message, type = "E", color = ""):
         #pdb.set_trace()
@@ -213,15 +216,22 @@ class messageObj():
             if type == "I":
                 color = "#22B14C"   # Si type = Information: color = vert
         self.clearMess()
+        self.messValue = message
         self.messLabel = tk.Label(self.messframe, font=('Calibri 12'), fg= color)
         self.messLabel.config(text= message)
-        #print(str(self.messframe.winfo_width()))
+
         w = self.messframe.winfo_width() - 50
         self.messLabel.config(wraplength=w)
         self.messLabel.pack(expand= True, fill=X)
         if not self.objToBind is None:
             self.objToBind.bind("<Button-1>", self.clearMess)
-        
+
+    def addMess(self, message, type = "E", color = ""):
+        #pdb.set_trace()
+        self.showMess(self.messValue + message, type, color)
+        if color == "" :
+            x=1
+            
     def clearMess(self, event = None):
         if not self.objToBind is None:
             self.objToBind.update_idletasks()
@@ -237,6 +247,7 @@ class imageObj():
         self.objToBind = parentObj
         self.imgCont = parentContainer
         self.imgURL = imgURL
+        self.editMode = False
         self.localImage = ""
         self.labImg = Label(self.imgCont)
         self.width = dim[0]
@@ -261,16 +272,20 @@ class imageObj():
         self.objToBind.unbind("<Enter>")
         self.objToBind.config(cursor="watch")
         ht = 140
-        if localPath :
+        #pdb.set_trace()
+        if localPath: 
             self.labImg.destroy()
             self.labImg = Label(self.imgCont)
             self.recImage=Image.open(localPath)
-            self.labImg.bind("<Button-1>", self.modifImage)            
+            self.labImg.bind("<Button-1>", self.modifImage)  
         else:
             cover = self.imgURL
             raw_data = urllib.request.urlopen(cover).read()
             self.recImage = Image.open(io.BytesIO(raw_data))
-            self.labImg.bind("<Button-1>", self.showImage)
+            if self.editMode :
+                self.labImg.bind("<Button-1>", self.modifImage)
+            else:
+                self.labImg.bind("<Button-1>", self.showImage)
         image = ImageTk.PhotoImage(self.recImage)
         lg = int(image.width() * (ht/image.height()))
         img=self.recImage.resize(( lg, ht))
@@ -289,13 +304,15 @@ class imageObj():
     def editImgage(self):
         self.labImg.config(cursor="hand2")
         self.editMode = True
+        #pdb.set_trace()
         if self.imgURL :
             self.labImg.bind("<Button-1>", self.modifImage)
         else:
             self.labImg.bind("<Button-1>", self.changeImage)           
 
     def changeImage(self, event = None):
-        file_path = filedialog.askopenfilename()
+        file_path = filedialog.askopenfilename( title="Selectionner une image", filetypes=(("jpeg files", "*.jpg"), ("gif files", "*.gif*"), ("png files", "*.png")))
+
         if file_path:
             self.localImage = file_path
             self.showImg(False, file_path)    
@@ -323,11 +340,11 @@ class imageObj():
             pos = self.localImage.rfind('/')
             upload_filename=self.localImage[pos+1:]
             upload_file = os.path.normpath(os.path.join("", upload_filename))
- 
+            #pdb.set_trace()
             dbx = dropbox.Dropbox(readFile("" + "info"))
-     
+
             file_to = "/" + upload_filename
-     
+            shutil.copy( self.localImage, os.getcwd())
             while True:
                 try:
                     with open(upload_file, 'rb') as f:
@@ -341,10 +358,10 @@ class imageObj():
                     else:
                         break
                         return except_handler("addFile Dropbox", ex)
-            
+
             link = dbx.sharing_create_shared_link(file_to)
             dl_url = link.url.replace("dl=0", "raw=1")
-            
+            os.remove(upload_filename)
         return dl_url    
 
 
@@ -371,7 +388,7 @@ class modifRecImg(modalDialogWin):
     def createWidget(self):
 
         datURL = self.obj.localImage if self.obj.localImage else self.obj.imgURL
-        #print(datURL)
+
         if datURL == '' or datURL == 'undefined' :
             txt = "Ajouter..."
         else:
@@ -406,10 +423,10 @@ class menuEdit():
         self.win = parentWin
         self.inputToBind = inputToBind  #Object to right click to pop menuEdit
         self.menu = Menu(self.win,tearoff=0) # Create a menu
-        self.menu.add_command(label='Couper',command=self.cut) # Create labels and commands
-        self.menu.add_command(label='Copier',command=self.copy) 
-        self.menu.add_command(label='Coller',command=self.paste)
-        self.menu.add_command(label='Sélectionner tout',command=self.selectAll)
+        self.menu.add_command(label='Couper',command=self.cut, accelerator="Ctrl+X") # Create labels and commands
+        self.menu.add_command(label='Copier',command=self.copy, accelerator="Ctrl+C") 
+        self.menu.add_command(label='Coller',command=self.paste, accelerator="Ctrl+V")
+        self.menu.add_command(label='Sélectionner tout',command=self.selectAll, accelerator="Ctrl+A")
         
         self.inputToBind.bind('<Button-3>',self.popup) # Bind to right click
 
@@ -435,11 +452,10 @@ class menuEdit():
             lines = len(self.inputToBind.get("1.0", "end").split('\n'))
             for nl in range(1,lines):
                 self.inputToBind.tag_add('sel', '{}.0'.format(nl), '{}.end'.format(nl))
-            #print(str(lines))
 
 
 class editEntry(tk.Entry):
-    def __init__(self, parent=None, width=None, textvariable=None, state=None, validate="key", maxlen=None, font='', fg='black', bg='white'):
+    def __init__(self, parent=None, width=None, textvariable=None, state=None, validate="key", isNum=False, maxlen=None, font='', fg='black', bg='white'):
         if font:
             tk.Entry.__init__(self, parent, textvariable=textvariable, width=width, state=state, validate=validate, font=font, fg=fg, bg=bg)
         else:
@@ -449,23 +465,28 @@ class editEntry(tk.Entry):
         self.maxlen = maxlen
         menuEdit(parent.win, self)
         if maxlen:
-            self.config(validatecommand=(parent.register(self.validate), '%P', maxlen))
+            self.config(validatecommand=(parent.register(self.validate), '%P', maxlen, isNum))
         
-    def validate(self, P, maxlen):
+    def validate(self, P, maxlen, isNum):
         #pdb.set_trace()
-        if len(P) <= int(maxlen):
-            return True
-        else:
+        if isNum == 'True' and not (str.isdigit(P) or P == ""):
             self.win.bell()
-            if self.cntTry > 2:
-                messagebox.showinfo(
-                    title="Maximum atteint",
-                    message=f"Ce champ a une longeur maximale de " + str(self.maxlen) + " caractères.") 
-                self.cntTry = 0
-            else:
-                self.cntTry += 1
-                
             return False
+        else:
+            if len(P) <= int(maxlen):
+                return True
+            else:
+                self.win.bell()
+                if self.cntTry > 2:
+                    num = " numériques." if isNum=='True' else "."
+                    messagebox.showinfo(
+                        title="Maximum atteint",
+                        message=f"Ce champ a une longeur maximale de " + str(self.maxlen) + " caractères" + num) 
+                    self.cntTry = 0
+                else:
+                    self.cntTry += 1
+                    
+                return False
             
             
 class resizeFrame(tk.Frame):
@@ -518,8 +539,6 @@ class selectDate(modalDialogWin):
         if isinstance(self.seldate, list):
             self.theDate.append(seldate)
             self.theDate.append(datetime.datetime.strptime(seldate, "%Y-%m-%d"))
-        #pdb.set_trace()
-        #print(self.theDate)
         dt = datetime.datetime.strptime(seldate, "%Y-%m-%d")
         self.close()            
         
@@ -548,7 +567,7 @@ class sortGridObj():
     def sortGrid(self, colSort, typ="N", reverse=False):
         otherCol = "col_labels_list"
         colNbr = self.colNbr
-        #print(reverse)
+
         #get data
         sort_label = self.gridframe.grid_slaves(column=colSort)
         for col in range(colNbr):
@@ -597,7 +616,195 @@ class sortGridObj():
 
         for colN in range(colNbr):
             if colN != col:
-                colHeadObj[colN]["text"] = labels[colN]
-            
+                colHeadObj[colN]["text"] = labels[colN]           
         self.sortGrid(col, typ, reverse)
-        x=1
+
+
+class progressBarObj():
+    def __init__(self, parent, height=10, column = None):
+        self.parent = parent
+        self.height = height
+        #pdb.set_trace()
+        self.width=self.parent.winfo_width()
+        if self.width < 5:
+            self.width = 280
+
+        if not column is None:
+            self.pbZone = tk.Frame(self.parent, bg="blue", width=self.width)
+            self.pbZone.grid(column=0, row=0, padx=0, pady=0)            
+        else:
+            self.pbZone = tk.Frame(self.parent, bg="blue", width=self.width)
+            self.pbZone.pack(fill=X)           
+
+        self.sizeZone = tk.Frame(self.pbZone, height=self.height, width=self.width, padx=10)        
+        self.sizeZone.pack(expand= True, fill=X)
+        self.sizeZone.pack_propagate(0)
+
+        # progressbar
+        self.pBar = ttk.Progressbar(
+            self.sizeZone,
+            orient='horizontal',
+            mode='determinate',
+            length=self.width
+        )
+
+    def showBar(self):
+        #self.pbZone.pack(fill=X)
+        self.pBar.pack()
+
+    def hideBar(self):
+        self.pBar.pack_forget()
+
+    def progress(self, percentVal = 20):
+        if self.pBar['value'] < 100:
+            self.pBar['value'] += percentVal
+        self.parent.update_idletasks()
+        
+    def kill(self):
+        self.pbZone.destroy()
+
+
+# Logon modal dialog
+class logonBDdialog(simpledialog.Dialog):
+    def body(self, master):
+        self.connectArr = []
+
+        self.titleframe = tk.Frame(master)
+        self.titleframe.grid(row=0)        
+        lblTitle = tk.Label(self.titleframe, text="Connexion à la BD", font=('Calibri 12 bold'))    #.grid(row=0, columnspan=2)
+        lblTitle.pack()
+        
+        self.formframe = tk.Frame(master, borderwidth = 1, relief=RIDGE, padx=10, pady=10)
+        self.formframe.grid(row=1)
+        tk.Label(self.formframe, text="Identifiant :").grid(row=0, sticky=E)
+        self.entry = tk.Entry(self.formframe, width=30)
+        self.entry.grid(row=0, column=1)
+        tk.Label(self.formframe, text="Mot de passe :").grid(row=1, sticky=E)
+        self.passentry = tk.Entry(self.formframe,show="*", width=30)
+        self.passentry.grid(row=1, column=1)        
+        return self.entry  # Mettez le focus sur le champ de saisie
+
+    def validate(self):
+        self.connectArr.append(self.entry.get())
+        self.connectArr.append(self.passentry.get())       
+        return True
+            
+    def apply(self):
+        # Cette méthode est appelée lorsque le bouton "OK" est cliqué
+        self.result = self.connectArr   #Permet de récupérer les valeurs dans un array
+        #print("logonBDdialog.apply" + str(self.result))
+
+class logonAPPdialog(logonBDdialog):
+    def __init__(self, parent, optionalObject = None):
+        self.parent = parent
+        self.obj = optionalObject[0]
+        self.userIdent = optionalObject[1]
+        logonBDdialog.__init__(self, parent)
+ 
+    def body(self, master):
+        logonBDdialog.body(self, master)
+        self.entry.insert(0, self.userIdent)
+        self.titleframe = tk.Frame(master)
+        self.titleframe.grid(row=0)  
+        lblTitle = tk.Label(self.titleframe, text="S'authentifier à l'application.", width=40, font=('Calibri 12 bold'))
+        lblTitle.pack()        
+        self.objMess = messageObj(self.titleframe)
+
+        return self.entry  # Mettre le focus sur le champ de saisie
+
+    def validate(self):
+        ident = self.entry.get()
+        password = self.passentry.get()
+
+        res = self.getUserPass(ident, password)
+
+        if len(res) == 0:
+            self.objMess.showMess("Identifiant/mot de passe inconnu.")
+            return False
+        else:
+            if not res[0]["actif"]:
+                self.objMess.showMess("Utilisateur inactif.")
+                return False
+            else:
+                self.connectArr.append(self.entry.get())
+                dt = datetime.datetime.now()    #Date actuelle
+                #pdb.set_trace()
+                self.connectArr.append(dt.timestamp() * 1000 + 172800000)  #Date actuelle + 2 jours
+                self.connectArr.append(res[0]["Nom"])
+                self.connectArr.append(res[0]["niveau"])
+                self.connectArr.append(res[0]["_id"])
+                return True
+
+    def getUserPass(self, ident, password):
+        col = self.obj.users
+        dat = col.find({"courriel": ident , "motpass": password})
+        return list(dat)
+        
+class changePassAPPdialog(logonAPPdialog):
+    def __init__(self, parent, optionalObject = None):
+        self.parent = parent
+        logonAPPdialog.__init__(self, parent, optionalObject)
+ 
+    def body(self, master):
+        #pdb.set_trace()
+        logonBDdialog.body(self, master)
+        self.entry.insert(0, self.userIdent)
+        self.entry.config(state="disable")
+        self.titleframe = tk.Frame(master)
+        self.titleframe.grid(row=0)   
+        lblTitle = tk.Label(self.titleframe, text="Changer le mot de passe", width=40, font=('Calibri 12 bold'))
+        lblTitle.pack()    
+        self.objMess = messageObj(self.titleframe)       
+        
+        tk.Label(self.formframe, text="Nouveau mot de passe :").grid(row=2, sticky=E)
+        self.newpassentry = tk.Entry(self.formframe,show="*", width=30)
+        self.newpassentry.grid(row=2, column=1)   
+        tk.Label(self.formframe, text="Confirmer mot de passe :").grid(row=3, sticky=E)
+        self.confpassentry = tk.Entry(self.formframe,show="*", width=30)
+        self.confpassentry.grid(row=3, column=1) 
+        return self.passentry  # Mettre le focus sur le champ password
+
+    def validate(self):
+        ident = self.entry.get()
+        password = self.passentry.get()
+        newpass = self.newpassentry.get()
+        confpass = self.confpassentry.get()
+
+        res = self.getUserPass(ident, password)
+        
+        if len(res) == 0:
+            self.objMess.showMess("Identifiant/mot de passe inconnu.")
+            return False
+        else:
+            if newpass == "" or newpass != confpass:
+                self.objMess.showMess("Échec de la confirmation du mot de passe.")
+            else:
+                if len(newpass) < 3:
+                    self.objMess.showMess("Longeur minimum de 3 caractères du mot de passe.")
+                else:
+                    self.changeUserPass(res[0]["_id"], newpass)
+                    return True
+
+    def changeUserPass(self, id, password):
+        col = self.obj.users
+        dat = col.update_one({"_id": id} , { "$set": {"motpass": password}})
+            
+            
+class logonWin:
+    def __init__(self, root, optionalObject = None):
+        self.root = root
+        self.obj = optionalObject
+        
+    def showLogonBD(self):
+        custom_dialog = logonBDdialog(self.root)
+        return custom_dialog.result #Retourner les valeurs par le bouton Ok, sinon None
+        
+    def showAPPdialog(self, userIdent = None):
+        custom_dialog = logonAPPdialog(self.root, [self.obj, userIdent])
+        return custom_dialog.result #Retourner les valeurs par le bouton Ok, sinon None        
+
+    def showChangePassdialog(self, userIdent = None):
+        custom_dialog = changePassAPPdialog(self.root, [self.obj, userIdent])
+        return custom_dialog.result #Retourner les valeurs par le bouton Ok, sinon None 
+        
+# FIN Logon modal dialog

@@ -27,9 +27,6 @@ import phonetics
 import webbrowser
 
 
-
-APPICON = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
-
 class editerRecette():
     def __init__(self, masterForm, recData, EDITOK):
         self.INGR = "Ingrédients"
@@ -245,7 +242,6 @@ class editerRecette():
         elem.focus()
         if edList == "prep":
             self.scrollframe.scroll()
-        #self.winDim()
         
         
     def deleteElem(self, section):
@@ -295,8 +291,7 @@ class editerRecette():
         #self.pop.attributes('-fullscreen', True)
         self.masterForm.childWin.append(self.pop)
         self.pop.title(self.recData["nom"])
-        if os.path.exists(APPICON):
-            self.pop.iconbitmap(APPICON)
+        self.pop.iconbitmap(RECICON)
 
         self.objMess = cdc.messageObj(self.pop, height=25)
         
@@ -414,7 +409,8 @@ class editerRecette():
         self.butframe.pack(expand= True, side=LEFT, fill=X, anchor=CENTER)
         self.butEdit = tk.Frame(self.butframe)
         self.butEdit.pack()
-        if self.EDITOK:
+        #print(self.masterForm.userRole)
+        if self.masterForm.userRole == "ADM" or self.masterForm.userRole == "MEA" :
             butAnn = ttk.Button(self.butEdit, text="Annuler", command=self.annuler, width=15 ) 
             butAnn.grid(row=0, column=0, padx=5, sticky="WE")        
             butMod = ttk.Button(self.butEdit, text="Modifier", command=self.modify, width=15 ) 
@@ -430,18 +426,22 @@ class editerRecette():
         self.editList = dict(editArr)
         
         #Positionner la fenêtre de consulation/édition de la recette
-        self.winDim(True)
+        self.winDim()
 
         
-    def winDim(self, adjustPosition = False):
+    def winDim(self):
         self.win.update_idletasks()                                                             ##update_idletasks
         w=self.pop.winfo_width()
-        #print("edit: " + str(self.editFrame.winfo_height()) + " scroll: " + str(self.scrollframe.interior.winfo_height()))
         h=self.scrollframe.interior.winfo_height() + 300
-        if (self.win.winfo_screenheight() - 80) < h:
+        if (self.win.winfo_screenheight() - 80) < h :
             h = self.win.winfo_screenheight() - 80
-            if adjustPosition:
-                self.pop.geometry("+50+0")
+            self.pop.geometry("+50+0")  #Placer au top
+        else:
+            #print(str(self.win.winfo_screenheight() - 80) + "   H = " + str(h + self.pop.winfo_y()))
+            if self.win.winfo_screenheight() - 80  < h + self.pop.winfo_y():
+                adj = (h + self.pop.winfo_y()) - (self.win.winfo_screenheight() - 80)
+                h -= adj
+                #print( str(adj) + "   H = " + str(h ))
                 
         self.pop.geometry(f"{w}x{h}")
 
