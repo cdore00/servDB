@@ -7,6 +7,8 @@
 #Scripts\pyinstaller  -F --add-data C:\Users\charl\AppData\Local\Programs\Python\Python39\tcl\tix8.4.3;tcl\tix8.4.3 code\win64MD.py --noconsole
 #C:\Users\charl\AppData\Local\Programs\Python\Python39\Scripts
 #https://pypi.org/project/jsoneditor/
+#Built-In Roles
+#https://www.mongodb.com/docs/manual/reference/built-in-roles/#mongodb-authrole-dbOwner
 
 import pdb
 #; pdb.set_trace()
@@ -123,6 +125,8 @@ actionsList = [
 "viewRole",
 "viewUser"
 ]
+
+systemRole = ['read','readWrite','dbAdmin','dbOwner','userAdmin','clusterAdmin','clusterManager','clusterMonitor','hostManager','backup','restore','readAnyDatabase','readWriteAnyDatabase','userAdminAnyDatabase','dbAdminAnyDatabase','dbOwner','userAdmin','userAdminAnyDatabase','root']
         
 class master_form_find():
     def __init__(self, mainWin, *args, **kwargs):
@@ -131,17 +135,17 @@ class master_form_find():
         self.user = [""]
         self.userName = ""
         self.userRole = ""
+        self.roleList = []
         self.actApp   = APPR 
         self.actServ  = LSERV
         initInfo = self.readConfFile()
         if "init" in initInfo:
             self.actApp   = initInfo["init"][0] 
             self.actServ  = initInfo["init"][1]                             
-        self.winGame = None
-        self.winUsers = None
         self.childWin = []
 
         self.gridFrame = None
+        self.usersFrame = None
 
         self.setApp(self.actServ, self.actApp)
 
@@ -196,6 +200,7 @@ class master_form_find():
         isConnected = False
         if not res is None:
             isConnected = self.data.connectTo(serv, appName, res)
+            #pdb.set_trace()
 
         #isConnected = self.data.connectTo(serv, appName)
         self.win.objMainMess.clearMess()    
@@ -203,10 +208,7 @@ class master_form_find():
         mainFrame = tk.Frame(self.win, borderwidth = 1, relief=RIDGE)
         mainFrame.pack( fill=X, padx=10, pady=10)        
         mainFrame.columnconfigure(0, weight=1)
-        mainFrame.columnconfigure(1, weight=1)
-        
-        self.gridFrame = cdc.VscrollFrame(self.win)
-        self.gridFrame.pack(expand= True, fill=BOTH)        
+        mainFrame.columnconfigure(1, weight=1)     
             
         formframe = self.add_input_frame(mainFrame)
         formframe.grid(column=0, row=0)
@@ -222,8 +224,24 @@ class master_form_find():
             self.win.title(actAppDB + " : Non connecté.")
         if not self.user:
             menu_file.delete(3)
-            
+
+        # Onglets
+        tab_setup = ttk.Notebook(self.win)
+
+        tabRoles = LabelFrame(tab_setup, text = " Roles ", font=('Calibri 12 bold'))
+        tab_setup.add(tabRoles, text = "    Roles    ")
+        tab_setup.pack(expand=1, fill = "both", padx = 10)
+
+        tabUsers = LabelFrame(tab_setup, text = " Users ", font=('Calibri 12 bold'))
+        tab_setup.add(tabUsers, text = "    Users    ")
+        tab_setup.pack(expand=1, fill = "both", padx = 10)        
+
+        self.gridFrame = cdc.VscrollFrame(tabRoles)
+        self.gridFrame.pack(expand= True, fill=BOTH)            
         self.getRoles()
+        self.usersFrame = cdc.VscrollFrame(tabUsers)
+        self.usersFrame.pack(expand= True, fill=BOTH)            
+        self.getUsers()
         
         if self.actApp == APPR:
             self.win.geometry("550x500")
@@ -318,39 +336,48 @@ class master_form_find():
         for widget in formframe.winfo_children():
             widget.grid(padx=5, pady=5)
             
-        ttk.Button(formframe, text='Role', command=self.getRoles).grid(column=2, row=4)
 
         return formframe
 
-    def getUsers(self):
+    def getUsers(self, userName = None, pos = None):
         #pdb.set_trace()
         dat = self.data.data.system.users
         res=dat.find()
-        self.dataList=list(res)
+        self.usersDataList=list(res)
         #pdb.set_trace()
+        slavelist = self.usersFrame.interior.slaves()
+        for elem in slavelist:
+            elem.destroy()         
+        usersframe = tk.Frame(self.usersFrame.interior)
+        usersframe.pack(expand= True, side=LEFT, fill=X, padx=10)
         
-        gridframe = tk.Frame(self.gridFrame.interior)
-        gridframe.pack(expand= True, side=LEFT, fill=X, padx=10)
-
-        for index in range(len(self.dataList)):
-            data = self.dataList[index]
+        userNameIndex = -1
+        for index in range(len(self.usersDataList)):
+            data = self.usersDataList[index]
+            #print(data)
             data.pop("userId")
             data.pop("credentials")
+            if data["user"] == userName:
+                userNameIndex = index
             #pdb.set_trace()
-            Button(gridframe, text=' ... ', command= lambda index=index: self.editUser(index), font=('Calibri 15 bold')).grid(row=index, column=0)
-            text_box = tk.Text(gridframe)
-            text_box.grid(row= index, column=1, sticky="WE") 
+            Button(usersframe, text=' ... ', command= lambda index=index: self.editUser(index), font=('Calibri 15 bold')).grid(row=index, column=0)
             formatted_data = json.dumps(data, indent=4)
+            nlines = formatted_data.count('\n')
+            text_box = tk.Text(usersframe, height= nlines+1)
+            text_box.grid(row= index, column=1, sticky="WE")             
             text_box.insert(tk.END, formatted_data)
             text_box.config( state="disabled")
+        
+        if userNameIndex > -1:
+            self.editUser(userNameIndex, pos)
         #jsoneditor.editjson(data)
-        print('getUsers')
+
         
     def getRoles(self):
         
         dat = self.data.data.system.roles
         res=dat.find()
-        self.dataList=list(res)
+        self.rolesDataList=list(res)
         #pdb.set_trace()
         slavelist = self.gridFrame.interior.slaves()
         for elem in slavelist:
@@ -358,115 +385,33 @@ class master_form_find():
         gridframe = tk.Frame(self.gridFrame.interior)
         gridframe.pack(expand= True, side=LEFT, fill=X, padx=10)
 
-        for index in range(len(self.dataList)):
-            data = self.dataList[index]
+        for index in range(len(self.rolesDataList)):
+            data = self.rolesDataList[index]
+            self.roleList.append(data["role"])
             #pdb.set_trace()
             Button(gridframe, text=' ... ', command= lambda index=index: self.editRole(index), font=('Calibri 15 bold')).grid(row=index, column=0)
-            text_box = tk.Text(gridframe)
-            text_box.grid(row= index, column=1, sticky="WE") 
             formatted_data = json.dumps(data, indent=4)
+            nlines = formatted_data.count('\n')            
+            text_box = tk.Text(gridframe, height= nlines+1)
+            text_box.grid(row= index, column=1, sticky="WE") 
             text_box.insert(tk.END, formatted_data)
             text_box.config( state="disabled")
-        #jsoneditor.editjson(data)
-        print('getRoles')
+        self.win.update_idletasks()   
+        return len(self.rolesDataList)
 
     def editRole(self, index = None):
         #pdb.set_trace()
-        
-        userActionsList = self.dataList[index]["privileges"][0]["actions"]
-        roleName = self.dataList[index]["role"]
-        
-        def selectAction(index, task):
-            print(str(task))
-        
-        def close():
-            self.pop.destroy()
+        editRoleWin(self, self.rolesDataList[index])
 
-        def save(roleName):
-            db = self.data.data
-            revokeArr = []
-            for act in userActionsList:
-                #print(str(self.var_list[actionsList.index(act)].get()))
-                if self.var_list[actionsList.index(act)].get() == 0:
-                    revokeArr.append(act)
-            print(revokeArr)
-            
-            res = None
-            if len(revokeArr):
-                res = db.command({"revokePrivilegesFromRole": roleName, "privileges": [{"resource": {"db":"", "collection" : ""}, "actions": revokeArr}]})
-
-            grantArr = []
-            for act in actionsList:
-                if self.var_list[actionsList.index(act)].get() == 1:
-                    grantArr.append(act)
-            print(grantArr)
-
-            if len(grantArr):
-                res = db.command({"grantPrivilegesToRole": roleName, "privileges": [{"resource": {"db":"", "collection" : ""}, "actions": grantArr}]})            
-
-            if res["ok"]:
-                self.objMess.showMess("Enregistré!", type = "I")
-            else:
-                self.objMess.showMess(str(res))
-                
-            #pdb.set_trace()
-            self.getRoles()
-            print("save")
-            
-        print(self.dataList[index])
-
-        self.pop = tk.Toplevel(self.win)
-        #self.pop.protocol('WM_DELETE_WINDOW',self.destroyRef)
-        self.pop.geometry("250x500")
-        self.pop.title("Parties")
-        #self.pop.iconbitmap(GOLFICON)   
-        
-        self.objMess = cdc.messageObj(self.pop, height=25)
-
-        # Form frame
-        mainFrame = tk.Frame(self.pop, borderwidth = 1, relief=RIDGE)
-        mainFrame.pack( fill=X, padx=10, pady=10)        
-        mainFrame.columnconfigure(0, weight=1)
-        mainFrame.columnconfigure(1, weight=1)
-
-        # Input
-        self.formFrame = tk.Frame(mainFrame)
-        #self.formFrame.pack(fill=X, padx=5)
-        self.formFrame.grid(column=0, row=0)        
-        ttk.Label(self.formFrame, text="role : ").grid(row=0, column=0, sticky=tk.W, padx=5, pady=3)
-        ttk.Label(self.formFrame, text=roleName).grid(row=0, column=1, sticky=tk.W, padx=5, pady=3)       
-        ttk.Label(self.formFrame, text="actions : ").grid(row=2, column=0, sticky=tk.W, padx=5, pady=3)
-
-        # Button        
-        self.butFrame = tk.Frame(mainFrame)
-        self.butFrame.grid(column=1, row=0)
-
-        ttk.Button(self.butFrame, text='Enregistrer', command= lambda roleName=roleName: save(roleName)).grid(row=0, column=0)        
-        ttk.Button(self.butFrame, text='Annuler', command=close).grid(row=1, column=0, pady=5)
-        
-        # Grid list frame
-        self.actionsFrame = cdc.VscrollFrame(self.pop)
-        self.actionsFrame.pack(expand= True, fill=BOTH)
-        
-        self.var_list = []
-
-        for ind, task in enumerate(actionsList):
-            #print(str(ind))
-            self.var_list.append(IntVar())
-            if (task in userActionsList):
-                self.var_list[ind].set(1)  
-            ttk.Checkbutton(self.actionsFrame.interior, variable=self.var_list[ind],
-                        text=task).pack(anchor=W)
- 
-        
-
-    def editUser(self, index = None):
+    def editUser(self, index = None, pos = None):
         #pdb.set_trace()
         db = self.data.data
         #res = db.command("grantRolesToUser", "cdore", roles=["makebup"])
-        res = db.command("revokeRolesFromUser", "cdore", roles=["makebup"])
+        #res = db.command("revokeRolesFromUser", "cdore", roles=["makebup"])
         
-        print(self.dataList[index])
+        #res = db.command({"createUser": "username", "pwd": "pass", "roles": [ { "role": "makebup", "db": "admin" } ] } )
+        editUserWin(self, self.usersDataList[index], pos)
+        print("editUser") 
  
     def do(self):
         x=2
@@ -507,17 +452,388 @@ class master_form_find():
         userIdent = "" if self.user == "" else self.user[0]
         res = app.showChangePassdialog(USER_ID)
         
+class editRoleWin():
+    def __init__(self, mainWin, roleData):
+        self.mainObj = mainWin
+        self.data = mainWin.data
+        self.roleData = roleData
+        self.roleName = self.roleData["role"]
+        self.userActionsList = self.roleData["privileges"][0]["actions"]
+        self.showRoleWin()
+        
+    def close(self):
+        self.pop.destroy()
 
+    def save(self):
 
+        db = self.data.data
+        revokeArr = []
+        for act in self.userActionsList:
+            if self.var_list[actionsList.index(act)].get() == 0:
+                revokeArr.append(act)
+
+        res = None
+        if len(revokeArr):
+            res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": {"db":"", "collection" : ""}, "actions": revokeArr}]})
+
+        grantArr = []
+        for act in actionsList:
+            if self.var_list[actionsList.index(act)].get() == 1:
+                grantArr.append(act)
+        #print(grantArr)
+
+        if len(grantArr):
+            res = db.command({"grantPrivilegesToRole": self.roleName, "privileges": [{"resource": {"db":"", "collection" : ""}, "actions": grantArr}]})            
+
+        if res["ok"]:
+            #pdb.set_trace()
+            for act in revokeArr:
+                self.userActionsList.remove(act)
+            for act in grantArr:
+                self.userActionsList.append(act)
+            self.objMess.showMess("Enregistré!", type = "I")
+        else:
+            self.objMess.showMess(str(res))
+            
+        #pdb.set_trace()
+        self.mainObj.getRoles()
+
+    def delete(self):
+        answer = askyesno(title='Suppression',
+            message='Supprimer le rôle : ' + self.roleName)
+        if answer:       
+            db = self.data.data
+            res = db.command({"dropRole": self.roleName})
+            if res["ok"]:
+                self.objMess.showMess("Enregistré!", type = "I")
+                self.mainObj.getRoles()
+                self.close()
+            else:
+                self.objMess.showMess(str(res))             
+
+    def addRole(self):
+        self.menuFichier.destroy()
+        self.newRoleName = ttk.Entry(self.formFrame, width=20)
+        self.newRoleName.focus()
+        self.newRoleName.grid(column=1, row=0, sticky=tk.W)
+        ttk.Button(self.butFrame, text='Enregistrer', command=self.createRole).grid(row=0, column=0)        
+
+    def createRole(self):
+        #roleData = {}
+        grantArr = []
+        for act in actionsList:
+            if self.var_list[actionsList.index(act)].get() == 1:
+                grantArr.append(act)
+        
+        #roleData["privileges"] = []
+        priv = {}
+        priv["resource"] = { "db": self.comboBD.get(), "collection": self.comboCol.get() }
+        priv["actions"] = grantArr
+        #roleData["privileges"].append(priv)
+
+        db = self.data.data
+        res = db.command({"createRole": self.newRoleName.get(), "privileges": [priv], "roles": []})
+        if res["ok"]:
+            self.objMess.showMess("Enregistré!", type = "I")
+            ind = self.mainObj.getRoles()
+            self.mainObj.editRole(ind-1)
+            self.close()
+        else:
+            self.objMess.showMess(str(res))        
+        
+    
+    def showRoleWin(self):
+        #print(self.roleData)
+
+        self.pop = tk.Toplevel(self.mainObj.win)
+        self.pop.geometry("400x550")
+        self.pop.title("Modifier Role")
+        #self.pop.iconbitmap(GOLFICON)   
+        self.mainObj.childWin.append(self.pop)
+        #pdb.set_trace()
+        
+        self.objMess = cdc.messageObj(self.pop, height=15)
+
+        # Form frame
+        mainFrame = tk.Frame(self.pop)
+        mainFrame.pack( fill=X, padx=10, pady=10)        
+        mainFrame.columnconfigure(0, weight=1)
+        mainFrame.columnconfigure(1, weight=1)
+
+        # Input
+
+        self.formFrame = tk.Frame(mainFrame)
+        self.formFrame.grid(column=0, row=0)        
+        ttk.Label(self.formFrame, text=" role : ").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(self.formFrame, text=self.roleName).grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)  
+
+        # Création du menu
+
+        self.menuFichier = Menubutton(self.formFrame, text='role :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
+        self.menuFichier.grid(row=0,column=0, sticky=tk.W)
+        menu_file = Menu(self.menuFichier, tearoff = 0)
+        menu_file.add_cascade(label='Ajouter...', command = self.addRole) 
+        menu_file.add_cascade(label='Supprimer...', command = self.delete) 
+        self.menuFichier.configure(menu=menu_file) 
+        
+        ttk.Label(self.formFrame, text="privileges :  [").grid(row=1, column=0, sticky=tk.W, padx=5, pady=3)
+        #ttk.Label(self.formFrame, text="{").grid(row=1, column=1, sticky=tk.W, padx=5, pady=3)
+        
+        ttk.Label(self.formFrame, text="{  resources : {        ").grid(row=2, column=0, sticky=tk.E, padx=1, pady=3)
+        
+        ttk.Label(self.formFrame, text= "db : ").grid( row=3, column=0, sticky=tk.E, padx=1, pady=3)
+        self.comboBD = ttk.Combobox(
+            self.formFrame,
+            state="readonly",
+            values = self.data.dbList
+            )
+        self.comboBD.grid( row=3, column=1, sticky=tk.W)
+        ttk.Label(self.formFrame, text= "collection : ").grid( row=4, column=0, sticky=tk.E, padx=1, pady=3)
+        self.comboCol = ttk.Combobox(
+            self.formFrame,
+            state="readonly",
+            values=[""]
+            )
+        self.comboCol.grid( row=4, column=1, sticky=tk.W)      
+        ttk.Label(self.formFrame, text="} , ").grid(row=5, column=0, sticky=tk.W, padx=45, pady=3)
+        ttk.Label(self.formFrame, text="actions : [").grid(row=6, column=0, columnspan=2, sticky=tk.W, padx=50, pady=3)
+        #pdb.set_trace()
+        
+        # Button        
+        self.butFrame = tk.Frame(mainFrame)
+        self.butFrame.grid(column=1, row=0)
+
+        ttk.Button(self.butFrame, text='Enregistrer', command=self.save).grid(row=0, column=0)        
+        ttk.Button(self.butFrame, text='Annuler', command=self.close).grid(row=1, column=0, pady=5)
+        
+        # Grid list frame
+        self.actionsFrame = cdc.VscrollFrame(self.pop)
+        self.actionsFrame.pack(expand= True, fill=BOTH)
+        
+        self.var_list = []
+
+        for ind, task in enumerate(actionsList):
+            #print(str(ind))
+            self.var_list.append(IntVar())
+            if (task in self.userActionsList):
+                self.var_list[ind].set(1)  
+            ttk.Checkbutton(self.actionsFrame.interior, variable=self.var_list[ind], text=task).pack(anchor=W, padx=80)        
+
+        footFrame = tk.Frame(self.pop)
+        footFrame.pack( fill=X, padx=10, pady=10)  
+        ttk.Label(footFrame, text="]").grid(row=0, column=0, sticky=tk.W, padx=60, pady=0)
+        ttk.Label(footFrame, text="}").grid(row=1, column=0, sticky=tk.W, padx=40, pady=0)
+        ttk.Label(footFrame, text="]").grid(row=2, column=0, sticky=tk.W, padx=15, pady=0)
+
+class editUserWin():
+    def __init__(self, mainWin, userData, pos):
+        self.mainObj = mainWin
+        self.data = mainWin.data
+        self.userData = userData
+        self.pos = pos
+        self.userName = self.userData["user"]
+        self.userRolesList = self.userData["roles"]
+        self.showUserWin()
+        
+    def close(self):
+        self.pop.destroy()
+
+    def delete(self):
+        answer = askyesno(title='Suppression',
+            message="Supprimer l'utilisateur : " + self.userName)
+        if answer:       
+            db = self.data.data
+            res = db.command({"dropUser": self.userName})  
+            self.refreshRole(res)           
+
+    def addUser(self):
+        self.menuFichier.destroy()
+        
+        self.newUserName = ttk.Entry(self.formFrame, width=20)
+        self.newUserName.focus()
+        self.newUserName.grid(column=1, row=0, sticky=tk.W)
+        self.addRole()
+        ttk.Label(self.formFrame, text=" Password : ").grid(row=1, column=0, sticky=tk.W)
+        self.newUserPass = ttk.Entry(self.formFrame, width=20)
+        self.newUserPass.grid(row=1, column=1, sticky=tk.W)
+        ttk.Button(self.butFrame, text='Enregistrer', command=self.createUser).grid(row=0, column=0)        
+
+    def createUser(self):
+        role = {"role": self.comboRole.get(), "db": self.comboBD.get()}
+        db = self.data.data
+        res = db.command({"createUser": self.newUserName.get(), "pwd": self.newUserPass.get(), "roles": [ role ] } )
+        try:
+            res = db.command("grantRolesToUser", self.userName, roles=[role])
+            self.refreshRole(res)
+        except Exception as ex:
+            self.objMess.showMess(str(ex))       
+
+    def delRole(self):
+        roleIndex = self.comboRole.current()
+        role = {"role": self.comboRole.get(), "db": self.comboBD.get()}
+        answer = askyesno(title='Suppression role',
+            message="Supprimer le role : " + str(role))
+        if answer:         
+            db = self.data.data
+            res = db.command("revokeRolesFromUser", self.userName, roles=[role])   
+            self.refreshRole(res)
+                
+    def addRole(self):
+
+        sys_check = ttk.Checkbutton(
+            self.formFrame,
+            text="System roles",
+            variable=self.sysRole,
+            onvalue=1,
+            offvalue=0)
+        sys_check.grid(row=6, column=1, sticky=tk.W, padx=5, pady=3)  
+        sys_check.bind("<Button-1>", self.changeRoleList)
+        #pdb.set_trace()
+        self.comboRole.config(values=self.mainObj.roleList)
+        self.comboRole.unbind("<<ComboboxSelected>>")
+        bdList = self.data.dbList
+        bdList[0]='admin'
+        self.comboBD.config(values=bdList)
+        self.comboBD.unbind("<<ComboboxSelected>>")
+        ttk.Button(self.butFrame, text='Enregistrer', command=self.grantRole).grid(row=0, column=0)    
+        self.menuRole.destroy()
+
+    def grantRole(self):
+        role = self.comboRole.get()
+        #pdb.set_trace()
+        role = {"role": self.comboRole.get(), "db": self.comboBD.get()}
+        db = self.data.data
+        try:
+            res = db.command("grantRolesToUser", self.userName, roles=[role])
+            self.refreshRole(res)
+        except Exception as ex:
+            self.objMess.showMess(str(ex))
+    
+    def refreshRole(self, res):
+        if res["ok"]:
+            self.mainObj.getUsers(self.userName, [self.pop.winfo_x(), self.pop.winfo_y()])
+            self.close()
+        else:
+            self.objMess.showMess(str(res))    
+ 
+    def showUserWin(self):
+        #print(self.userData)
+
+        self.pop = tk.Toplevel(self.mainObj.win)
+        self.pop.geometry("350x250")
+        self.pop.title("Modifier User")
+        #self.pop.iconbitmap(GOLFICON)   
+        self.mainObj.childWin.append(self.pop)
+        #pdb.set_trace()
+        
+        print(str(self.pos))
+        if not self.pos is None:
+            self.pop.geometry(f"+{self.pos[0]}+{self.pos[1]}")  
+        
+        self.objMess = cdc.messageObj(self.pop, height=15)
+
+        # Form frame
+        mainFrame = tk.Frame(self.pop, borderwidth = 1, relief=RIDGE)
+        mainFrame.pack( fill=X, padx=10, pady=10)        
+        mainFrame.columnconfigure(0, weight=1)
+        mainFrame.columnconfigure(1, weight=1)
+
+        # Input
+
+        self.formFrame = tk.Frame(mainFrame)
+        self.formFrame.grid(column=0, row=0)        
+        ttk.Label(self.formFrame, text=" User : ").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(self.formFrame, text=self.userName).grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)  
+
+        # Création du menu user
+        self.menuFichier = Menubutton(self.formFrame, text='User :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
+        self.menuFichier.grid(row=0,column=0)
+        menu_file = Menu(self.menuFichier, tearoff = 0)
+        menu_file.add_cascade(label='Ajouter...', command = self.addUser) 
+        menu_file.add_cascade(label='Supprimer...', command = self.delete) 
+        self.menuFichier.configure(menu=menu_file) 
+        
+        ttk.Label(self.formFrame, text="db :").grid(row=2, column=0, sticky=tk.E, padx=5, pady=3)
+        ttk.Label(self.formFrame, text="admin ").grid(row=2, column=1, sticky=tk.W)
+
+        ttk.Label(self.formFrame, text= "roles : ").grid( row=3, column=0, sticky=tk.E, padx=1, pady=3) 
+        ttk.Label(self.formFrame, text= "[").grid( row=3, column=1, sticky=tk.W, padx=1, pady=3) 
+        
+        # Création du menu roles
+        self.menuRole = Menubutton(self.formFrame, text='roles :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
+        self.menuRole.grid(row=3,column=0)
+        menu_role = Menu(self.menuRole, tearoff = 0)
+        menu_role.add_cascade(label='Ajouter...', command = self.addRole) 
+        menu_role.add_cascade(label='Supprimer...', command = self.delRole) 
+        self.menuRole.configure(menu=menu_role)        
+        
+        roleList = []
+        dbList = []
+        for role in self.userRolesList:
+            roleList.append(role["role"])
+            dbList.append(role["db"])
+        
+        ttk.Label(self.formFrame, text= "role : ").grid( row=4, column=0, sticky=tk.E, padx=1, pady=3)
+        self.comboRole = ttk.Combobox(
+            self.formFrame,
+            state="readonly",
+            values = roleList
+            )   #self.mainObj.roleList
+        if roleList:
+            self.comboRole.current(0)
+        self.comboRole.bind("<<ComboboxSelected>>", self.setRole)
+        self.comboRole.grid( row=4, column=1, sticky=tk.W)         
+        ttk.Label(self.formFrame, text= "db : ").grid( row=5, column=0, sticky=tk.E, padx=1, pady=3)
+        self.comboBD = ttk.Combobox(
+            self.formFrame,
+            state="readonly",
+            values = dbList
+            )   #self.data.dbList
+        if dbList:
+            self.comboBD.current(0)
+        self.comboBD.bind("<<ComboboxSelected>>", self.setRole)
+        self.comboBD.grid( row=5, column=1, sticky=tk.W)
+
+        self.sysRole = IntVar()
+        #self.sysRole.set(1)
+
+        ttk.Label(self.formFrame, text= "]").grid( row=7, column=0, sticky=tk.E, padx=1, pady=3) 
+        #pdb.set_trace()
+        
+        # Button        
+        self.butFrame = tk.Frame(mainFrame)
+        self.butFrame.grid(column=1, row=0)
+    
+        ttk.Button(self.butFrame, text='Annuler', command=self.close).grid(row=1, column=0, pady=5)
+        ttk.Button(self.butFrame, text='Test', command=self.test).grid(row=5, column=0, pady=5)
+        
+    def changeRoleList(self, event= None):
+        #roleList = []
+        #pdb.set_trace()
+        if self.sysRole.get():
+            self.comboRole.config(values=self.mainObj.roleList)
+        else:
+            self.comboRole.config(values=systemRole)
+
+    def setRole(self, event = None):
+        index = event.widget.current()
+        self.comboRole.current(index)
+        self.comboBD.current(index)
+
+    def test(self):
+        print(str(self.pop.winfo_x()) + "   y=" + str(self.pop.winfo_y()))
+        
 class dbaseObj():
     def __init__(self, *args, **kwargs):
         self.data = None
+        self.dbList = []
+        self.colList = {}
         self.dbase = ""
         self.appdbName = { APPG: APPGBD,
                             APPR: APPRBD}        
         self.server = {
             "Local": "mongodb://localhost:27017/",
-            VSERV: ""
+            VSERV: "mongodb://cdore:925@cdore.ddns.net:6600/?authSource=admin&ssl=false"
             }
         self.DBconnect = None
         self.isConnect = False
@@ -529,7 +845,7 @@ class dbaseObj():
         if userPass is None:
             uri = self.server[Server]
         else:
-            uri = """mongodb://%s:%s@cdore.ddns.net:6600/?authSource=admin&ssl=false"""  % ("")
+            uri = """mongodb://%s:%s@cdore.ddns.net:6600/?authSource=admin&ssl=false"""  % ("CDadmin", "925045Cd!")
             globals()["USER_ID"] = "CDadmin"
         if Server == "Local":
             timeout = 2000
@@ -546,8 +862,19 @@ class dbaseObj():
                         serverSelectionTimeoutMS=timeout,)
 
             self.DBconnect.server_info()
+            #pdb.set_trace()
             #print(str(self.DBconnect.server_info()))
             if "ok" in self.DBconnect.server_info():
+                dbs=self.DBconnect.list_database_names()
+                dbs.remove('admin')
+                dbs.remove('config')
+                dbs.remove('local')
+                #pdb.set_trace()                
+                for db in dbs:
+                    theDB = self.DBconnect[db]
+                    self.colList[db] = theDB.list_collection_names()
+                dbs.insert(0, "")
+                self.dbList = dbs
                 self.data = self.DBconnect[self.dbase]
                 self.isConnect = True
         except:
