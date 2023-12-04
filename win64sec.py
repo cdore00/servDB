@@ -546,7 +546,7 @@ class editRoleWin():
         #print(self.roleData)
 
         self.pop = tk.Toplevel(self.mainObj.win)
-        self.pop.geometry("400x550")
+        self.pop.geometry("400x560")
         self.pop.title("Modifier Role")
         #self.pop.iconbitmap(GOLFICON)   
         self.mainObj.childWin.append(self.pop)
@@ -575,28 +575,31 @@ class editRoleWin():
         menu_file.add_cascade(label='Ajouter...', command = self.addRole) 
         menu_file.add_cascade(label='Supprimer...', command = self.delete) 
         self.menuFichier.configure(menu=menu_file) 
+
+        ttk.Label(self.formFrame, text="db :                        ").grid(row=1, column=0, sticky=tk.E, padx=5, pady=3)
+        ttk.Label(self.formFrame, text="admin ").grid(row=1, column=1, sticky=tk.W)
         
-        ttk.Label(self.formFrame, text="privileges :  [").grid(row=1, column=0, sticky=tk.W, padx=5, pady=3)
+        ttk.Label(self.formFrame, text="privileges :  [").grid(row=2, column=0, sticky=tk.W, padx=5, pady=3)
         #ttk.Label(self.formFrame, text="{").grid(row=1, column=1, sticky=tk.W, padx=5, pady=3)
         
-        ttk.Label(self.formFrame, text="{  resources : {        ").grid(row=2, column=0, sticky=tk.E, padx=1, pady=3)
+        ttk.Label(self.formFrame, text="{  resources : { ").grid(row=3, column=0, sticky=tk.E, padx=30, pady=3)
         
-        ttk.Label(self.formFrame, text= "db : ").grid( row=3, column=0, sticky=tk.E, padx=1, pady=3)
+        ttk.Label(self.formFrame, text= "db : ").grid( row=4, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboBD = ttk.Combobox(
             self.formFrame,
             state="readonly",
             values = self.data.dbList
             )
-        self.comboBD.grid( row=3, column=1, sticky=tk.W)
-        ttk.Label(self.formFrame, text= "collection : ").grid( row=4, column=0, sticky=tk.E, padx=1, pady=3)
+        self.comboBD.grid( row=4, column=1, sticky=tk.W)
+        ttk.Label(self.formFrame, text= "collection : ").grid( row=5, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboCol = ttk.Combobox(
             self.formFrame,
             state="readonly",
             values=[""]
             )
-        self.comboCol.grid( row=4, column=1, sticky=tk.W)      
-        ttk.Label(self.formFrame, text="} , ").grid(row=5, column=0, sticky=tk.W, padx=45, pady=3)
-        ttk.Label(self.formFrame, text="actions : [").grid(row=6, column=0, columnspan=2, sticky=tk.W, padx=50, pady=3)
+        self.comboCol.grid( row=5, column=1, sticky=tk.W)      
+        ttk.Label(self.formFrame, text="} , ").grid(row=6, column=0, sticky=tk.W, padx=45, pady=3)
+        ttk.Label(self.formFrame, text="actions : [").grid(row=7, column=0, columnspan=2, sticky=tk.W, padx=50, pady=3)
         #pdb.set_trace()
         
         # Button        
@@ -620,10 +623,10 @@ class editRoleWin():
             ttk.Checkbutton(self.actionsFrame.interior, variable=self.var_list[ind], text=task).pack(anchor=W, padx=80)        
 
         footFrame = tk.Frame(self.pop)
-        footFrame.pack( fill=X, padx=10, pady=10)  
-        ttk.Label(footFrame, text="]").grid(row=0, column=0, sticky=tk.W, padx=60, pady=0)
-        ttk.Label(footFrame, text="}").grid(row=1, column=0, sticky=tk.W, padx=40, pady=0)
-        ttk.Label(footFrame, text="]").grid(row=2, column=0, sticky=tk.W, padx=15, pady=0)
+        footFrame.pack( fill=X )
+        ttk.Label(footFrame, text="]").grid(row=0, column=0, sticky=tk.W, padx=70, pady=0)
+        ttk.Label(footFrame, text="}").grid(row=1, column=0, sticky=tk.W, padx=45, pady=0)
+        ttk.Label(footFrame, text="]").grid(row=2, column=0, sticky=tk.W, padx=25, pady=0)
 
 class editUserWin():
     def __init__(self, mainWin, userData, pos):
