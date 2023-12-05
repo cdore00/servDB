@@ -50,6 +50,7 @@ from pymongo import MongoClient
 USER_ID = 0
 
 RECICON  = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
+RECICON  = "mongo.ico"
 if not os.path.exists(RECICON):
     RECICON = ''
 
@@ -344,7 +345,6 @@ class master_form_find():
         dat = self.data.data.system.users
         res=dat.find()
         self.usersDataList=list(res)
-        #pdb.set_trace()
         slavelist = self.usersFrame.interior.slaves()
         for elem in slavelist:
             elem.destroy()         
@@ -373,7 +373,7 @@ class master_form_find():
         #jsoneditor.editjson(data)
 
         
-    def getRoles(self):
+    def getRoles(self, userRole = None, pos = None):
         
         dat = self.data.data.system.roles
         res=dat.find()
@@ -385,10 +385,13 @@ class master_form_find():
         gridframe = tk.Frame(self.gridFrame.interior)
         gridframe.pack(expand= True, side=LEFT, fill=X, padx=10)
 
+        userRoleIndex = -1
         for index in range(len(self.rolesDataList)):
             data = self.rolesDataList[index]
             self.roleList.append(data["role"])
             #pdb.set_trace()
+            if data["role"] == userRole:
+                userRoleIndex = index            
             Button(gridframe, text=' ... ', command= lambda index=index: self.editRole(index), font=('Calibri 15 bold')).grid(row=index, column=0)
             formatted_data = json.dumps(data, indent=4)
             nlines = formatted_data.count('\n')            
@@ -396,22 +399,23 @@ class master_form_find():
             text_box.grid(row= index, column=1, sticky="WE") 
             text_box.insert(tk.END, formatted_data)
             text_box.config( state="disabled")
-        self.win.update_idletasks()   
+
+        if userRoleIndex > -1:
+            self.editRole(userRoleIndex, pos)
+            
         return len(self.rolesDataList)
 
-    def editRole(self, index = None):
+    def editRole(self, index = None, pos = None):
         #pdb.set_trace()
-        editRoleWin(self, self.rolesDataList[index])
+        editRoleWin(self, self.rolesDataList[index], pos)
 
     def editUser(self, index = None, pos = None):
         #pdb.set_trace()
         db = self.data.data
         #res = db.command("grantRolesToUser", "cdore", roles=["makebup"])
         #res = db.command("revokeRolesFromUser", "cdore", roles=["makebup"])
-        
         #res = db.command({"createUser": "username", "pwd": "pass", "roles": [ { "role": "makebup", "db": "admin" } ] } )
         editUserWin(self, self.usersDataList[index], pos)
-        print("editUser") 
  
     def do(self):
         x=2
@@ -453,10 +457,11 @@ class master_form_find():
         res = app.showChangePassdialog(USER_ID)
         
 class editRoleWin():
-    def __init__(self, mainWin, roleData):
+    def __init__(self, mainWin, roleData, pos):
         self.mainObj = mainWin
         self.data = mainWin.data
         self.roleData = roleData
+        self.pos = pos
         self.roleName = self.roleData["role"]
         self.userActionsList = self.roleData["privileges"][0]["actions"]
         self.showRoleWin()
@@ -465,38 +470,24 @@ class editRoleWin():
         self.pop.destroy()
 
     def save(self):
-
+        res = None
         db = self.data.data
+        
         revokeArr = []
         for act in self.userActionsList:
             if self.var_list[actionsList.index(act)].get() == 0:
                 revokeArr.append(act)
-
-        res = None
         if len(revokeArr):
-            res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": {"db":"", "collection" : ""}, "actions": revokeArr}]})
+            res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": revokeArr}]})
 
         grantArr = []
         for act in actionsList:
             if self.var_list[actionsList.index(act)].get() == 1:
                 grantArr.append(act)
-        #print(grantArr)
-
         if len(grantArr):
-            res = db.command({"grantPrivilegesToRole": self.roleName, "privileges": [{"resource": {"db":"", "collection" : ""}, "actions": grantArr}]})            
+            res = db.command({"grantPrivilegesToRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": grantArr}]})            
 
-        if res["ok"]:
-            #pdb.set_trace()
-            for act in revokeArr:
-                self.userActionsList.remove(act)
-            for act in grantArr:
-                self.userActionsList.append(act)
-            self.objMess.showMess("Enregistré!", type = "I")
-        else:
-            self.objMess.showMess(str(res))
-            
-        #pdb.set_trace()
-        self.mainObj.getRoles()
+        self.refreshRoles(res)
 
     def delete(self):
         answer = askyesno(title='Suppression',
@@ -513,10 +504,14 @@ class editRoleWin():
 
     def addRole(self):
         self.menuFichier.destroy()
+        self.menuPriv.destroy()
         self.newRoleName = ttk.Entry(self.formFrame, width=20)
         self.newRoleName.focus()
         self.newRoleName.grid(column=1, row=0, sticky=tk.W)
-        ttk.Button(self.butFrame, text='Enregistrer', command=self.createRole).grid(row=0, column=0)        
+        ttk.Button(self.butFrame, text='Enregistrer', command=self.createRole).grid(row=0, column=0) 
+        self.comboBD.current(0)
+        self.comboCol.current(0)
+        self.setPriv()
 
     def createRole(self):
         #roleData = {}
@@ -540,7 +535,21 @@ class editRoleWin():
             self.close()
         else:
             self.objMess.showMess(str(res))        
-        
+
+    def delPriv(self):
+        answer = askyesno(title='Suppression',
+            message='Supprimer le privilege : {' + "db: " + self.comboBD.get() + ", collection: " + self.comboCol.get() + " }")
+        if answer:     
+            db = self.data.data
+            res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": actionsList}]})
+            self.refreshRoles(res)
+    
+    def refreshRoles(self, res):
+        if res["ok"]:
+            self.mainObj.getRoles(self.roleName, [self.pop.winfo_x(), self.pop.winfo_y()])
+            self.close()
+        else:
+            self.objMess.showMess(str(res))         
     
     def showRoleWin(self):
         #print(self.roleData)
@@ -551,7 +560,11 @@ class editRoleWin():
         #self.pop.iconbitmap(GOLFICON)   
         self.mainObj.childWin.append(self.pop)
         #pdb.set_trace()
-        
+
+        print(str(self.pos))
+        if not self.pos is None:
+            self.pop.geometry(f"+{self.pos[0]}+{self.pos[1]}")
+            
         self.objMess = cdc.messageObj(self.pop, height=15)
 
         # Form frame
@@ -568,7 +581,6 @@ class editRoleWin():
         ttk.Label(self.formFrame, text=self.roleName).grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)  
 
         # Création du menu
-
         self.menuFichier = Menubutton(self.formFrame, text='role :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuFichier.grid(row=0,column=0, sticky=tk.W)
         menu_file = Menu(self.menuFichier, tearoff = 0)
@@ -579,8 +591,15 @@ class editRoleWin():
         ttk.Label(self.formFrame, text="db :                        ").grid(row=1, column=0, sticky=tk.E, padx=5, pady=3)
         ttk.Label(self.formFrame, text="admin ").grid(row=1, column=1, sticky=tk.W)
         
-        ttk.Label(self.formFrame, text="privileges :  [").grid(row=2, column=0, sticky=tk.W, padx=5, pady=3)
-        #ttk.Label(self.formFrame, text="{").grid(row=1, column=1, sticky=tk.W, padx=5, pady=3)
+        ttk.Label(self.formFrame, text="privileges :    [").grid(row=2, column=0, sticky=tk.W, padx=5, pady=3)
+        
+        # Création du menu privileges
+        self.menuPriv = Menubutton(self.formFrame, text='privileges :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
+        self.menuPriv.grid(row=2,column=0, sticky=tk.W)
+        menu_priv = Menu(self.menuPriv, tearoff = 0)
+        #menu_priv.add_cascade(label='Ajouter...', command = self.addRole) 
+        menu_priv.add_cascade(label='Supprimer...', command = self.delPriv) 
+        self.menuPriv.configure(menu=menu_priv)        
         
         ttk.Label(self.formFrame, text="{  resources : { ").grid(row=3, column=0, sticky=tk.E, padx=30, pady=3)
         
@@ -590,13 +609,17 @@ class editRoleWin():
             state="readonly",
             values = self.data.dbList
             )
+        self.comboBD.bind("<<ComboboxSelected>>", self.setPriv)
         self.comboBD.grid( row=4, column=1, sticky=tk.W)
+        self.comboBD.current( self.data.dbList.index(self.roleData["privileges"][0]["resource"]["db"]) )
+        
         ttk.Label(self.formFrame, text= "collection : ").grid( row=5, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboCol = ttk.Combobox(
             self.formFrame,
             state="readonly",
             values=[""]
             )
+        self.comboCol.bind("<<ComboboxSelected>>", self.setPriv)
         self.comboCol.grid( row=5, column=1, sticky=tk.W)      
         ttk.Label(self.formFrame, text="} , ").grid(row=6, column=0, sticky=tk.W, padx=45, pady=3)
         ttk.Label(self.formFrame, text="actions : [").grid(row=7, column=0, columnspan=2, sticky=tk.W, padx=50, pady=3)
@@ -627,7 +650,37 @@ class editRoleWin():
         ttk.Label(footFrame, text="]").grid(row=0, column=0, sticky=tk.W, padx=70, pady=0)
         ttk.Label(footFrame, text="}").grid(row=1, column=0, sticky=tk.W, padx=45, pady=0)
         ttk.Label(footFrame, text="]").grid(row=2, column=0, sticky=tk.W, padx=25, pady=0)
+        self.setPriv(setCol = True)
+        
 
+    def setPriv(self, event = None, setCol = False):
+
+        colList = []
+        if self.comboBD.get() != "":
+            colList = self.data.colList[self.comboBD.get()]
+            if not "" in colList:
+                colList.insert(0,"")
+        self.comboCol.config(values=colList)
+        privileges = self.roleData["privileges"]
+        if setCol:
+            self.comboCol.current( colList.index(self.roleData["privileges"][0]["resource"]["collection"]) )
+
+        actPriv = '{ ' + 'db: "' + self.comboBD.get() + '" , collection: "' + self.comboCol.get() + '" }'        
+        existPriv = False
+        self.userActionsList = []
+        #pdb.set_trace()
+        for priv in privileges:
+            if priv["resource"]["db"] == self.comboBD.get() and priv["resource"]["collection"] == self.comboCol.get():
+                existPriv = True
+                self.userActionsList = priv["actions"]
+        mess = ("Modifier" if existPriv else "Ajouter") + " le privilege :\n" + actPriv
+        self.objMess.showMess(mess, "I")
+        for ind, task in enumerate(actionsList):
+            if (task in self.userActionsList):
+                self.var_list[ind].set(1)
+            else:
+                self.var_list[ind].set(0)
+        
 class editUserWin():
     def __init__(self, mainWin, userData, pos):
         self.mainObj = mainWin
@@ -647,7 +700,7 @@ class editUserWin():
         if answer:       
             db = self.data.data
             res = db.command({"dropUser": self.userName})  
-            self.refreshRole(res)           
+            self.refreshUsers(res)           
 
     def addUser(self):
         self.menuFichier.destroy()
@@ -667,7 +720,7 @@ class editUserWin():
         res = db.command({"createUser": self.newUserName.get(), "pwd": self.newUserPass.get(), "roles": [ role ] } )
         try:
             res = db.command("grantRolesToUser", self.userName, roles=[role])
-            self.refreshRole(res)
+            self.refreshUsers(res)
         except Exception as ex:
             self.objMess.showMess(str(ex))       
 
@@ -679,7 +732,7 @@ class editUserWin():
         if answer:         
             db = self.data.data
             res = db.command("revokeRolesFromUser", self.userName, roles=[role])   
-            self.refreshRole(res)
+            self.refreshUsers(res)
                 
     def addRole(self):
 
@@ -708,11 +761,11 @@ class editUserWin():
         db = self.data.data
         try:
             res = db.command("grantRolesToUser", self.userName, roles=[role])
-            self.refreshRole(res)
+            self.refreshUsers(res)
         except Exception as ex:
             self.objMess.showMess(str(ex))
     
-    def refreshRole(self, res):
+    def refreshUsers(self, res):
         if res["ok"]:
             self.mainObj.getUsers(self.userName, [self.pop.winfo_x(), self.pop.winfo_y()])
             self.close()
@@ -729,7 +782,6 @@ class editUserWin():
         self.mainObj.childWin.append(self.pop)
         #pdb.set_trace()
         
-        print(str(self.pos))
         if not self.pos is None:
             self.pop.geometry(f"+{self.pos[0]}+{self.pos[1]}")  
         
