@@ -690,7 +690,7 @@ class dbaseObj():
                             APPR: APPRBD}        
         self.server = {
             "Local": "mongodb://localhost:27017/",
-            VSERV: ""
+            VSERV: "mongodb://cdore.ddns.net:6600/?authSource=admin&ssl=false"
             }
         self.DBconnect = None
         self.isConnect = False
