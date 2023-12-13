@@ -671,8 +671,8 @@ class logonBDdialog(simpledialog.Dialog):
 
         self.titleframe = tk.Frame(master)
         self.titleframe.grid(row=0)        
-        lblTitle = tk.Label(self.titleframe, text="Connexion à la BD", font=('Calibri 12 bold'))    #.grid(row=0, columnspan=2)
-        lblTitle.pack()
+        lblTitle = tk.Label(self.titleframe, text="Connexion à la BD", font=('Calibri 12 bold')).grid(row=0)
+        #lblTitle.pack()
         
         self.formframe = tk.Frame(master, borderwidth = 1, relief=RIDGE, padx=10, pady=10)
         self.formframe.grid(row=1)
@@ -691,8 +691,8 @@ class logonBDdialog(simpledialog.Dialog):
             
     def apply(self):
         # Cette méthode est appelée lorsque le bouton "OK" est cliqué
+        #pdb.set_trace()
         self.result = self.connectArr   #Permet de récupérer les valeurs dans un array
-        #print("logonBDdialog.apply" + str(self.result))
 
 class logonAPPdialog(logonBDdialog):
     def __init__(self, parent, optionalObject = None):
@@ -789,6 +789,42 @@ class changePassAPPdialog(logonAPPdialog):
         col = self.obj.users
         dat = col.update_one({"_id": id} , { "$set": {"motpass": password}})
             
+
+
+class changeBDpass(logonBDdialog):
+    def __init__(self, parent, optionalObject = None):
+        self.parent = parent
+        self.obj = optionalObject[0]
+        self.userIdent = optionalObject[1]
+        logonBDdialog.__init__(self, parent)
+ 
+    def body(self, master):
+        logonBDdialog.body(self, master)
+        self.entry.insert(0, self.userIdent)
+        
+        lblTitle = tk.Label(self.titleframe, text="Change password", font=('Calibri 12 bold')).grid(row=0)
+
+        self.passentry.config(show="")
+
+class adminBDpass(logonBDdialog):
+    def __init__(self, parent, optionalObject = None):
+        
+        self.parent = parent
+        self.obj = optionalObject[0]
+        self.userIdent = optionalObject[1]
+        logonBDdialog.__init__(self, parent)
+ 
+    def body(self, master):
+        logonBDdialog.body(self, master)
+        self.entry.insert(0, self.userIdent)
+        
+        lblTitle = tk.Label(self.titleframe, text="   User admin database  ", font=('Calibri 12 bold')).grid(row=0)
+        tk.Label(self.titleframe, text="Use root admin database user ").grid(row=1)
+        tk.Label(self.titleframe, text="or [recommanded]").grid(row=2)
+        tk.Label(self.titleframe, text="admin user database user with list collections privilege.").grid(row=3)
+        
+
+
             
 class logonWin:
     def __init__(self, root, optionalObject = None):
@@ -806,5 +842,14 @@ class logonWin:
     def showChangePassdialog(self, userIdent = None):
         custom_dialog = changePassAPPdialog(self.root, [self.obj, userIdent])
         return custom_dialog.result #Retourner les valeurs par le bouton Ok, sinon None 
+
+    def showChangeBDpass(self, userIdent = ""):
+        custom_dialog = changeBDpass(self.root, [self.obj, userIdent])
+        return custom_dialog.result #Retourner les valeurs par le bouton Ok, sinon None   
+
+    def showAdminUserBD(self, userIdent = ""):
+        #pdb.set_trace()
+        custom_dialog = adminBDpass(self.root, [self.obj, userIdent])
+        return custom_dialog.result #Retourner les valeurs par le bouton Ok, sinon None   
         
 # FIN Logon modal dialog

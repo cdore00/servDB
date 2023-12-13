@@ -1,5 +1,4 @@
 # coding=utf-8
-#https://stackoverflow.com/questions/71677889/create-a-scrollbar-to-a-full-window-tkinter-in-python
 #https://pyinstaller.org/en/stable/usage.html#cmdoption-hidden-import
 #pyinstaller main.py --onefile --name test --icon test.ico --noconsole
 #Mise à jour et sécurité/Sécurité Windows/Protection contre les virus/Gérer les paramètres/Protection en temps réel
@@ -9,6 +8,10 @@
 #https://pypi.org/project/jsoneditor/
 #Built-In Roles
 #https://www.mongodb.com/docs/manual/reference/built-in-roles/#mongodb-authrole-dbOwner
+#https://www.mongodb.com/docs/v3.4/tutorial/enable-authentication/
+#/etc/mongod.conf     #/data/db
+#security:
+#	authorization: "enabled"
 
 import pdb
 #; pdb.set_trace()
@@ -30,6 +33,7 @@ from tkinter import tix
 from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
 from tkinter.scrolledtext import ScrolledText
+from tkinter import simpledialog
 #from idlelib.tooltip import Hovertip
 
 import urllib
@@ -37,6 +41,7 @@ import urllib.request
 
 #import jsoneditor
 
+import mongoRoles
 import cdControl as cdc
 
 # JSON
@@ -47,558 +52,19 @@ import json
 import pymongo
 from pymongo import MongoClient
 
-RECICON  = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
-RECICON  = "mongo.ico"
-if not os.path.exists(RECICON):
-    RECICON = ''
+APPICON  = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
+APPICON  = "mongo.ico"
+if not os.path.exists(APPICON):
+    APPICON = ''
 
+BDSYSTEMLIST = mongoRoles.bdSystemList
+ACTIONLIST = mongoRoles.actionsList
+BULTINROLELIST = mongoRoles.systemRole
 
 CONFFILE = "mongoSecur.conf"
-LSERV   = "Local"
+LOCALSERV= "localhost"
 VSERV   = "Vultr"
 
-BDSYSTEMLIST = ["", "admin", "local", "config"]
-
-ACTIONLIST = [
-{
-	"resource" : {
-			"db" : "config",
-			"collection" : ""
-	},
-	"actions" : [
-			"analyzeShardKey",
-			"bypassDocumentValidation",
-			"changeCustomData",
-			"changePassword",
-			"changeStream",
-			"clearJumboFlag",
-			"collMod",
-			"collStats",
-			"configureQueryAnalyzer",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createRole",
-			"createSearchIndexes",
-			"createUser",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"dropRole",
-			"dropUser",
-			"enableSharding",
-			"find",
-			"getDatabaseVersion",
-			"getShardVersion",
-			"grantRole",
-			"indexStats",
-			"insert",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"updateSearchIndex",
-			"moveChunk",
-			"planCacheRead",
-			"refineCollectionShardKey",
-			"remove",
-			"reshardCollection",
-			"revokeRole",
-			"setAuthenticationRestriction",
-			"splitChunk",
-			"splitVector",
-			"update",
-			"viewRole",
-			"viewUser"
-	]
-},
-{
-	"resource" : {
-			"db" : "config",
-			"collection" : "system.js"
-	},
-	"actions" : [
-			"changeStream",
-			"collStats",
-			"dbHash",
-			"dbStats",
-			"find",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "local",
-			"collection" : ""
-	},
-	"actions" : [
-			"analyzeShardKey",
-			"bypassDocumentValidation",
-			"changeCustomData",
-			"changePassword",
-			"changeStream",
-			"clearJumboFlag",
-			"collMod",
-			"collStats",
-			"configureQueryAnalyzer",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createRole",
-			"createSearchIndexes",
-			"createUser",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"dropRole",
-			"dropUser",
-			"enableSharding",
-			"find",
-			"getDatabaseVersion",
-			"getShardVersion",
-			"grantRole",
-			"indexStats",
-			"insert",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"updateSearchIndex",
-			"moveChunk",
-			"planCacheRead",
-			"refineCollectionShardKey",
-			"remove",
-			"reshardCollection",
-			"revokeRole",
-			"setAuthenticationRestriction",
-			"splitChunk",
-			"splitVector",
-			"update",
-			"viewRole",
-			"viewUser"
-	]
-},
-{
-	"resource" : {
-			"db" : "local",
-			"collection" : "system.js"
-	},
-	"actions" : [
-			"changeStream",
-			"collStats",
-			"dbHash",
-			"dbStats",
-			"find",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "",
-			"collection" : ""
-	},
-	"actions" : [
-			"analyze",
-			"analyzeShardKey",
-			"bypassDocumentValidation",
-			"changeCustomData",
-			"changePassword",
-			"changeStream",
-			"clearJumboFlag",
-			"collMod",
-			"collStats",
-			"compact",
-			"compactStructuredEncryptionData",
-			"configureQueryAnalyzer",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createRole",
-			"createSearchIndexes",
-			"createUser",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"dropDatabase",
-			"dropIndex",
-			"dropRole",
-			"dropSearchIndex",
-			"dropUser",
-			"enableProfiler",
-			"enableSharding",
-			"find",
-			"getDatabaseVersion",
-			"getShardVersion",
-			"grantRole",
-			"indexStats",
-			"insert",
-			"killCursors",
-			"listCachedAndActiveUsers",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"updateSearchIndex",
-			"moveChunk",
-			"planCacheIndexFilter",
-			"planCacheRead",
-			"planCacheWrite",
-			"refineCollectionShardKey",
-			"reIndex",
-			"remove",
-			"renameCollectionSameDB",
-			"reshardCollection",
-			"revokeRole",
-			"setAuthenticationRestriction",
-			"splitChunk",
-			"splitVector",
-			"storageDetails",
-			"update",
-			"validate",
-			"viewRole",
-			"viewUser"
-	]
-},
-{
-	"resource" : {
-			"db" : "config",
-			"collection" : "system.sessions"
-	},
-	"actions" : [
-			"collStats",
-			"dbStats",
-			"getDatabaseVersion",
-			"getShardVersion",
-			"indexStats"
-	]
-},
-{
-	"resource" : {
-			"db" : "local",
-			"collection" : "system.replset"
-	},
-	"actions" : [
-			"bypassDocumentValidation",
-			"changeStream",
-			"collMod",
-			"collStats",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createSearchIndexes",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"find",
-			"insert",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"updateSearchIndex",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "local",
-			"collection" : "replset.election"
-	},
-	"actions" : [
-			"bypassDocumentValidation",
-			"collMod",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createSearchIndexes",
-			"dropCollection",
-			"find",
-			"insert",
-			"updateSearchIndex",
-			"remove",
-			"update"
-	]
-},
-{
-	"resource" : {
-			"db" : "local",
-			"collection" : "replset.minvalid"
-	},
-	"actions" : [
-			"bypassDocumentValidation",
-			"collMod",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createSearchIndexes",
-			"dropCollection",
-			"find",
-			"insert",
-			"updateSearchIndex",
-			"remove",
-			"update"
-	]
-},
-{
-	"resource" : {
-			"db" : "",
-			"collection" : "system.profile"
-	},
-	"actions" : [
-			"changeStream",
-			"collStats",
-			"convertToCapped",
-			"createCollection",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"find",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "local",
-			"collection" : "system.healthlog"
-	},
-	"actions" : [
-			"changeStream",
-			"collStats",
-			"dbHash",
-			"dbStats",
-			"find",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "admin",
-			"collection" : "system.users"
-	},
-	"actions" : [
-			"changeStream",
-			"collStats",
-			"createIndex",
-			"createSearchIndexes",
-			"dbHash",
-			"dbStats",
-			"dropIndex",
-			"dropSearchIndex",
-			"find",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "admin",
-			"collection" : "system.roles"
-	},
-	"actions" : [
-			"changeStream",
-			"collStats",
-			"createIndex",
-			"createSearchIndexes",
-			"dbHash",
-			"dbStats",
-			"dropIndex",
-			"dropSearchIndex",
-			"find",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "",
-			"collection" : "system.users"
-	},
-	"actions" : [
-			"bypassDocumentValidation",
-			"changeStream",
-			"collMod",
-			"collStats",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createSearchIndexes",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"find",
-			"insert",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"updateSearchIndex",
-			"planCacheRead",
-			"remove",
-			"update"
-	]
-},
-{
-	"resource" : {
-			"db" : "admin",
-			"collection" : "system.version"
-	},
-	"actions" : [
-			"bypassDocumentValidation",
-			"changeStream",
-			"collMod",
-			"collStats",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createSearchIndexes",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"find",
-			"insert",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"updateSearchIndex",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "admin",
-			"collection" : "system.backup_users"
-	},
-	"actions" : [
-			"bypassDocumentValidation",
-			"changeStream",
-			"collMod",
-			"collStats",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createSearchIndexes",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"find",
-			"insert",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"updateSearchIndex",
-			"planCacheRead"
-	]
-},
-{
-	"resource" : {
-			"db" : "",
-			"collection" : "system.js"
-	},
-	"actions" : [
-			"bypassDocumentValidation",
-			"changeStream",
-			"collMod",
-			"collStats",
-			"compactStructuredEncryptionData",
-			"convertToCapped",
-			"createCollection",
-			"createIndex",
-			"createSearchIndexes",
-			"dbHash",
-			"dbStats",
-			"dropCollection",
-			"dropIndex",
-			"dropSearchIndex",
-			"find",
-			"insert",
-			"killCursors",
-			"listCollections",
-			"listIndexes",
-			"listSearchIndexes",
-			"updateSearchIndex",
-			"planCacheRead",
-			"remove",
-			"renameCollectionSameDB",
-			"update"
-	]
-},
-{
-	"resource" : {
-			"db" : "config",
-			"collection" : "settings"
-	},
-	"actions" : [
-			"find",
-			"insert",
-			"update"
-	]
-},
-{
-	"resource" : {
-			"db" : "admin",
-			"collection" : "tempusers"
-	},
-	"actions" : [
-			"find"
-	]
-},
-{
-	"resource" : {
-			"db" : "admin",
-			"collection" : "temproles"
-	},
-	"actions" : [
-			"find"
-	]
-},
-{
-	"resource" : {
-			"db" : "config",
-			"collection" : "system.preimages"
-	},
-	"actions" : [
-			"find",
-			"remove"
-	]
-},
-{
-	"resource" : {
-			"db" : "config",
-			"collection" : "system.change_collection"
-	},
-	"actions" : [
-			"find",
-			"insert",
-			"remove",
-			"update"
-	]
-}
-]
-
-systemRole = ['read','readWrite','dbAdmin','dbOwner','userAdmin','clusterAdmin','clusterManager','clusterMonitor','hostManager','backup','restore','readAnyDatabase','readWriteAnyDatabase','userAdminAnyDatabase','dbAdminAnyDatabase','dbOwner','userAdmin','userAdminAnyDatabase','root']
         
 class filterForm():
     def __init__(self, parent, textVar, callBack):
@@ -627,14 +93,15 @@ class master_form_find():
         self.userPass = ["", ""]
         self.userRole = ""
         self.roleList = [] 
-        self.actServ  = LSERV
+        self.actServ  = None
+        self.servers = []
         self.keyWordRole = StringVar()
         self.keyWordUser = StringVar() 
-        """
+
         initInfo = self.readConfFile()
         if "init" in initInfo: 
             self.actServ  = initInfo["init"] 
-        """
+
         self.childWin = []
 
         self.gridFrame = None
@@ -650,7 +117,8 @@ class master_form_find():
         self.actServ  = serv
         #self.win.update_idletasks() 
         self.win.title(self.actServ)
-            
+        self.win.iconbitmap(APPICON)
+        
         self.closeRec()
         slavelist = self.win.slaves()
         for elem in slavelist:
@@ -683,52 +151,53 @@ class master_form_find():
         self.win.objMainMess.showMess("Conecting...")
         self.win.update_idletasks() 
 
-        app = cdc.logonWin(self.win)
-        res = app.showAdminUswerBD()
         isConnected = False
+        """
+        app = cdc.logonWin(self.win)
+        res = app.showAdminUserBD()
         if not res is None:
             self.userPass = res
             self.setConfFile()
             isConnected = self.data.connectTo(self.actServ, res)
             #pdb.set_trace()
+        """
+        defInfo = self.setDefault()
+        hostName = defInfo["host"] if "host" in defInfo else ""
+        port = defInfo["port"] if "port" in defInfo else ""
+        isConnected = self.data.connectTo(self.actServ, self.userPass, hostName=hostName, port=port)
+        self.afficherTitre(isConnected)
 
         self.win.objMainMess.clearMess()    
 
-        if isConnected:
-            self.afficherTitre()
-        else:
-            messagebox.showinfo(
-                title="Not connected",
-                message=f"Please select another connection.")
-            self.win.title(self.actServ + " : Not connected.")
-
         # Onglets
         tab_setup = ttk.Notebook(self.win)
+        
+        tabUsers = LabelFrame(tab_setup, text = " Users ", font=('Calibri 12 bold'))
+        tab_setup.add(tabUsers, text = "    Users    ")
+        tab_setup.pack(expand=1, fill = "both", padx = 10)           
 
         tabRoles = LabelFrame(tab_setup, text = " Roles ", font=('Calibri 12 bold'))
         tab_setup.add(tabRoles, text = "    Roles    ")
         tab_setup.pack(expand=1, fill = "both", padx = 10)
 
-        tabUsers = LabelFrame(tab_setup, text = " Users ", font=('Calibri 12 bold'))
-        tab_setup.add(tabUsers, text = "    Users    ")
-        tab_setup.pack(expand=1, fill = "both", padx = 10)        
+        filterForm(tabUsers, self.keyWordUser, self.getUsers)        
+        self.usersFrame = cdc.VscrollFrame(tabUsers)
+        self.usersFrame.pack(expand= True, fill=BOTH)            
+        self.getUsers()     
         
-
         filterForm(tabRoles, self.keyWordRole, self.getRoles)
         self.gridFrame = cdc.VscrollFrame(tabRoles)
         self.gridFrame.pack(expand= True, fill=BOTH)            
         self.getRoles()
         
-        filterForm(tabUsers, self.keyWordUser, self.getUsers)        
-        self.usersFrame = cdc.VscrollFrame(tabUsers)
-        self.usersFrame.pack(expand= True, fill=BOTH)            
-        self.getUsers()
-        
         self.win.geometry("550x500")        
 
     
-    def afficherTitre(self):
-        self.win.title( self.actServ + " : Connected " + self.userPass[0])
+    def afficherTitre(self, isConnected):
+        if isConnected:
+            self.win.title( self.actServ + " : Connected - " + self.userPass[0])
+        else:
+            self.win.title( self.actServ + " : Not connected.")
     
 
     def readConfFile(self):
@@ -745,38 +214,83 @@ class master_form_find():
         initInfo = (self.readConfFile())
         
         initInfo["init"] = self.actServ
-        initInfo[(self.actServ)] = {}
+        if not self.actServ in initInfo:
+            initInfo[(self.actServ)] = {}
+            print("NEW-NEW-NEW")
         initInfo[(self.actServ)]["roleKeyword"] = self.keyWordRole.get()
         initInfo[(self.actServ)]["userKeyword"] = self.keyWordUser.get()
-
         initInfo[(self.actServ)]["userPass"] = self.userPass
-        
-      
+        self.writeConfFile(initInfo)
 
+    def writeConfFile(self, initInfo):
         with open(CONFFILE, 'w', encoding='utf-8') as f:
             f.write(str(initInfo))
-            #f.close()
-        
+            f.close()
 
+    def setServerConfFile(self, param = None):
+        #pdb.set_trace()
+        initInfo = (self.readConfFile())
+        if param["server"] is None:
+            #pdb.set_trace()
+            del initInfo[param["delServ"]]
+            if initInfo["init"] == param["delServ"]:
+                del initInfo["init"]
+        else:
+            if param["server"] != self.actServ and param["server"] not in initInfo:
+                print("NEW")
+                initInfo[param["server"]] = {}
+                initInfo[param["server"]]["roleKeyword"] = ""
+                initInfo[param["server"]]["userKeyword"] = ""
+                initInfo[param["server"]]["userPass"] = ["", ""]
+        
+            initInfo[param["server"]]["host"] = param["host"]
+            initInfo[param["server"]]["port"] = param["port"]
+        self.writeConfFile(initInfo)
+        print(initInfo)
+        
+    def setDefault(self, initInfo = None):
+        actInfo = {}
+        if initInfo is None:
+            initInfo = (self.readConfFile())
+        if self.actServ is None:
+            self.actServ = LOCALSERV
+        if not initInfo is None and self.actServ in initInfo:
+            actInfo = initInfo[(self.actServ)]
+            self.userPass = actInfo["userPass"]
+            self.keyWordRole.set(actInfo["roleKeyword"])
+            self.keyWordUser.set(actInfo["userKeyword"])
+        return actInfo    
+            
     def getUsers(self, userName = None, pos = None):
         #pdb.set_trace()
-        if self.data.data is None:
-            return        
+        slavelist = self.usersFrame.interior.slaves()
+        for elem in slavelist:
+            elem.destroy() 
+            
+        if not self.data.isConnect or self.data.data is None:
+            return   
+
+        self.setConfFile()            
         dat = self.data.data.system.users
         res=dat.find()
         self.usersDataList=list(res)
-        slavelist = self.usersFrame.interior.slaves()
-        for elem in slavelist:
-            elem.destroy()         
+        
         usersframe = tk.Frame(self.usersFrame.interior)
         usersframe.pack(expand= True, side=LEFT, fill=X, padx=10)
-        
+
+        if len(self.usersDataList) == 0:
+            Button(usersframe, text='Create root user', command= self.createRoot, font=('Calibri 12 bold')).pack()
+            #grid(row=0, column=0)
+            
         userNameIndex = -1
         for index in range(len(self.usersDataList)):
             data = self.usersDataList[index]
             #print(data)
-            data.pop("userId")
-            data.pop("credentials")
+            if "userId" in data and "credentials" in data :
+                data.pop("userId")
+                data.pop("credentials")
+            else:
+                print("NOT userID and credentials")
             if data["user"] == userName:
                 userNameIndex = index
             #pdb.set_trace()
@@ -793,23 +307,40 @@ class master_form_find():
             self.editUser(userNameIndex, pos)
         #jsoneditor.editjson(data)
 
+    def createRoot(self):
+        #pdb.set_trace()
+        app = cdc.logonWin(self.win)
+        res = app.showAdminUserBD()   
         
+        if res:
+            db = self.data.data
+            result = db.command({"createUser": res[0], "pwd": res[1], "roles": [ {'role': 'root', 'db': 'admin'} ] } )
+            #result = db.command({"updateUser": res[0], "pwd": res[1]})
+            if result["ok"]:
+                self.win.objMainMess.showMess("Root user created : " + res[0], "I") 
+                self.getUsers()
+    
     def getRoles(self, userRole = None, pos = None):
+
+        slavelist = self.gridFrame.interior.slaves()
+        for elem in slavelist:
+            elem.destroy()
+        #pdb.set_trace()
         
-        if self.data.data is None:
+        if not self.data.isConnect or self.data.data is None:
             return
         dat = self.data.data.system.roles
         res=dat.find()
         if res is None:
             return
+        self.setConfFile()
         self.rolesDataList=list(res)
-        #pdb.set_trace()
-        slavelist = self.gridFrame.interior.slaves()
-        for elem in slavelist:
-            elem.destroy()      
             
         gridframe = tk.Frame(self.gridFrame.interior)
         gridframe.pack(expand= True, side=LEFT, fill=X, padx=10)
+
+        if len(self.rolesDataList) == 0:
+            Button(gridframe, text='Create role', command= self.createRole, font=('Calibri 12 bold')).pack()
 
         userRoleIndex = -1
         for index in range(len(self.rolesDataList)):
@@ -832,6 +363,13 @@ class master_form_find():
             
         return len(self.rolesDataList)
 
+    def createRole(self):
+        db = self.data.data
+        result = db.command({"createRole": "Read", "privileges": [{"resource": {"db": "", "collection": ""}, "actions": ["find", "listCollections"]}], "roles": []})
+        if result["ok"]:
+            self.win.objMainMess.showMess("Role created : 'Read'" , "I") 
+            self.getRoles()
+
     def editRole(self, index = None, pos = None):
         #pdb.set_trace()
         editRoleWin(self, self.rolesDataList[index], pos)
@@ -847,10 +385,17 @@ class master_form_find():
         #self.destroy()
 
     def login(self):
+        initInfo = (self.readConfFile())
+        info = initInfo.keys()
+        self.servers = []
+        for k in info:
+            if k != "init":
+                self.servers.append(k)
         dial = loginDialog(self.win, "Connecter : app - location", self)
         dial.showDialog()
 
     def authentif(self):
+        """
         app = cdc.logonWin(self.win, self.data.data)
         userIdent = "" if self.userPass[0] == "" else self.userPass[0]
         res = app.showAPPdialog(userIdent)
@@ -858,7 +403,15 @@ class master_form_find():
             self.user, self.userName, self.userRole, USER_ID = [res[0], res[1]], res[2], res[3], res[4]
             self.setConfFile()
             self.afficherTitre()
+        """
+        app = cdc.logonWin(self.win)
+        res = app.showAdminUserBD(self.userPass[0])
+        if not res is None:
+            self.userPass = res
+            self.setConfFile()
+            self.setApp(self.actServ)
 
+                
     
 class editRoleWin():
     def __init__(self, mainWin, roleData, pos):
@@ -868,7 +421,6 @@ class editRoleWin():
         self.pos = pos
         self.roleName = self.roleData["role"]
         self.actionsList = None
-        #self.bdSystemCollections = None
         self.userActionsList = self.roleData["privileges"][0]["actions"]
         self.addSystemPriv = False
         self.showRoleWin()
@@ -898,13 +450,13 @@ class editRoleWin():
         self.refreshRoles(res)
 
     def delete(self):
-        answer = askyesno(title='Suppression',
-            message='Supprimer le rôle : ' + self.roleName)
+        answer = askyesno(title='Remove',
+            message='Remove role : ' + self.roleName)
         if answer:       
             db = self.data.data
             res = db.command({"dropRole": self.roleName})
             if res["ok"]:
-                self.objMess.showMess("Enregistré!", type = "I")
+                self.objMess.showMess(self.roleName + " removed!", type = "I")
                 self.mainObj.getRoles()
                 self.close()
             else:
@@ -943,8 +495,8 @@ class editRoleWin():
             self.objMess.showMess(str(res))        
 
     def delPriv(self):
-        answer = askyesno(title='Suppression',
-            message='Supprimer le privilege : {' + "db: " + self.comboBD.get() + ", collection: " + self.comboCol.get() + " }")
+        answer = askyesno(title='Remove',
+            message='Remove privilege : {' + "db: " + self.comboBD.get() + ", collection: " + self.comboCol.get() + " }")
         if answer:     
             db = self.data.data
             res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": self.actionsList}]})
@@ -1045,8 +597,8 @@ class editRoleWin():
         self.butFrame = tk.Frame(mainFrame)
         self.butFrame.grid(column=1, row=0)
 
-        ttk.Button(self.butFrame, text='Enregistrer', command=self.save).grid(row=0, column=0)        
-        ttk.Button(self.butFrame, text='Annuler', command=self.close).grid(row=1, column=0, pady=5)
+        ttk.Button(self.butFrame, text='Save', command=self.save).grid(row=0, column=0)        
+        ttk.Button(self.butFrame, text='Cancel', command=self.close).grid(row=1, column=0, pady=5)
         
         # Grid list frame
         self.actionsFrame = cdc.VscrollFrame(self.pop)
@@ -1167,8 +719,8 @@ class editUserWin():
                 self.objMess.showMess("Password changed for " + res[0], "I") 
 
     def delete(self):
-        answer = askyesno(title='Suppression',
-            message="Supprimer l'utilisateur : " + self.userName)
+        answer = askyesno(title='Remove',
+            message="Remove user : " + self.userName)
         if answer:       
             db = self.data.data
             res = db.command({"dropUser": self.userName})  
@@ -1199,8 +751,8 @@ class editUserWin():
     def delRole(self):
         roleIndex = self.comboRole.current()
         role = {"role": self.comboRole.get(), "db": self.comboBD.get()}
-        answer = askyesno(title='Suppression role',
-            message="Supprimer le role : " + str(role))
+        answer = askyesno(title='Remove role',
+            message="Remove role : " + str(role))
         if answer:         
             db = self.data.data
             res = db.command("revokeRolesFromUser", self.userName, roles=[role])   
@@ -1330,14 +882,14 @@ class editUserWin():
         self.butFrame = tk.Frame(mainFrame)
         self.butFrame.grid(column=1, row=0)
     
-        ttk.Button(self.butFrame, text='Annuler', command=self.close).grid(row=1, column=0, pady=5)
+        ttk.Button(self.butFrame, text='Cancel', command=self.close).grid(row=1, column=0, pady=5)
         ttk.Button(self.butFrame, text='Test', command=self.test).grid(row=5, column=0, pady=5)
         
     def changeRoleList(self, event= None):
         if self.sysRole.get():
             self.comboRole.config(values=self.mainObj.roleList)
         else:
-            self.comboRole.config(values=systemRole)
+            self.comboRole.config(values=BULTINROLELIST)
 
     def setRole(self, event = None):
         index = event.widget.current()
@@ -1353,25 +905,23 @@ class dbaseObj():
         self.dbList = []
         self.colList = {}
         self.dbase = ""
-       
-        self.server = {
-            "Local": "mongodb://localhost:27017/",
-            VSERV: "mongodb://cdore:925@cdore.ddns.net:6600/?authSource=admin&ssl=false"
-            }
         self.DBconnect = None
         self.isConnect = False
 
-    def connectTo(self, Server = "Local", userPass = None):
+    def connectTo(self, Server = LOCALSERV, userPass = None, hostName = "", port = ""):
         #pdb.set_trace()
 
         self.dbase = 'admin'
-        print(userPass)
-        if userPass is None:
-            uri = self.server[Server]
-        else:
-            uri = """mongodb://%s:%s@cdore.ddns.net:6600/?authSource=admin&ssl=false"""  % ("userAdmin", "111")
-
-        if Server == "Local":
+        
+        uri = """mongodb://%s:%s@"""  % (userPass[0], userPass[1])
+        uri += hostName + ":" + port + "/?authSource=admin&ssl=false"
+        if userPass[0] == "":
+            uri = "mongodb://" + hostName + ":" + port + "/"
+        if hostName == LOCALSERV:
+            uri = "mongodb://" + LOCALSERV + ":27017/"
+            
+        print(uri)
+        if Server == LOCALSERV or hostName == LOCALSERV:
             timeout = 2000
         else:
             timeout = 15000
@@ -1380,16 +930,15 @@ class dbaseObj():
             self.DBconnect.close()
             self.isConnect = False
         try:
-            
             self.DBconnect = MongoClient(uri,socketTimeoutMS=timeout,
                         connectTimeoutMS=timeout,
                         serverSelectionTimeoutMS=timeout,)
 
             if "ok" in self.DBconnect.server_info():
                 dbs=self.DBconnect.list_database_names()
-                dbs.remove('admin')
-                dbs.remove('config')
-                dbs.remove('local')                
+                for db in BDSYSTEMLIST:
+                    if db != "" and db in dbs:
+                        dbs.remove(db)                
                 for db in dbs:
                     theDB = self.DBconnect[db]
                     self.colList[db] = theDB.list_collection_names()
@@ -1397,7 +946,8 @@ class dbaseObj():
                 self.dbList = dbs
                 self.data = self.DBconnect[self.dbase]
                 self.isConnect = True
-        except:
+        except Exception as ex:
+            print(ex)
             self.isConnect = False
         return self.isConnect
 
@@ -1409,13 +959,14 @@ class loginDialog(cdc.modalDialogWin):
         self.actServ = self.mainApp.actServ
         #pdb.set_trace()
         self.labAct = Label(self.dframe, text="Actuel : " + self.actServ, font=('Calibri 12 bold'), pady=5)
-        self.labAct.grid(row=0, column=0, columnspan=2, sticky=EW)
-        button1 = Button(self.dframe, text= LSERV, command= lambda: self.selectAppDB(LSERV), width=30, cursor="hand2")
-        button1.grid(row=1, column=0, columnspan=2)
-        button1.bind("<Double-Button-1>", self.setAppDB)  
-        button2 = Button(self.dframe, text= VSERV, command= lambda: self.selectAppDB(VSERV), width=30, cursor="hand2")
-        button2.grid(row=2, column=0, columnspan=2)
-        button2.bind("<Double-Button-1>", self.setAppDB) 
+        self.labAct.grid(row=0, column=0, columnspan=3, sticky=EW)
+        
+        if len(self.mainApp.servers) == 0:
+            self.mainApp.servers.append(LOCALSERV)
+        for ind, serv in enumerate(self.mainApp.servers):
+            globals()["but" + str(ind)] = Button(self.dframe, text= serv, command= lambda serv=serv: self.selectAppDB(serv), width=30, cursor="hand2")
+            globals()["but" + str(ind)].grid(row=ind+1, column=0, columnspan=3)
+            globals()["but" + str(ind)].bind("<Double-Button-1>", self.setAppDB) 
         
         lab1 = Label(self.dframe, text=" ", font=('Calibri 1'))
         lab1.grid(row=5, column=0, columnspan=2)
@@ -1424,21 +975,13 @@ class loginDialog(cdc.modalDialogWin):
         self.dframe.columnconfigure(1, weight=1)
         buttonC = ttk.Button(self.dframe, text="Ok", command=self.setAppDB, width=10)
         buttonC.grid(row=6, column=0) 
-        buttonC = ttk.Button(self.dframe, text="Annuler", command=self.close, width=10)
-        buttonC.grid(row=6, column=1) 
+        buttonC = ttk.Button(self.dframe, text="Modify", command=self.modifyServ, width=10)
+        buttonC.grid(row=6, column=1)
+        buttonC = ttk.Button(self.dframe, text="Cancel", command=self.close, width=10)
+        buttonC.grid(row=6, column=2)         
         lab1 = Label(self.dframe, text=" ", font=('Calibri 1'))
         lab1.grid(row=7, column=0, columnspan=2)
-    """    
-    def getPass(self):
-        self.passf = tk.Frame(self.dframe)
-        lab1 = Label(self.passf, text="Password: ", bg="white")
-        lab1.grid(row=0, column=0)
-        txt1 = ttk.Entry(self.passf)
-        txt1.grid(row=0, column=1)
-        txt1.config(show="*");
-        self.passf.grid(row=3, column=0, columnspan=2, pady=5)
-        txt1.focus_set()
-    """
+
     def selectAppDB(self, serv):
         self.actServ = serv
         self.labAct.config(text="Actuel = " + serv)
@@ -1446,8 +989,85 @@ class loginDialog(cdc.modalDialogWin):
     def setAppDB(self, e = None):  
         self.close()
         self.mainApp.setApp(self.actServ)
-        
+ 
+    def modifyServ(self, e = None):
+        initInfo = self.mainApp.readConfFile()
+        servInfo = {}
+        servInfo[self.actServ] = initInfo[self.actServ]
+        custom_dialog = modifyServerDialog(self.pop, servInfo)
+        res = custom_dialog.result #Retourner les valeurs par le bouton Ok, sinon None 
+        if not res is None:
+            self.mainApp.setServerConfFile(res)
+            self.close()
 
+
+class modifyServerDialog(simpledialog.Dialog):
+    def __init__(self, parent, optionalObject = None):
+        self.parent = parent
+        self.actServ = list(optionalObject.keys())[0]
+        self.servInfo = optionalObject
+        self.server = StringVar()
+        self.host = StringVar()
+        self.port = StringVar()
+        self.servToRemove = ""
+        
+        simpledialog.Dialog.__init__(self, parent)
+
+        
+    def body(self, master):
+        #pdb.set_trace()
+        if "host" in self.servInfo[self.actServ]:
+            self.host.set(self.servInfo[self.actServ]["host"])
+        if "port" in self.servInfo[self.actServ]:
+            self.port.set(self.servInfo[self.actServ]["port"])
+        self.formframe = tk.Frame(master, borderwidth = 1, relief=RIDGE, padx=10, pady=10)
+        self.formframe.grid(row=1)
+        tk.Label(self.formframe, text="Server :").grid(row=0, column=0, sticky=E)
+        tk.Label(self.formframe, text= self.actServ, font=('Calibri 12 bold')).grid(row=0, column=1, sticky=W)
+        tk.Label(self.formframe, text= "Host : ").grid(row=1, column=0, sticky=E)
+        self.entry = tk.Entry(self.formframe, textvariable = self.host, width=30)
+        self.entry.grid(row=1, column=1)        
+        tk.Label(self.formframe, text= "Port : ").grid(row=2, column=0, sticky=E)
+        port = tk.Entry(self.formframe, textvariable = self.port, width=10)
+        port.grid(row=2, column=1, sticky=W)        
+        
+        butframe = tk.Frame(self.formframe, padx=10, pady=10)
+        butframe.grid(row=3, column=0, columnspan=2) 
+        buttonC = ttk.Button(butframe, text="Add server", command=self.addServer, width=15)
+        buttonC.grid(row=0, column=0, pady=5, padx=5) 
+        buttonC = ttk.Button(butframe, text="Remove server", command=self.removeServer, width=15)
+        buttonC.grid(row=0, column=1, pady=5, padx=5) 
+
+
+    def addServer(self):
+        serv = tk.Entry(self.formframe, textvariable = self.server, width=10)
+        serv.grid(row=0, column=1, sticky=W)
+        self.port.set("27017")
+
+    def removeServer(self):
+        answer = askyesno(title='Remove',
+            message='Remove server : ' + self.actServ)
+        if answer:
+            self.servToRemove = self.actServ
+            self.actServ = None
+            self.apply()
+            self.destroy()
+    
+    def validate(self):
+        #self.connectArr.append(self.entry.get())
+        #self.connectArr.append(self.passentry.get()) 
+        if self.server.get() != "":
+            self.actServ = self.server.get()
+        
+        return True
+            
+    def apply(self):
+        # Cette méthode est appelée lorsque le bouton "OK" est cliqué
+        resObj = {"server": self.actServ, "host": self.host.get(), "port": self.port.get()}
+        if self.servToRemove != "":
+            resObj["delServ"] = self.servToRemove
+        self.result = resObj
+        
 def create_main_window():
 
     win = tix.Tk()
