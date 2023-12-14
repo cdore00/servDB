@@ -395,15 +395,6 @@ class master_form_find():
         dial.showDialog()
 
     def authentif(self):
-        """
-        app = cdc.logonWin(self.win, self.data.data)
-        userIdent = "" if self.userPass[0] == "" else self.userPass[0]
-        res = app.showAPPdialog(userIdent)
-        if not res is None:
-            self.user, self.userName, self.userRole, USER_ID = [res[0], res[1]], res[2], res[3], res[4]
-            self.setConfFile()
-            self.afficherTitre()
-        """
         app = cdc.logonWin(self.win)
         res = app.showAdminUserBD(self.userPass[0])
         if not res is None:
@@ -450,6 +441,17 @@ class editRoleWin():
         self.refreshRoles(res)
 
     def delete(self):
+        #pdb.set_trace()
+        curRole = next(x["roles"] for x in self.mainObj.usersDataList if x["user"] == self.mainObj.userPass[0] )
+        for x in curRole:
+            if x["role"] == self.roleName:
+                #print(self.roleName + " used by current user : " + self.mainObj.userPass[0])
+                messagebox.showinfo(
+                    title="Role: " + self.roleName,
+                    message="Role «" + self.roleName + "» is used by current user : " + self.mainObj.userPass[0])                 
+                return
+            
+        #roleUsed = next(x for x in reg if x["role"] == self.roleName )
         answer = askyesno(title='Remove',
             message='Remove role : ' + self.roleName)
         if answer:       
@@ -509,15 +511,16 @@ class editRoleWin():
         else:
             self.objMess.showMess(str(res))         
     
-    def do(self):
+    def setKeyWordRole(self):
         self.mainObj.keyWordRole.set(self.roleName) 
+        self.mainObj.getRoles()
     
     def showRoleWin(self):
         #print(self.roleData)
 
         self.pop = tk.Toplevel(self.mainObj.win)
         self.pop.geometry("400x560")
-        self.pop.title("Modifier Role")
+        self.pop.title("Modify Role")
         #self.pop.iconbitmap(GOLFICON)   
         self.mainObj.childWin.append(self.pop)
 
@@ -539,8 +542,8 @@ class editRoleWin():
         ttk.Label(self.formFrame, text=" role : ").grid(row=0, column=0, sticky=tk.W)
         identFrame = tk.Frame(self.formFrame)
         identFrame.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)
-        ttk.Label(identFrame, text=self.roleName).grid(row=0, column=0, sticky=tk.W, padx=1, pady=3)  
-        button = cdc.RoundedButton(identFrame, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.do)
+        ttk.Label(identFrame, text=self.roleName, font= ('Segoe 9 bold')).grid(row=0, column=0, sticky=tk.W, padx=1, pady=3)  
+        button = cdc.RoundedButton(identFrame, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.setKeyWordRole)
         button.create_text(12,11, text=" >", fill="black", font=('Helvetica 15 '))
         button.grid(row=0, column=1, padx=30, pady=5)
         #Hovertip(button,"Blanchir le formulaire")
@@ -549,8 +552,8 @@ class editRoleWin():
         self.menuFichier = Menubutton(self.formFrame, text='role :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuFichier.grid(row=0,column=0, sticky=tk.W)
         menu_file = Menu(self.menuFichier, tearoff = 0)
-        menu_file.add_cascade(label='Ajouter...', command = self.addRole) 
-        menu_file.add_cascade(label='Supprimer...', command = self.delete) 
+        menu_file.add_cascade(label='Add...', command = self.addRole) 
+        menu_file.add_cascade(label='Remove...', command = self.delete) 
         self.menuFichier.configure(menu=menu_file)                 
 
         ttk.Label(self.formFrame, text="db :                        ").grid(row=1, column=0, sticky=tk.E, padx=5, pady=3)
@@ -563,7 +566,7 @@ class editRoleWin():
         self.menuPriv.grid(row=2,column=0, sticky=tk.W)
         menu_priv = Menu(self.menuPriv, tearoff = 0)
         menu_priv.add_cascade(label='Add system', command = self.addSystemPrivilege) 
-        menu_priv.add_cascade(label='Supprimer...', command = self.delPriv) 
+        menu_priv.add_cascade(label='Remove...', command = self.delPriv) 
         self.menuPriv.configure(menu=menu_priv)        
         
         ttk.Label(self.formFrame, text="{  resources : { ").grid(row=3, column=0, sticky=tk.E, padx=30, pady=3)
@@ -577,6 +580,8 @@ class editRoleWin():
         self.comboBD.bind("<<ComboboxSelected>>", self.setPriv)
         self.comboBD.grid( row=4, column=1, sticky=tk.W)
         #pdb.set_trace()
+        print("DB actuel: " + self.roleData["privileges"][0]["resource"]["db"])
+        print("DBlist: " + str(self.data.dbList))
         self.comboBD.current( self.data.dbList.index(self.roleData["privileges"][0]["resource"]["db"]) )
         
         ttk.Label(self.formFrame, text= "collection : ").grid( row=5, column=0, sticky=tk.E, padx=1, pady=3)
@@ -719,6 +724,16 @@ class editUserWin():
                 self.objMess.showMess("Password changed for " + res[0], "I") 
 
     def delete(self):
+        if self.userName == self.mainObj.userPass[0]:
+            messagebox.showinfo(
+                title="User: " + self.userName,
+                message=f"Can't remove current user : " + self.userName + ".") 
+            #pdb.set_trace()
+            reg = next(x["roles"] for x in self.mainObj.usersDataList if x["user"] == self.userName )
+            #self.mainObj.usersDataList
+            #self.userName
+            return
+            
         answer = askyesno(title='Remove',
             message="Remove user : " + self.userName)
         if answer:       
@@ -736,7 +751,8 @@ class editUserWin():
         ttk.Label(self.formFrame, text=" Password : ").grid(row=1, column=0, sticky=tk.W)
         self.newUserPass = ttk.Entry(self.formFrame, width=20)
         self.newUserPass.grid(row=1, column=1, sticky=tk.W)
-        ttk.Button(self.butFrame, text='Enregistrer', command=self.createUser).grid(row=0, column=0)        
+        ttk.Button(self.butFrame, text='Enregistrer', command=self.createUser).grid(row=0, column=0)  
+        #self.addSystemPrivilege()
 
     def createUser(self):
         role = {"role": self.comboRole.get(), "db": self.comboBD.get()}
@@ -744,6 +760,7 @@ class editUserWin():
         res = db.command({"createUser": self.newUserName.get(), "pwd": self.newUserPass.get(), "roles": [ role ] } )
         try:
             res = db.command("grantRolesToUser", self.userName, roles=[role])
+            self.userName = self.newUserName.get()
             self.refreshUsers(res)
         except Exception as ex:
             self.objMess.showMess(str(ex))       
@@ -800,8 +817,8 @@ class editUserWin():
         #print(self.userData)
 
         self.pop = tk.Toplevel(self.mainObj.win)
-        self.pop.geometry("350x250")
-        self.pop.title("Modifier User")
+        self.pop.geometry("350x270")
+        self.pop.title("Modify User")
         #self.pop.iconbitmap(GOLFICON)   
         self.mainObj.childWin.append(self.pop)
         #pdb.set_trace()
@@ -822,8 +839,18 @@ class editUserWin():
         self.formFrame = tk.Frame(mainFrame)
         self.formFrame.grid(column=0, row=0)        
         ttk.Label(self.formFrame, text=" User : ").grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(self.formFrame, text=self.userName).grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)  
+        #ttk.Label(self.formFrame, text=self.userName).grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)  
+        
 
+        identFrame = tk.Frame(self.formFrame)
+        identFrame.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)
+        ttk.Label(identFrame, text=self.userName, font= ('Segoe 9 bold')).grid(row=0, column=0, sticky=tk.W, padx=1, pady=3)  
+        button = cdc.RoundedButton(identFrame, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.setKeyWordUser)
+        button.create_text(12,11, text=" >", fill="black", font=('Helvetica 15 '))
+        button.grid(row=0, column=1, padx=30, pady=5)
+        #Hovertip(button,"Blanchir le formulaire")
+
+        
         # Création du menu user
         self.menuFichier = Menubutton(self.formFrame, text='User :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuFichier.grid(row=0,column=0)
@@ -843,8 +870,8 @@ class editUserWin():
         self.menuRole = Menubutton(self.formFrame, text='roles :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuRole.grid(row=3,column=0)
         menu_role = Menu(self.menuRole, tearoff = 0)
-        menu_role.add_cascade(label='Ajouter...', command = self.addRole) 
-        menu_role.add_cascade(label='Supprimer...', command = self.delRole) 
+        menu_role.add_cascade(label='Add...', command = self.addRole) 
+        menu_role.add_cascade(label='Remove...', command = self.delRole) 
         self.menuRole.configure(menu=menu_role)        
         
         roleList = []
@@ -856,6 +883,7 @@ class editUserWin():
         ttk.Label(self.formFrame, text= "role : ").grid( row=4, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboRole = ttk.Combobox(
             self.formFrame,
+            width = 22,
             state="readonly",
             values = roleList
             )   #self.mainObj.roleList
@@ -866,6 +894,7 @@ class editUserWin():
         ttk.Label(self.formFrame, text= "db : ").grid( row=5, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboBD = ttk.Combobox(
             self.formFrame,
+            width = 22,
             state="readonly",
             values = dbList
             )   #self.data.dbList
@@ -883,7 +912,6 @@ class editUserWin():
         self.butFrame.grid(column=1, row=0)
     
         ttk.Button(self.butFrame, text='Cancel', command=self.close).grid(row=1, column=0, pady=5)
-        ttk.Button(self.butFrame, text='Test', command=self.test).grid(row=5, column=0, pady=5)
         
     def changeRoleList(self, event= None):
         if self.sysRole.get():
@@ -896,8 +924,10 @@ class editUserWin():
         self.comboRole.current(index)
         self.comboBD.current(index)
 
-    def test(self):
-        print(str(self.pop.winfo_x()) + "   y=" + str(self.pop.winfo_y()))
+    def setKeyWordUser(self):
+        self.mainObj.keyWordUser.set(self.userName)
+        self.mainObj.getUsers()
+
         
 class dbaseObj():
     def __init__(self, *args, **kwargs):
@@ -920,7 +950,7 @@ class dbaseObj():
         if hostName == LOCALSERV:
             uri = "mongodb://" + LOCALSERV + ":27017/"
             
-        print(uri)
+        #print(uri)
         if Server == LOCALSERV or hostName == LOCALSERV:
             timeout = 2000
         else:
@@ -1046,6 +1076,7 @@ class modifyServerDialog(simpledialog.Dialog):
 
     def removeServer(self):
         answer = askyesno(title='Remove',
+
             message='Remove server : ' + self.actServ)
         if answer:
             self.servToRemove = self.actServ
