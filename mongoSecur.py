@@ -509,8 +509,16 @@ class editRoleWin():
             if self.var_list[self.actionsList.index(act)].get() == 1:
                 grantArr.append(act)
         if len(grantArr):
-            res = db.command({"grantPrivilegesToRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": grantArr}]})            
-
+            try:    
+                res = db.command({"grantPrivilegesToRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": grantArr}]})            
+            except pymongo.errors.OperationFailure as ex1:
+                #ex1.details.get('errmsg', '')
+                #pdb.set_trace()
+                self.objMess.showMess(ex1.details.get('errmsg', ''))
+            except Exception as ex:
+                #pdb.set_trace()
+                self.objMess.showMess(str(ex))
+                return
         if res:
             self.refreshRoles(res)
 
