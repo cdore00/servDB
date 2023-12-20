@@ -65,12 +65,26 @@ CONFFILE = "mongoSecur.conf"
 LOCALSERV= "localhost"
 VSERV   = "Vultr"
 
+def winChildPos(winObj):
+    winObj.mainObj.win.update_idletasks()                                                             ##update_idletasks
+    w=winObj.pop.winfo_width()
+    h=winObj.pop.winfo_height() + 2
+    
+    #pdb.set_trace()
+    winObj.pop.geometry(f"{w}x{h}") 
+    my = winObj.mainObj.win.winfo_x() - w - 2
+    my = 0 if my < 0 else my
+    mt = winObj.mainObj.win.winfo_y()
+    winObj.pop.geometry(f"+{my}+{mt}")        
+    #winObj.pop.geometry(f"+{my}+0")
+    winObj.pop.update_idletasks()
+    winObj.pop.attributes('-topmost', True)
+    winObj.pop.attributes('-topmost', False)
         
 class filterForm():
     def __init__(self, parent, dbList, textVar, callBack):
-        dataBaseList = dbList.copy()
-        dataBaseList[0] = "admin"
-        formframe = Frame(parent, borderwidth=3, relief = SUNKEN)
+
+        formframe = Frame(parent, borderwidth=3, relief = RIDGE )  #SUNKEN
         formframe.pack( fill=X, padx=50, pady=5)
 
         ttk.Label(formframe, text='Keyword :').grid(column=0, row=1, padx=5, pady=5, sticky=tk.W)
@@ -123,10 +137,9 @@ class master_form_find():
     def quitter(self, e):
         self.win.quit
     
-    def setApp(self, serv):
+    def setApp(self, serv, userPass = None):
 
         self.actServ  = serv
-        #self.win.update_idletasks() 
         self.win.title(self.actServ)
         self.win.iconbitmap(APPICON)
         
@@ -162,22 +175,14 @@ class master_form_find():
         self.win.objMainMess.showMess("Connecting...")
         self.win.update_idletasks() 
         
-
-
         isConnected = False
-        """
-        app = cdc.logonWin(self.win)
-        res = app.showAdminUserBD()
-        if not res is None:
-            self.userPass = res
-            self.setConfFile()
-            isConnected = self.data.connectTo(self.actServ, res)
-            #pdb.set_trace()
-        """
+
         defInfo = self.setDefault()
         hostName = defInfo["host"] if "host" in defInfo else ""
         port = defInfo["port"] if "port" in defInfo else ""
-        isConnected = self.data.connectTo(self.actServ, self.userPass, hostName=hostName, port=port)
+        if userPass is None:
+            userPass = self.userPass
+        isConnected = self.data.connectTo(self.actServ, userPass, hostName=hostName, port=port)
         self.afficherTitre(isConnected)
         
         # Database form
@@ -186,21 +191,22 @@ class master_form_find():
         dbForm = tk.Frame(dbFrame)
         dbForm.pack()
         
-        
+        #pdb.set_trace()
         dt = ttk.Label(dbForm, text= "Database : ", font=('Calibri 12 bold'))
         dt.grid( row=0, column=0, padx=5, sticky="WE")
         dbList = self.data.dbList.copy()
-        dbList[0] = "admin"
-        dbList.insert(0, "All")
-        self.comboDatabase = ttk.Combobox(
-            dbForm,
-            textvariable=self.Database,
-            state="readonly",
-            values = dbList
-            )
-        self.comboDatabase.current(0)
-        self.comboDatabase.bind("<<ComboboxSelected>>", self.changeDatabase)
-        self.comboDatabase.grid( row=0, column=1)        
+        if dbList:
+            dbList[0] = "admin"
+            dbList.insert(0, "All")
+            self.comboDatabase = ttk.Combobox(
+                dbForm,
+                textvariable=self.Database,
+                state="readonly",
+                values = dbList
+                )
+            self.comboDatabase.current(0)
+            self.comboDatabase.bind("<<ComboboxSelected>>", self.changeDatabase)
+            self.comboDatabase.grid( row=0, column=1)        
         
 
         self.win.objMainMess.clearMess()    
@@ -256,6 +262,12 @@ class master_form_find():
         initInfo[(self.actServ)]["roleKeyword"] = self.keyWordRole.get()
         initInfo[(self.actServ)]["userKeyword"] = self.keyWordUser.get()
         initInfo[(self.actServ)]["userPass"] = self.userPass
+        if not param is None:
+            if not param[0]:
+                self.userPass[0] = ""
+            if not param[1]:
+                self.userPass[1] = ""                
+            initInfo[(self.actServ)]["userPass"] = self.userPass
         self.writeConfFile(initInfo)
 
     def writeConfFile(self, initInfo):
@@ -290,6 +302,7 @@ class master_form_find():
             initInfo = (self.readConfFile())
         if self.actServ is None:
             self.actServ = LOCALSERV
+        #pdb.set_trace()
         if not initInfo is None and self.actServ in initInfo:
             actInfo = initInfo[(self.actServ)]
             self.userPass = actInfo["userPass"]
@@ -353,7 +366,6 @@ class master_form_find():
         if res:
             db = self.data.data
             result = db.command({"createUser": res[0], "pwd": res[1], "roles": [ {'role': 'root', 'db': 'admin'} ] } )
-            #result = db.command({"updateUser": res[0], "pwd": res[1]})
             if result["ok"]:
                 self.win.objMainMess.showMess("Root user created : " + res[0], "I") 
                 self.getUsers()
@@ -437,11 +449,13 @@ class master_form_find():
 
     def authentif(self):
         app = cdc.logonWin(self.win)
-        res = app.showAdminUserBD(self.userPass[0])
-        if not res is None:
-            self.userPass = res
-            self.setConfFile()
-            self.setApp(self.actServ)
+        result = app.showAdminUserBD(self.userPass)
+        if not result is None:
+            res = result[0]
+            self.userPass = res.copy()
+            self.setConfFile([result[1],result[2]])
+            self.setApp(self.actServ, userPass = res)            
+            
 
     def checkRoleExist(self, name, db):
         exist = False
@@ -478,18 +492,22 @@ class editRoleWin():
         self.pop.destroy()
         
     def save(self):
-
+        #pdb.set_trace()
         res = None
         db=self.data.DBconnect[self.Database.get()]
         role = self.rolesObj.getRole()   
         if role["role"]:  #Save role if exist
             if not self.rolesObj.checkRole():
+                self.objMess.showMess("Role not exist!")
                 return
             else:
                 role = self.rolesObj.getRole()
                 #print(str(role))
                 try:
                     res = db.command("grantRolesToRole", self.roleName, roles=[role])
+                except pymongo.errors.OperationFailure as ex1:
+                    self.objMess.showMess(ex1.details.get('errmsg', ''))
+                    return
                 except Exception as ex:
                     self.objMess.showMess(str(ex))
                     return
@@ -504,10 +522,12 @@ class editRoleWin():
         if len(revokeArr):
             res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": revokeArr}]})
 
+
         grantArr = []
         for act in self.actionsList:
             if self.var_list[self.actionsList.index(act)].get() == 1:
                 grantArr.append(act)
+
         if len(grantArr):
             try:    
                 res = db.command({"grantPrivilegesToRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": grantArr}]})            
@@ -724,12 +744,15 @@ class editRoleWin():
         self.menuPriv.configure(menu=self.submenu_priv)        
         
         ttk.Label(self.formFrame, text="{  resources : { ").grid(row=3, column=0, sticky=tk.E, padx=30, pady=3)
+        dbList = self.data.dbList.copy()
+        # self.Database.get() != self.data.dbase:
+
         
         ttk.Label(self.formFrame, text= "db : ").grid( row=4, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboBD = ttk.Combobox(
             self.formFrame,
             state="readonly",
-            values = self.data.dbList
+            values = dbList
             )
         self.comboBD.bind("<<ComboboxSelected>>", self.setPriv)
         self.comboBD.grid( row=4, column=1, sticky=tk.W)
@@ -751,8 +774,6 @@ class editRoleWin():
         ttk.Label(self.formFrame, text="actions : [").grid(row=7, column=0, columnspan=2, sticky=tk.W, padx=50, pady=3)
         #pdb.set_trace()
 
-
-        
         # Button        
         self.butFrame = tk.Frame(mainFrame)
         self.butFrame.grid(column=1, row=0)
@@ -779,7 +800,8 @@ class editRoleWin():
         self.rolesObj = rolesSelect(self, rolesFrame, self.roleData["roles"].copy()) 
         
         self.setPriv(setCol = True)
-
+        winChildPos(self)
+        #self.winDim()
         
     def setPriv(self, event = None, setCol = False):
         """
@@ -866,7 +888,24 @@ class editRoleWin():
             if privObj["resource"]["db"] == sysBD:
                 colList.append(privObj["resource"]["collection"])
         return colList
-
+    """
+    def winDim(self):
+        self.mainObj.win.update_idletasks()                                                             ##update_idletasks
+        w=self.pop.winfo_width()
+        h=self.pop.winfo_height() + 2
+        
+        #pdb.set_trace()
+        self.pop.geometry(f"{w}x{h}") 
+        my = self.mainObj.win.winfo_x() - w - 2
+        my = 0 if my < 0 else my
+        mt = self.mainObj.win.winfo_y()
+        self.pop.geometry(f"+{my}+{mt}")        
+        #self.pop.geometry(f"+{my}+0")
+        self.win.update_idletasks()
+        self.pop.attributes('-topmost', True)
+        self.pop.attributes('-topmost', False)
+    """
+        
 class editUserWin():
     def __init__(self, mainWin, userData, pos):
         self.mainObj = mainWin
@@ -1043,7 +1082,7 @@ class editUserWin():
         self.butFrame.grid(column=1, row=0)
     
         ttk.Button(self.butFrame, text='Close', command=self.close).grid(row=1, column=0, pady=5)
-        
+        winChildPos(self)
 
     def setKeyWordUser(self):
         self.mainObj.keyWordUser.set(self.userName)
@@ -1061,6 +1100,7 @@ class rolesSelect():
         self.comboRoleText = StringVar()
         self.comboBDText = StringVar()
         self.sysRole = IntVar()
+        self.addRoleFlag = False
         self.showRolesSelect()
         #print("rolesSelect.rolesList=" + str(self.rolesList))
 
@@ -1082,7 +1122,7 @@ class rolesSelect():
         self.comboBD.config(values=bdList)
         self.comboBD.unbind("<<ComboboxSelected>>")
         self.menuRole.destroy()
-        
+        self.addRoleFlag = True
         self.parent.addRole()
         
     def changeRoleList(self, event= None):
@@ -1116,22 +1156,25 @@ class rolesSelect():
         role = self.comboRoleText.get()
         db = self.comboBDText.get()
         exist = False
-        if self.sysRole.get():  # If Built-in role
-            if BULTINROLELIST.index(role) < 6:  # Database Built-in role
-                if BULTINROLELIST.index(role) == 5:
-                    self.objMess.showMess(role + " is not a role.")
-                else:
-                    exist = True
-            else:               # Admin Built-in role
-                if self.comboBD.current() != 0:
-                    self.objMess.showMess(role + " is an admin role. \ndb: «admin» must be selected.")
-                else:
-                    exist = True
-        else:   # pre-defined role
-            exist = self.mainObj.checkRoleExist(role, db)
-            if not exist:
-                #messagebox.showinfo(  title="The role does not exist ",  message=
-                self.objMess.showMess("Role «" + self.comboRoleText.get() + "», bd : «" + self.comboBDText.get() + "» not exist. \nCheck existence in the role tab of the main window.")         
+        if self.addRoleFlag:
+            if self.sysRole.get():  # If Built-in role
+                if BULTINROLELIST.index(role) < 6:  # Database Built-in role
+                    if BULTINROLELIST.index(role) == 5:
+                        self.objMess.showMess(role + " is not a role.")
+                    else:
+                        exist = True
+                else:               # Admin Built-in role
+                    if self.comboBD.current() != 0:
+                        self.objMess.showMess(role + " is an admin role. \ndb: «admin» must be selected.")
+                    else:
+                        exist = True
+            else:   # pre-defined role
+                exist = self.mainObj.checkRoleExist(role, db)
+                if not exist:
+                    #messagebox.showinfo(  title="The role does not exist ",  message=
+                    self.objMess.showMess("Role «" + self.comboRoleText.get() + "», bd : «" + self.comboBDText.get() + "» not exist. \nCheck existence in the role tab of the main window.")         
+        else:
+            exist = True
         return exist
         
     def showRolesSelect(self):
@@ -1214,9 +1257,10 @@ class dbaseObj():
             self.DBconnect = MongoClient(uri,socketTimeoutMS=timeout,
                         connectTimeoutMS=timeout,
                         serverSelectionTimeoutMS=timeout,)
-
+            #pdb.set_trace()
             if "ok" in self.DBconnect.server_info():
                 dbs=self.DBconnect.list_database_names()
+                #pdb.set_trace()
                 for db in BDSYSTEMLIST:
                     if db != "" and db in dbs:
                         dbs.remove(db)                
