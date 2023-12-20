@@ -676,10 +676,10 @@ class logonBDdialog(simpledialog.Dialog):
         
         self.formframe = tk.Frame(master, borderwidth = 1, relief=RIDGE, padx=10, pady=10)
         self.formframe.grid(row=1)
-        tk.Label(self.formframe, text="Identifiant :").grid(row=0, sticky=E)
+        tk.Label(self.formframe, text="User :").grid(row=0, sticky=E)
         self.entry = tk.Entry(self.formframe, width=30)
         self.entry.grid(row=0, column=1)
-        tk.Label(self.formframe, text="Mot de passe :").grid(row=1, sticky=E)
+        tk.Label(self.formframe, text="Password :").grid(row=1, sticky=E)
         self.passentry = tk.Entry(self.formframe,show="*", width=30)
         self.passentry.grid(row=1, column=1)        
         return self.entry  # Mettez le focus sur le champ de saisie
@@ -808,10 +808,12 @@ class changeBDpass(logonBDdialog):
 
 class adminBDpass(logonBDdialog):
     def __init__(self, parent, optionalObject = None):
-        
+        #pdb.set_trace()
         self.parent = parent
         self.obj = optionalObject[0]
-        self.userIdent = optionalObject[1]
+        self.userIdent = optionalObject[1][0]
+        self.password = optionalObject[1][1]
+        self.chkUser = IntVar()
         logonBDdialog.__init__(self, parent)
  
     def body(self, master):
@@ -823,9 +825,37 @@ class adminBDpass(logonBDdialog):
         tk.Label(self.titleframe, text="or [recommanded]").grid(row=2)
         tk.Label(self.titleframe, text="admin user database user with list collections privilege.").grid(row=3)
         
-
-
+        tk.Label(self.formframe, text="Remember :").grid(row=3, column=0, sticky=E)
+        chxframe = tk.Frame(self.formframe)
+        chxframe.grid(row=3, column=1, sticky=tk.W)
+        self.chkUser = IntVar()
+        user_check = ttk.Checkbutton(
+            chxframe,
+            text="User   ",
+            variable=self.chkUser,
+            onvalue=1,
+            offvalue=0)
+        user_check.grid(row=0, column=0, sticky=tk.W, padx=5, pady=3)
+        #pdb.set_trace()
+        if self.userIdent:
+            self.chkUser.set(1)        
+        self.chkPass = IntVar()
+        pass_check = ttk.Checkbutton(
+            chxframe,
+            text="Password",
+            variable=self.chkPass,
+            onvalue=1,
+            offvalue=0)
+        pass_check.grid(row=0, column=1, sticky=tk.W, padx=5, pady=3)        
+        if self.password:
+            self.chkPass.set(1)      
             
+    def apply(self):
+        # Cette méthode est appelée lorsque le bouton "OK" est cliqué
+        #pdb.set_trace()
+        self.result = [self.connectArr, self.chkUser.get(), self.chkPass.get()]
+
+        
 class logonWin:
     def __init__(self, root, optionalObject = None):
         self.root = root
