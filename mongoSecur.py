@@ -82,10 +82,14 @@ def winChildPos(winObj):
     winObj.pop.attributes('-topmost', False)
         
 class filterForm():
-    def __init__(self, parent, dbList, textVar, callBack):
-
+    def __init__(self, parent, textVar, callBack, nextcallBack = None):
+        self.totalCount = StringVar()
+        if nextcallBack is None:
+            padXform = 50
+        else:
+            padXform = 35
         formframe = Frame(parent, borderwidth=3, relief = RIDGE )  #SUNKEN
-        formframe.pack( fill=X, padx=50, pady=5)
+        formframe.pack( fill=X, padx=padXform, pady=5)
 
         ttk.Label(formframe, text='Keyword :').grid(column=0, row=1, padx=5, pady=5, sticky=tk.W)
         self.keyword = tk.Entry(formframe, textvariable=textVar, width=20)
@@ -95,13 +99,22 @@ class filterForm():
         
         button = cdc.RoundedButton(formframe, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.resetForm)
         button.create_text(12,11, text="x", fill="black", font=('Helvetica 15 '))
-        button.grid(column=2, row=1, padx=30)
+        button.grid(column=2, row=1, padx=15)
         #Hovertip(button,"Blanchir le formulaire")        
         ttk.Button(formframe, text='Search', command=callBack).grid(column=3, row=1, padx=5)
+        ttk.Label(formframe, textvariable=self.totalCount, font= ('Segoe 11 bold'), width=9).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
+        if not nextcallBack is None:
+            ttk.Button(formframe, text='>', width=3, command=nextcallBack).grid(column=5, row=1)  #, padx=1
+        
         
     def resetForm(self):
         self.keyword.delete(0, END)
         self.keyword.insert(0, "")
+        
+    def affTot(self, val):
+        #print(val)
+        self.totalCount.set(val)
+        
 
 class master_form_find():
     def __init__(self, mainWin, *args, **kwargs):
@@ -115,6 +128,7 @@ class master_form_find():
         self.Database = StringVar()
         self.keyWordRole = StringVar()
         self.keyWordUser = StringVar() 
+        self.keyWordLog = StringVar() 
 
         initInfo = self.readConfFile()
         if "init" in initInfo: 
@@ -127,7 +141,8 @@ class master_form_find():
         self.usersDataList = None
         self.rolesDataList = None
         self.rolesNamesList = None
-
+        self.logsDataList = None
+        
         self.setApp(self.actServ)
 
     def changeDatabase(self, event = None):
@@ -142,6 +157,7 @@ class master_form_find():
         self.actServ  = serv
         self.win.title(self.actServ)
         self.win.iconbitmap(APPICON)
+        self.win.geometry("550x500")
         
         self.closeRec()
         slavelist = self.win.slaves()
@@ -222,18 +238,132 @@ class master_form_find():
         tab_setup.add(tabRoles, text = "    Roles    ")
         tab_setup.pack(expand=1, fill = "both", padx = 10)
 
-        filterForm(tabUsers, self.data.dbList, self.keyWordUser, self.getUsers)        
+        tabLogs = LabelFrame(tab_setup, text = " Logs ", font=('Calibri 12 bold'))
+        tab_setup.add(tabLogs, text = "    Logs    ")
+        tab_setup.pack(expand=1, fill = "both", padx = 10)
+
+        tabHost = LabelFrame(tab_setup, text = " Host ", font=('Calibri 12 bold'))
+        tab_setup.add(tabHost, text = "    Host    ")
+        tab_setup.pack(expand=1, fill = "both", padx = 10)
+        
+        self.usersFilter = filterForm(tabUsers, self.keyWordUser, self.getUsers)        
         self.gridUsersFrame = cdc.VscrollFrame(tabUsers)
         self.gridUsersFrame.pack(expand= True, fill=BOTH)            
         self.getUsers()     
         
-        filterForm(tabRoles, self.data.dbList, self.keyWordRole, self.getRoles)
+        self.rolesFilter = filterForm(tabRoles, self.keyWordRole, self.getRoles)
         self.gridRolesFrame = cdc.VscrollFrame(tabRoles)
         self.gridRolesFrame.pack(expand= True, fill=BOTH)            
         self.getRoles()
-        
-        self.win.geometry("550x500")        
 
+        self.logsFilter = filterForm(tabLogs, self.keyWordLog, self.getLogs, self.nextLogList)
+        self.gridLogsFrame = cdc.VscrollFrame(tabLogs)
+        self.gridLogsFrame.pack(expand= True, fill=BOTH)            
+        #self.getLogs()
+
+        self.hostFilter = filterForm(tabHost, self.keyWordLog, self.getHost)
+        self.gridHostFrame = cdc.VscrollFrame(tabHost)
+        self.gridHostFrame.pack(expand= True, fill=BOTH)        
+
+    def getHost(self):
+        print("host")
+        slavelist = self.gridLogsFrame.interior.slaves()
+        for elem in slavelist:
+            elem.destroy() 
+            
+        if not self.data.isConnect or self.data.data is None:
+            return   
+        
+        try:
+            db = self.data.data        
+            res = db.command(({ "hostInfo": 1 }))
+        except pymongo.errors.OperationFailure as ex1:
+            self.win.objMainMess.showMess(ex1.details.get('errmsg', ''))
+            return
+        except Exception as ex:
+            self.win.objMainMess.showMess(str(ex))
+            return        
+        cle = list(res)
+        #print("cle= " + str(cle))
+        #rr0 = (res[cle[0]])
+        da=res['system']['currentTime']
+        res['system']['currentTime'] = str(da)
+        data=res
+        #pdb.set_trace()
+        gridHostFrame = tk.Frame(self.gridHostFrame.interior)
+        gridHostFrame.pack(expand= True, side=LEFT, fill=X, padx=10)
+
+        formatted_data = json.dumps(data, indent=4)  #, indent=4
+        nlines = formatted_data.count('\n')
+        text_box = tk.Text(gridHostFrame) #, height= nlines+1
+        text_box.grid(row= 0, column=1, sticky="WE")             
+        #text_box.insert(tk.END, formatted_data)
+        text_box.insert(tk.END, formatted_data)
+        text_box.config( state="disabled")
+            
+    def getLogs(self):
+        #pdb.set_trace()
+        #db.command(({ "hostInfo": 1 }))
+        #sudo cat /var/log/mongodb/mongod.log
+            
+        if not self.data.isConnect or self.data.data is None:
+            return   
+
+        try:
+            db = self.data.data
+            res = db.command(({ "getLog": "global" }))
+        except pymongo.errors.OperationFailure as ex1:
+            self.win.objMainMess.showMess(ex1.details.get('errmsg', ''))
+            return
+        except Exception as ex:
+            self.win.objMainMess.showMess(str(ex))
+            return 
+            
+        self.logsDataList=list(res["log"])
+        self.logCnt = len(self.logsDataList)
+        self.rangeLog = self.logCnt
+        self.nextLogList()
+
+    def nextLogList(self):
+        
+        slavelist = self.gridLogsFrame.interior.slaves()
+        for elem in slavelist:
+            elem.destroy() 
+
+        gridLogsFrame = tk.Frame(self.gridLogsFrame.interior, bg= "red")
+        gridLogsFrame.pack(expand= True, side=LEFT, fill=X, padx=10)               
+        
+        stepCnt = self.logCnt - self.rangeLog
+        index = 0
+        for i in range(self.rangeLog-1,0,-1):
+            data = self.logsDataList[i]
+            formatted_data = data  #json.dumps(data, indent=4)  #, indent=4
+            nlines = formatted_data.count('\n')
+            text_box = tk.Text(gridLogsFrame, height=5) #, height= nlines+1
+            text_box.pack(expand= True, fill=X)
+            #text_box.grid(row= index, column=1)             
+            text_box.insert(tk.END, formatted_data)
+            text_box.config( state="disabled")
+            text_box.bind("<Double-Button-1>", self.getLogDetail)
+            #text_box.pack(expand= True, fill=BOTH, anchor=NW, padx=5, pady=3)
+            index += 1
+            if index > 298:
+                self.rangeLog -= index + 1
+                break
+
+        stepCnt += index+1
+        #print( "step = " + str(stepCnt))
+        if stepCnt == self.logCnt:
+            self.rangeLog = self.logCnt
+        
+        self.logsFilter.affTot(str(stepCnt) + "/" + str(self.logCnt))
+    
+    def getLogDetail(self, event):
+        #pdb.set_trace()
+        txt=event.widget.get("1.0",END)
+        oLog = json.loads(txt)
+        print(oLog)
+        x=2
     
     def afficherTitre(self, isConnected):
         if isConnected:
@@ -332,9 +462,9 @@ class master_form_find():
             #grid(row=0, column=0)
             
         userNameIndex = -1
-        for index in range(len(self.usersDataList)):
-            
-            data = self.usersDataList[index]
+        cnt = 0
+        for index, data in enumerate(self.usersDataList):
+
             if (self.Database.get() == "All" or self.Database.get() == data["db"]):
                 #print(data)
                 if "userId" in data and "credentials" in data :
@@ -345,7 +475,8 @@ class master_form_find():
                 if not userNameDB is None and data["user"] == userNameDB[0] and data["db"] == userNameDB[1]:
                     userNameIndex = index
                 #pdb.set_trace()
-                if not self.keyWordUser.get() or self.keyWordUser.get().upper() in data["user"].upper():            
+                if not self.keyWordUser.get() or self.keyWordUser.get().upper() in data["user"].upper():   
+                    cnt += 1
                     Button(gridUsersFrame, text=' ... ', command= lambda index=index: self.editUser(index), font=('Calibri 15 bold')).grid(row=index, column=0)
                     formatted_data = json.dumps(data, indent=4)
                     nlines = formatted_data.count('\n')
@@ -353,6 +484,7 @@ class master_form_find():
                     text_box.grid(row= index, column=1, sticky="WE")             
                     text_box.insert(tk.END, formatted_data)
                     text_box.config( state="disabled")
+        self.usersFilter.affTot(str(cnt) + "/" + str(index+1))
         self.gridUsersFrame.scroll(0)
         if userNameIndex > -1:
             self.editUser(userNameIndex, pos)
@@ -394,8 +526,9 @@ class master_form_find():
 
         self.rolesNamesList = []
         userRoleIndex = -1
-        for index in range(len(self.rolesDataList)):
-            data = self.rolesDataList[index]
+        cnt = 0
+        for index, data in enumerate(self.rolesDataList):
+            #data = self.rolesDataList[index]
             self.rolesNamesList.append(data["role"])
             if (self.Database.get() == "All" or self.Database.get() == data["db"]):
                 self.roleList.append(data["role"])
@@ -403,6 +536,7 @@ class master_form_find():
                 if not userRole is None and data["role"] == userRole[0] and data["db"] == userRole[1]:
                     userRoleIndex = index     
                 if not self.keyWordRole.get() or self.keyWordRole.get().upper() in data["role"].upper():
+                    cnt += 1
                     Button(gridRolesFrame, text=' ... ', command= lambda index=index: self.editRole(index), font=('Calibri 15 bold')).grid(row=index, column=0)
                     formatted_data = json.dumps(data, indent=4)
                     nlines = formatted_data.count('\n')            
@@ -410,6 +544,7 @@ class master_form_find():
                     text_box.grid(row= index, column=1, sticky="WE") 
                     text_box.insert(tk.END, formatted_data)
                     text_box.config( state="disabled")
+        self.rolesFilter.affTot(str(cnt) + "/" + str(index+1))
         self.gridRolesFrame.scroll(0)
         if userRoleIndex > -1:
             self.editRole(userRoleIndex, pos)
