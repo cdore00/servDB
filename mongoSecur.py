@@ -59,7 +59,17 @@ if not os.path.exists(APPICON):
 
 BDSYSTEMLIST = mongoRoles.bdSystemList
 ACTIONLIST = mongoRoles.actionsList
+ACTIONCLUSTER = mongoRoles.clusterResActions
 BULTINROLELIST = mongoRoles.systemRole
+
+#https://www.mongodb.com/docs/manual/reference/log-messages/
+"""
+id
+ctx
+msg
+"""
+LOG_severity = ["", "I", "F", "E", "W"]
+LOG_component = ["","ACCESS","COMMAND","CONTROL","ELECTION","FTDC","GEO","INDEX","INITSYNC","JOURNAL","NETWORK","QUERY","RECOVERY","REPL","REPL_HB","ROLLBACK","SHARDING","STORAGE","TXN","WRITE","WT","WTBACKUP","WTCHKPT","WTCMPCT","WTEVICT","WTHS","WTRECOV","WTRTS","WTSLVG","WTTIER","WTTS","WTTXN","WTVRFY","WTWRTLOG"]
 
 CONFFILE = "mongoSecur.conf"
 LOCALSERV= "localhost"
@@ -80,6 +90,8 @@ def winChildPos(winObj):
     winObj.pop.update_idletasks()
     winObj.pop.attributes('-topmost', True)
     winObj.pop.attributes('-topmost', False)
+
+
         
 class filterForm():
     def __init__(self, parent, textVar, callBack, nextcallBack = None):
@@ -88,25 +100,27 @@ class filterForm():
             padXform = 50
         else:
             padXform = 35
-        formframe = Frame(parent, borderwidth=3, relief = RIDGE )  #SUNKEN
-        formframe.pack( fill=X, padx=padXform, pady=5)
-
-        ttk.Label(formframe, text='Keyword :').grid(column=0, row=1, padx=5, pady=5, sticky=tk.W)
-        self.keyword = tk.Entry(formframe, textvariable=textVar, width=20)
+        self.formframe = Frame(parent, borderwidth=3, relief = RIDGE )  #SUNKEN
+        self.formframe.pack( fill=X, padx=padXform, pady=5)
+        
+        self.mainBlock = Frame(self.formframe)
+        self.mainBlock.pack()
+        
+        ttk.Label(self.mainBlock, text='Keyword :').grid(column=0, row=1, padx=5, pady=5, sticky=tk.W)
+        self.keyword = tk.Entry(self.mainBlock, textvariable=textVar, width=20)
         self.keyword.focus()
         self.keyword.grid(column=1, row=1, sticky=tk.W)  
         self.keyword.bind("<Return>", callBack)        
         
-        button = cdc.RoundedButton(formframe, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.resetForm)
+        button = cdc.RoundedButton(self.mainBlock, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.resetForm)
         button.create_text(12,11, text="x", fill="black", font=('Helvetica 15 '))
         button.grid(column=2, row=1, padx=15)
         #Hovertip(button,"Blanchir le formulaire")        
-        ttk.Button(formframe, text='Search', command=callBack).grid(column=3, row=1, padx=5)
-        ttk.Label(formframe, textvariable=self.totalCount, font= ('Segoe 11 bold'), width=9).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
+        self.searchBut = ttk.Button(self.mainBlock, text='Search', command=callBack).grid(column=3, row=1, padx=5)
+        ttk.Label(self.mainBlock, textvariable=self.totalCount, font= ('Segoe 11 bold'), width=9).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
         if not nextcallBack is None:
-            ttk.Button(formframe, text='>', width=3, command=nextcallBack).grid(column=5, row=1)  #, padx=1
-        
-        
+            ttk.Button(self.mainBlock, text='>', width=3, command=nextcallBack).grid(column=5, row=1)  #, padx=1
+
     def resetForm(self):
         self.keyword.delete(0, END)
         self.keyword.insert(0, "")
@@ -115,7 +129,80 @@ class filterForm():
         #print(val)
         self.totalCount.set(val)
         
+        
+class filterLogForm(filterForm):
+    def __init__(self, parent, textVar, callBack, nextcallBack = None):
+        filterForm.__init__(self, parent, textVar, callBack, nextcallBack)
+        self.callBack = callBack
+        self.sEqu = StringVar()
+        self.sRes = StringVar()
+        self.cEqu = StringVar()
+        self.cRes = StringVar()
+        
+        secondBlock = Frame(self.formframe)
+        secondBlock.pack()
 
+         
+        
+        """
+        s_checkEqu = ttk.Checkbutton(
+            secondBlock,
+            text="==",
+            variable=self.sEqu,
+            onvalue=1,
+            offvalue=0)
+        s_checkEqu.grid(row=0, column=1, sticky=tk.W, padx=5, pady=3) 
+        """
+        ttk.Label(secondBlock, text='Severity:').grid(row=0, column=0, padx=1, pady=3, sticky=tk.W)
+        self.sEqu.set("==")
+        s_Equ = tk.Label(secondBlock, textvariable=self.sEqu, borderwidth=2, relief = RAISED)
+        s_Equ.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3) 
+        s_Equ._values = 1
+        s_Equ.bind("<Button-1>", self.changeEqual)
+        
+        self.comboComp = ttk.Combobox(
+            secondBlock,
+            width=2,
+            textvariable=self.sRes,
+            state="readonly",
+            values = LOG_severity
+            )
+        self.comboComp.current(0)
+        self.comboComp.grid(row=0, column=2, sticky=tk.W, padx=1, pady=3)
+        
+        ttk.Label(secondBlock, text='Comp:').grid(row=0, column=3, padx=1, pady=3, sticky=tk.W)
+        self.cEqu.set("==")
+        cEqu = tk.Label(secondBlock, textvariable=self.sEqu, borderwidth=2, relief = RAISED)
+        cEqu.grid(row=0, column=4, sticky=tk.W, padx=1, pady=3) 
+        cEqu._values = 1
+        cEqu.bind("<Button-1>", self.changeEqual)        
+        
+        self.comboComp = ttk.Combobox(
+            secondBlock,
+            width=9,
+            textvariable=self.cRes,
+            state="readonly",
+            values = LOG_component
+            )
+        self.comboComp.current(0)
+        self.comboComp.grid(row=0, column=5, sticky=tk.W, padx=1, pady=3) 
+        
+        self.searchBut = ttk.Button(self.mainBlock, text='Search', command=self.execCallBack).grid(column=3, row=1, padx=5)
+        #command= lambda index=index: self.editUser(index)
+        
+    def execCallBack(self):
+        self.callBack(sRes=self.sRes.get(), cRes=self.cRes.get())
+
+    def changeEqual(self, event):
+        var=str(event.widget['textvariable'])
+        if event.widget._values:
+            tk.StringVar(name=var, value='<>')
+            event.widget._values = 0
+        else:
+            tk.StringVar(name=var, value='==')
+            event.widget._values = 1
+        #print(str(event.widget._values))
+        
 class master_form_find():
     def __init__(self, mainWin, *args, **kwargs):
         self.win = mainWin
@@ -158,12 +245,12 @@ class master_form_find():
         self.win.title(self.actServ)
         self.win.iconbitmap(APPICON)
         self.win.geometry("550x500")
+        self.win.minsize(width = 550, height = 500)
         
         self.closeRec()
         slavelist = self.win.slaves()
         for elem in slavelist:
             elem.destroy()
-        
         
         # Création du menu
         zoneMenu = Frame(self.win)
@@ -229,6 +316,7 @@ class master_form_find():
 
         # Onglets
         tab_setup = ttk.Notebook(self.win)
+        tab_setup.bind("<<NotebookTabChanged>>", self.on_tab_change)
         
         tabUsers = LabelFrame(tab_setup, text = " Users ", font=('Calibri 12 bold'))
         tab_setup.add(tabUsers, text = "    Users    ")
@@ -249,63 +337,84 @@ class master_form_find():
         self.usersFilter = filterForm(tabUsers, self.keyWordUser, self.getUsers)        
         self.gridUsersFrame = cdc.VscrollFrame(tabUsers)
         self.gridUsersFrame.pack(expand= True, fill=BOTH)            
-        self.getUsers()     
+        self.getUsers()
         
         self.rolesFilter = filterForm(tabRoles, self.keyWordRole, self.getRoles)
         self.gridRolesFrame = cdc.VscrollFrame(tabRoles)
         self.gridRolesFrame.pack(expand= True, fill=BOTH)            
         self.getRoles()
 
-        self.logsFilter = filterForm(tabLogs, self.keyWordLog, self.getLogs, self.nextLogList)
+        self.logsFilter = filterLogForm(tabLogs, self.keyWordLog, self.getLogs, self.nextLogList)
         self.gridLogsFrame = cdc.VscrollFrame(tabLogs)
         self.gridLogsFrame.pack(expand= True, fill=BOTH)            
         #self.getLogs()
 
-        self.hostFilter = filterForm(tabHost, self.keyWordLog, self.getHost)
+        
+        #self.hostFilter = filterForm(tabHost, self.keyWordLog, self.getHost)
         self.gridHostFrame = cdc.VscrollFrame(tabHost)
         self.gridHostFrame.pack(expand= True, fill=BOTH)        
+        #self.getHost()
+
+    def on_tab_change(self, event):
+        if event.widget.index(event.widget.select()) == 3:
+            self.getHost()
+            event.widget.unbind("<<NotebookTabChanged>>")
 
     def getHost(self):
-        print("host")
-        slavelist = self.gridLogsFrame.interior.slaves()
-        for elem in slavelist:
-            elem.destroy() 
-            
+  
         if not self.data.isConnect or self.data.data is None:
             return   
+
         
+        gridHostFrame = tk.Frame(self.gridHostFrame.interior)
+        gridHostFrame.pack(expand= True, side=LEFT, fill=X, padx=10)   
+        messFrame = tk.Frame(gridHostFrame)
+        messFrame.pack(fill=X, expand=1)
+        objMess = cdc.messageObj(gridHostFrame)
+        
+        #self.messframe.winfo_width() 
         try:
             db = self.data.data        
             res = db.command(({ "hostInfo": 1 }))
         except pymongo.errors.OperationFailure as ex1:
-            self.win.objMainMess.showMess(ex1.details.get('errmsg', ''))
+            objMess.showMess(ex1.details.get('errmsg', ''))
+            objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
             return
         except Exception as ex:
             self.win.objMainMess.showMess(str(ex))
             return        
-        cle = list(res)
+        #cle = list(res)
         #print("cle= " + str(cle))
-        #rr0 = (res[cle[0]])
         da=res['system']['currentTime']
         res['system']['currentTime'] = str(da)
         data=res
         #pdb.set_trace()
-        gridHostFrame = tk.Frame(self.gridHostFrame.interior)
-        gridHostFrame.pack(expand= True, side=LEFT, fill=X, padx=10)
 
         formatted_data = json.dumps(data, indent=4)  #, indent=4
         nlines = formatted_data.count('\n')
         text_box = tk.Text(gridHostFrame) #, height= nlines+1
-        text_box.grid(row= 0, column=1, sticky="WE")             
-        #text_box.insert(tk.END, formatted_data)
+        text_box.pack(expand= True, fill=X)
+        #text_box.grid(row= 0, column=1, sticky="WE")             
         text_box.insert(tk.END, formatted_data)
         text_box.config( state="disabled")
             
-    def getLogs(self):
+    def getLogs(self, sRes = None, cRes = None):
         #pdb.set_trace()
         #db.command(({ "hostInfo": 1 }))
         #sudo cat /var/log/mongodb/mongod.log
-            
+        """
+            https://www.mongodb.com/docs/manual/reference/log-messages/
+          "t": <Datetime>, // timestamp
+          "s": <String>, // severity
+          "c": <String>, // component
+          "id": <Integer>, // unique identifier
+          "ctx": <String>, // context
+          "msg": <String>, // message body
+          "attr": <Object> // additional attributes (optional)
+          "tags": <Array of strings> // tags (optional)
+          "truncated": <Object> // truncation info (if truncated)
+          "size": <Object> // original size of entry (if truncated)        
+        """
         if not self.data.isConnect or self.data.data is None:
             return   
 
@@ -322,30 +431,42 @@ class master_form_find():
         self.logsDataList=list(res["log"])
         self.logCnt = len(self.logsDataList)
         self.rangeLog = self.logCnt
-        self.nextLogList()
+        self.nextLogList(cRes = cRes)
 
-    def nextLogList(self):
-        
+    def nextLogList(self, sRes = None, cRes = None):
+        #pdb.set_trace()
+        if cRes:
+            print(cRes)
+
+        def showLog(data):
+            formatted_data = data  #json.dumps(data, indent=4)  #, indent=4
+            nlines = formatted_data.count('\n')
+            text_box = tk.Text(gridLogsFrame, height=5) #, height= nlines+1
+            text_box.pack(expand= True, fill=X)            
+            text_box.insert(tk.END, formatted_data)
+            text_box.config( state="disabled")
+            text_box.bind("<Double-Button-1>", self.getLogDetail)
+            
         slavelist = self.gridLogsFrame.interior.slaves()
         for elem in slavelist:
             elem.destroy() 
 
-        gridLogsFrame = tk.Frame(self.gridLogsFrame.interior, bg= "red")
+        gridLogsFrame = tk.Frame(self.gridLogsFrame.interior)
         gridLogsFrame.pack(expand= True, side=LEFT, fill=X, padx=10)               
         
         stepCnt = self.logCnt - self.rangeLog
         index = 0
+        print(self.logsDataList[0])
         for i in range(self.rangeLog-1,0,-1):
             data = self.logsDataList[i]
-            formatted_data = data  #json.dumps(data, indent=4)  #, indent=4
-            nlines = formatted_data.count('\n')
-            text_box = tk.Text(gridLogsFrame, height=5) #, height= nlines+1
-            text_box.pack(expand= True, fill=X)
-            #text_box.grid(row= index, column=1)             
-            text_box.insert(tk.END, formatted_data)
-            text_box.config( state="disabled")
-            text_box.bind("<Double-Button-1>", self.getLogDetail)
-            #text_box.pack(expand= True, fill=BOTH, anchor=NW, padx=5, pady=3)
+            if cRes:
+                obj = json.loads(data)
+                if obj["c"] == cRes:
+                    #pdb.set_trace()
+                    showLog(data)
+            else:    
+                showLog(data)
+
             index += 1
             if index > 298:
                 self.rangeLog -= index + 1
@@ -360,10 +481,9 @@ class master_form_find():
     
     def getLogDetail(self, event):
         #pdb.set_trace()
-        txt=event.widget.get("1.0",END)
-        oLog = json.loads(txt)
-        print(oLog)
-        x=2
+        txtLog=event.widget.get("1.0",END)
+        showLogRec(self.win, "Log detail : ", txtLog, modal = False)
+
     
     def afficherTitre(self, isConnected):
         if isConnected:
@@ -388,7 +508,6 @@ class master_form_find():
         initInfo["init"] = self.actServ
         if not self.actServ in initInfo:
             initInfo[(self.actServ)] = {}
-            print("NEW-NEW-NEW")
         initInfo[(self.actServ)]["roleKeyword"] = self.keyWordRole.get()
         initInfo[(self.actServ)]["userKeyword"] = self.keyWordUser.get()
         initInfo[(self.actServ)]["userPass"] = self.userPass
@@ -415,7 +534,6 @@ class master_form_find():
                 del initInfo["init"]
         else:
             if param["server"] != self.actServ and param["server"] not in initInfo:
-                print("NEW")
                 initInfo[param["server"]] = {}
                 initInfo[param["server"]]["roleKeyword"] = ""
                 initInfo[param["server"]]["userKeyword"] = ""
@@ -424,7 +542,7 @@ class master_form_find():
             initInfo[param["server"]]["host"] = param["host"]
             initInfo[param["server"]]["port"] = param["port"]
         self.writeConfFile(initInfo)
-        print(initInfo)
+
         
     def setDefault(self, initInfo = None):
         actInfo = {}
@@ -470,8 +588,7 @@ class master_form_find():
                 if "userId" in data and "credentials" in data :
                     data.pop("userId")
                     data.pop("credentials")
-                else:
-                    print("NOT userID and credentials")
+
                 if not userNameDB is None and data["user"] == userNameDB[0] and data["db"] == userNameDB[1]:
                     userNameIndex = index
                 #pdb.set_trace()
@@ -483,6 +600,8 @@ class master_form_find():
                     text_box = tk.Text(gridUsersFrame, height= nlines+1)
                     text_box.grid(row= index, column=1, sticky="WE")             
                     text_box.insert(tk.END, formatted_data)
+
+                    #pdb.set_trace()
                     text_box.config( state="disabled")
         self.usersFilter.affTot(str(cnt) + "/" + str(index+1))
         self.gridUsersFrame.scroll(0)
@@ -580,7 +699,7 @@ class master_form_find():
             if k != "init":
                 self.servers.append(k)
         dial = loginDialog(self.win, "Connecter : app - location", self)
-        dial.showDialog()
+        #dial.showDialog()
 
     def authentif(self):
         app = cdc.logonWin(self.win)
@@ -609,6 +728,8 @@ class editRoleWin():
         self.pos = pos
         self.roleName = self.roleData["role"]
         self.Database = StringVar()
+        self.clusterRes = IntVar()
+        
         self.actionsList = None
         self.userActionsList = []
         if self.roleData["privileges"]:
@@ -627,7 +748,7 @@ class editRoleWin():
         self.pop.destroy()
         
     def save(self):
-        #pdb.set_trace()
+        
         res = None
         db=self.data.DBconnect[self.Database.get()]
         role = self.rolesObj.getRole()   
@@ -646,26 +767,34 @@ class editRoleWin():
                 except Exception as ex:
                     self.objMess.showMess(str(ex))
                     return
-            print("Save role: " + str(role))
-        
-        #pdb.set_trace()
-        # Save Privilege and actions
-        revokeArr = []
-        for act in self.userActionsList:
-            if self.var_list[self.actionsList.index(act)].get() == 0:
-                revokeArr.append(act)      
-        if len(revokeArr):
-            res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": revokeArr}]})
 
+        # Save Privilege and actions
+        if self.clusterRes.get():
+            ressouce = {"cluster" : True}
+        else:
+            ressouce = {"db": self.comboBD.get(), "collection" : self.comboCol.get()}
+        
+        revokeArr = []
+        try:
+            for act in self.userActionsList:
+                if self.var_list[self.actionsList.index(act)].get() == 0:
+                    revokeArr.append(act)      
+        except Exception as ex:
+            pdb.set_trace()
+        if len(revokeArr):
+            res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": ressouce, "actions": revokeArr}]})
+        #print("revokeArr : " + str(revokeArr))
 
         grantArr = []
         for act in self.actionsList:
             if self.var_list[self.actionsList.index(act)].get() == 1:
                 grantArr.append(act)
-
+                
+        #pdb.set_trace()
+        #print(str(ressouce) + "  grantArr : " + str(grantArr))
         if len(grantArr):
             try:    
-                res = db.command({"grantPrivilegesToRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": grantArr}]})            
+                res = db.command({"grantPrivilegesToRole": self.roleName, "privileges": [{"resource": ressouce, "actions": grantArr}]})            
             except pymongo.errors.OperationFailure as ex1:
                 #ex1.details.get('errmsg', '')
                 #pdb.set_trace()
@@ -700,7 +829,6 @@ class editRoleWin():
     def addRole(self):
         self.objMess.addMess("\nAdd role to role: " + self.roleName, "I")
         self.addRoleFlag = True
-        ttk.Button(self.butFrame, text='Cancel', command=self.cancel).grid(row=1, column=0, pady=3)
 
     def delRole(self):
 
@@ -726,11 +854,9 @@ class editRoleWin():
         self.newRoleName.focus()
         self.newRoleName.grid(column=1, row=0, sticky=tk.W)
         ttk.Button(self.butFrame, text='Save', command=self.createRole).grid(row=0, column=0) 
-        ttk.Button(self.butFrame, text='Cancel', command=self.cancel).grid(row=1, column=0, pady=3)
         self.comboBD.current(0)
         self.comboCol.current(0)
         self.setPriv()
-        print("New priv")
         
         dbList = self.data.dbList.copy()
         dbList[0] = "admin"
@@ -756,15 +882,22 @@ class editRoleWin():
         
     
     def createRole(self):
-        #roleData = {}
-        
+
+        if not self.newRoleName.get():
+            self.objMess.showMess("Role name must be non-empty.")
+            return
+            
         grantArr = []
         for act in self.actionsList:
             if self.var_list[self.actionsList.index(act)].get() == 1:
                 grantArr.append(act)
 
         priv = {}
-        priv["resource"] = { "db": self.comboBD.get(), "collection": self.comboCol.get() }
+        if self.clusterRes.get():
+            ressouce = {"cluster" : True}
+        else:
+            ressouce = {"db": self.comboBD.get(), "collection" : self.comboCol.get()}        
+        priv["resource"] = ressouce
         priv["actions"] = grantArr
         #pdb.set_trace()
         if len(grantArr):
@@ -799,12 +932,17 @@ class editRoleWin():
             self.objMess.showMess(str(res)) 
 
     def delPriv(self):
-        if self.roleData["privileges"]:    
+        #pdb.set_trace()
+        if self.roleData["privileges"]:  
+            if self.clusterRes.get():
+                ressouce = {"cluster" : True}
+            else:
+                ressouce = {"db": self.comboBD.get(), "collection" : self.comboCol.get()}
             answer = askyesno(title='Remove',
-                message='Remove privilege : {' + "db: " + self.comboBD.get() + ", collection: " + self.comboCol.get() + " }")
+                message='Remove privilege : { "resource":' + str(ressouce) + " }")
             if answer:     
                 db=self.data.DBconnect[self.Database.get()]
-                res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": {"db": self.comboBD.get(), "collection" : self.comboCol.get()}, "actions": self.actionsList}]})
+                res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": ressouce, "actions": self.actionsList}]})
                 self.refreshRoles(res)
         else:
             self.objMess.showMess("No privilege to remove.")
@@ -816,8 +954,7 @@ class editRoleWin():
         self.comboBD.current(0)
         self.menuPriv.destroy()
         self.setPriv(setCol = True)
-        self.objMess.addMess("\nAdd system privilege", "I")
-        ttk.Button(self.butFrame, text='Cancel', command=self.cancel).grid(row=1, column=0, pady=3)            
+        self.objMess.addMess("\nAdd system privilege", "I")            
     
     def setKeyWordRole(self):
         self.mainObj.keyWordRole.set(self.roleName) 
@@ -835,7 +972,7 @@ class editRoleWin():
         if not self.pos is None:
             self.pop.geometry(f"+{self.pos[0]}+{self.pos[1]}")
             
-        self.objMess = cdc.messageObj(self.pop, height=15)
+        self.objMess = cdc.messageObj(self.pop, height=45)
 
         # Form frame
         mainFrame = tk.Frame(self.pop)
@@ -879,6 +1016,15 @@ class editRoleWin():
         self.menuPriv.configure(menu=self.submenu_priv)        
         
         ttk.Label(self.formFrame, text="{  resources : { ").grid(row=3, column=0, sticky=tk.E, padx=30, pady=3)
+        cluster_check = ttk.Checkbutton(
+            self.formFrame,
+            text="cluster : true",
+            variable=self.clusterRes,
+            onvalue=1,
+            offvalue=0)
+        cluster_check.grid(row=3, column=1, sticky=tk.W, padx=5, pady=3) 
+         
+        
         dbList = self.data.dbList.copy()
         # self.Database.get() != self.data.dbase:
 
@@ -891,12 +1037,16 @@ class editRoleWin():
             )
         self.comboBD.bind("<<ComboboxSelected>>", self.setPriv)
         self.comboBD.grid( row=4, column=1, sticky=tk.W)
-
-        if self.roleData["privileges"]:
+        
+        if self.roleData["privileges"] and "db" in self.roleData["privileges"][0]["resource"]:
             if self.roleData["privileges"][0]["resource"]["db"] in self.data.dbList:
                 self.comboBD.current( self.data.dbList.index(self.roleData["privileges"][0]["resource"]["db"]) )
         else:
+            if self.roleData["privileges"] and "cluster" in self.roleData["privileges"][0]["resource"]:
+                self.clusterRes.set(1)
             self.comboBD.current(0)
+        self.clusterRes.trace('w', self.changeCluster)     
+            
         ttk.Label(self.formFrame, text= "collection : ").grid( row=5, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboCol = ttk.Combobox(
             self.formFrame,
@@ -913,14 +1063,14 @@ class editRoleWin():
         self.butFrame = tk.Frame(mainFrame)
         self.butFrame.grid(column=1, row=0)
 
-        ttk.Button(self.butFrame, text='Save', command=self.save).grid(row=0, column=0)        
+        ttk.Button(self.butFrame, text='Save', command=self.save).grid(row=0, column=0)    
+        ttk.Button(self.butFrame, text='Cancel', command=self.cancel).grid(row=1, column=0, pady=3)
         ttk.Button(self.butFrame, text='Close', command=self.close).grid(row=2, column=0, pady=5)
         
         # Grid list frame
         self.actionsFrame = cdc.VscrollFrame(self.pop)
         self.actionsFrame.pack(expand= True, fill=BOTH)
-        
-        
+
 
         footFrame = tk.Frame(self.pop)
         footFrame.pack( fill=X )
@@ -935,38 +1085,35 @@ class editRoleWin():
         self.rolesObj = rolesSelect(self, rolesFrame, self.roleData["roles"].copy()) 
         
         self.setPriv(setCol = True)
-        winChildPos(self)
-        #self.winDim()
+        if self.pos is None:
+            winChildPos(self)
+
+    def changeCluster(self, *args):
+        self.pop.update_idletasks()     
+        self.setPriv()
         
     def setPriv(self, event = None, setCol = False):
-        """
-        if not self.roleData["privileges"]:
-            self.actionsList = self.getActionList({"db" : "", "collection" : ""})
-            self.setActionList()            
-            return
-        """
+        self.userActionsList = []                           #Empty user action list
+        slavelist = self.actionsFrame.interior.slaves()     #Empty checkbox action list
+        for elem in slavelist:
+            elem.destroy()
+
         colList = []
-        if self.comboBD.get() not in BDSYSTEMLIST: # Si valeur "bd" n'est pas dans la liste system
+        if self.comboBD.get() not in BDSYSTEMLIST:          # Si valeur "bd" n'est pas dans la liste system
             colList = self.data.colList[self.comboBD.get()].copy()
         if not "" in colList:
             colList.insert(0,"")
         self.comboCol.config(values=colList) 
             
         privileges = self.roleData["privileges"]
-        if privileges and setCol and len(colList)  and not self.addSystemPriv: # Si la collection est à initialiser et qu'on est pas en mode ajout de privilège system
+        if not self.clusterRes.get() and privileges and setCol and len(colList) and not self.addSystemPriv and self.roleData["privileges"][0]["resource"]["collection"] in colList: 
+        # Si on est pas en mode Cluster ou ajout de privilège system et la collection à initialiser existe
             self.comboCol.current( colList.index(self.roleData["privileges"][0]["resource"]["collection"]) )        
         
-        slavelist = self.actionsFrame.interior.slaves()
-        for elem in slavelist:
-            elem.destroy() 
-        
         privObj = {"db" : "", "collection" : ""}          
-        if self.addSystemPriv:  # Si ajout d'un privilege build in system
-            #pdb.set_trace()
+        if self.addSystemPriv:                              # Si ajout d'un privilege build in system
             dbList = BDSYSTEMLIST.copy()
-            self.comboBD.config(values=dbList)
-            #if setCol:
-            #    self.comboBD.current(1)            
+            self.comboBD.config(values=dbList)          
             colList = self.getSystemColl(self.comboBD.get())
             self.comboCol.config(values=colList)
             if setCol:
@@ -974,32 +1121,51 @@ class editRoleWin():
             privObj = {"db" : self.comboBD.get(), "collection" : self.comboCol.get()}
         else:
             dbList = self.data.dbList.copy()
-            self.comboBD.config(values=dbList)      
-       
+            self.comboBD.config(values=dbList.copy())      
+        if self.clusterRes.get():                        # Si privilege Cluster
+            dbList = []
+            privObj = {"cluster" : True } 
+            self.comboBD.config(values=[""])
+            self.comboBD.current(0)
+            self.comboCol.config(values=[""]) 
+            self.comboCol.current(0)
+                
         existPriv = False
-        self.userActionsList = []
+        #print(privileges)
         for priv in privileges:
-            if priv["resource"]["db"] == self.comboBD.get() and priv["resource"]["collection"] == self.comboCol.get():
-                existPriv = True
-                self.userActionsList = priv["actions"]
-            if not priv["resource"]["db"] in dbList:
-                dbList.append(priv["resource"]["db"])
-                self.comboBD.config(values=dbList)
-            if not priv["resource"]["db"] in self.data.dbList and priv["resource"]["db"] == self.comboBD.get():
-                colList.append(priv["resource"]["collection"])
-                self.comboCol.config(values=colList)
-
+            if not self.clusterRes.get() and "db" in priv["resource"]:
+                if priv["resource"]["db"] == self.comboBD.get() and priv["resource"]["collection"] == self.comboCol.get():
+                    existPriv = True
+                    self.userActionsList = priv["actions"]
+                if not priv["resource"]["db"] in dbList:
+                    dbList.append(priv["resource"]["db"])
+                    self.comboBD.config(values=dbList)
+                if not priv["resource"]["db"] in self.data.dbList and priv["resource"]["db"] == self.comboBD.get():
+                    colList.append(priv["resource"]["collection"])
+                    self.comboCol.config(values=colList)
+            else:
+                if self.clusterRes.get() and "cluster" in priv["resource"]:
+                    existPriv = True
+                    self.userActionsList = priv["actions"]
+                    break
+            
         if not self.comboCol.get() in colList: # Si la collection n'est pas dans la liste
             self.comboCol.current(0)
-            
-        actPriv = '{ ' + 'db: "' + self.comboBD.get() + '" , collection: "' + self.comboCol.get() + '" }' 
-        mess = ("Modify" if existPriv else "Add") + " privilege :\n" + actPriv
+        if self.clusterRes.get():
+            actPriv = privObj
+        else:
+            actPriv = '{ ' + 'db: "' + self.comboBD.get() + '" , collection: "' + self.comboCol.get() + '" }' 
+        mess = ("Modify" if existPriv else "Add") + " privilege :\n" + str(actPriv)  #actPriv
         if self.newRoleName is None: # If not adding new role
             self.objMess.showMess(mess, "I")
         else:
             self.changeDatabase(message=mess)
         
-        self.actionsList = self.getActionList(privObj)
+        if self.clusterRes.get():
+            #print("cluster= " + str(self.clusterRes.get()))
+            self.actionsList = ACTIONCLUSTER
+        else:
+            self.actionsList = self.getActionList(privObj)
         self.setActionList()
         
     def setActionList(self):    
@@ -1023,23 +1189,7 @@ class editRoleWin():
             if privObj["resource"]["db"] == sysBD:
                 colList.append(privObj["resource"]["collection"])
         return colList
-    """
-    def winDim(self):
-        self.mainObj.win.update_idletasks()                                                             ##update_idletasks
-        w=self.pop.winfo_width()
-        h=self.pop.winfo_height() + 2
-        
-        #pdb.set_trace()
-        self.pop.geometry(f"{w}x{h}") 
-        my = self.mainObj.win.winfo_x() - w - 2
-        my = 0 if my < 0 else my
-        mt = self.mainObj.win.winfo_y()
-        self.pop.geometry(f"+{my}+{mt}")        
-        #self.pop.geometry(f"+{my}+0")
-        self.win.update_idletasks()
-        self.pop.attributes('-topmost', True)
-        self.pop.attributes('-topmost', False)
-    """
+
         
 class editUserWin():
     def __init__(self, mainWin, userData, pos):
@@ -1216,8 +1366,10 @@ class editUserWin():
         self.butFrame = tk.Frame(mainFrame)
         self.butFrame.grid(column=1, row=0)
     
+        
         ttk.Button(self.butFrame, text='Close', command=self.close).grid(row=1, column=0, pady=5)
-        winChildPos(self)
+        if self.pos is None:
+            winChildPos(self)
 
     def setKeyWordUser(self):
         self.mainObj.keyWordUser.set(self.userName)
@@ -1411,6 +1563,16 @@ class dbaseObj():
             self.isConnect = False
         return self.isConnect
 
+class showLogRec(cdc.modalDialogWin):
+    def createWidget(self):
+        #self.pop.resizable(0, 0)
+        objLog = json.loads(self.obj)
+        format_log = json.dumps(objLog, indent=4)
+        text_box = tk.Text(self.dframe) #, height=5
+        text_box.pack(expand= True, fill=BOTH)
+        text_box.pack() 
+        text_box.insert(tk.END, format_log)
+        text_box.config( state="disabled")        
         
 class loginDialog(cdc.modalDialogWin):
     def createWidget(self):
