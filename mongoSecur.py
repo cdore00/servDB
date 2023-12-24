@@ -134,6 +134,7 @@ class filterLogForm(filterForm):
     def __init__(self, parent, textVar, callBack, nextcallBack = None):
         filterForm.__init__(self, parent, textVar, callBack, nextcallBack)
         self.callBack = callBack
+        self.nextcallBack = nextcallBack
         self.sEqu = StringVar()
         self.sRes = StringVar()
         self.cEqu = StringVar()
@@ -141,8 +142,6 @@ class filterLogForm(filterForm):
         
         secondBlock = Frame(self.formframe)
         secondBlock.pack()
-
-         
         
         """
         s_checkEqu = ttk.Checkbutton(
@@ -155,10 +154,10 @@ class filterLogForm(filterForm):
         """
         ttk.Label(secondBlock, text='Severity:').grid(row=0, column=0, padx=1, pady=3, sticky=tk.W)
         self.sEqu.set("==")
-        s_Equ = tk.Label(secondBlock, textvariable=self.sEqu, borderwidth=2, relief = RAISED)
-        s_Equ.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3) 
-        s_Equ._values = 1
-        s_Equ.bind("<Button-1>", self.changeEqual)
+        self.s_Equ = tk.Label(secondBlock, textvariable=self.sEqu, borderwidth=2, relief = RAISED)
+        self.s_Equ.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3) 
+        self.s_Equ._values = 1
+        self.s_Equ.bind("<Button-1>", self.changeEqual)
         
         self.comboComp = ttk.Combobox(
             secondBlock,
@@ -172,10 +171,10 @@ class filterLogForm(filterForm):
         
         ttk.Label(secondBlock, text='Comp:').grid(row=0, column=3, padx=1, pady=3, sticky=tk.W)
         self.cEqu.set("==")
-        cEqu = tk.Label(secondBlock, textvariable=self.sEqu, borderwidth=2, relief = RAISED)
-        cEqu.grid(row=0, column=4, sticky=tk.W, padx=1, pady=3) 
-        cEqu._values = 1
-        cEqu.bind("<Button-1>", self.changeEqual)        
+        self.c_Equ = tk.Label(secondBlock, textvariable=self.cEqu, borderwidth=2, relief = RAISED)
+        self.c_Equ.grid(row=0, column=4, sticky=tk.W, padx=1, pady=3) 
+        self.c_Equ._values = 1
+        self.c_Equ.bind("<Button-1>", self.changeEqual)        
         
         self.comboComp = ttk.Combobox(
             secondBlock,
@@ -187,11 +186,16 @@ class filterLogForm(filterForm):
         self.comboComp.current(0)
         self.comboComp.grid(row=0, column=5, sticky=tk.W, padx=1, pady=3) 
         
-        self.searchBut = ttk.Button(self.mainBlock, text='Search', command=self.execCallBack).grid(column=3, row=1, padx=5)
+        ttk.Button(self.mainBlock, text='Search', command=self.execCallBack).grid(column=3, row=1, padx=5)
+        ttk.Button(self.mainBlock, text='>', width=3, command=self.execNextcallBack).grid(column=5, row=1)  #, padx=1
         #command= lambda index=index: self.editUser(index)
         
     def execCallBack(self):
-        self.callBack(sRes=self.sRes.get(), cRes=self.cRes.get())
+        #pdb.set_trace()
+        self.callBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ)
+
+    def execNextcallBack(self):
+        self.nextcallBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ)
 
     def changeEqual(self, event):
         var=str(event.widget['textvariable'])
@@ -398,8 +402,8 @@ class master_form_find():
         text_box.insert(tk.END, formatted_data)
         text_box.config( state="disabled")
             
-    def getLogs(self, sRes = None, cRes = None):
-        #pdb.set_trace()
+    def getLogs(self, sRes = None, sEqu = None, cRes = None, cEqu = None):
+
         #db.command(({ "hostInfo": 1 }))
         #sudo cat /var/log/mongodb/mongod.log
         """
@@ -431,54 +435,76 @@ class master_form_find():
         self.logsDataList=list(res["log"])
         self.logCnt = len(self.logsDataList)
         self.rangeLog = self.logCnt
-        self.nextLogList(cRes = cRes)
-
-    def nextLogList(self, sRes = None, cRes = None):
+        self.foundLog = 0
         #pdb.set_trace()
+        self.nextLogList(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu)
+
+    def nextLogList(self, sRes = None, sEqu = None, cRes = None, cEqu = None):
         if cRes:
             print(cRes)
 
         def showLog(data):
             formatted_data = data  #json.dumps(data, indent=4)  #, indent=4
-            nlines = formatted_data.count('\n')
+            #nlines = formatted_data.count('\n')
             text_box = tk.Text(gridLogsFrame, height=5) #, height= nlines+1
             text_box.pack(expand= True, fill=X)            
             text_box.insert(tk.END, formatted_data)
             text_box.config( state="disabled")
             text_box.bind("<Double-Button-1>", self.getLogDetail)
+            self.foundLog += 1
             
+        def evalLog(index, data):
+            if sRes or cRes:
+                obj = json.loads(data)
+                exp = True
+                #if cRes:
+
+                if cRes:
+                    cExp = '"' + obj['c'] + '"' + ('==' if cEqu._values else '!=') + '"' + cRes + '"'
+                    exp = exp and eval(cExp)
+
+                
+                if exp:
+                    showLog(data)       #str(index) +             
+            else:    
+                showLog(data)  #str(index) +
+
         slavelist = self.gridLogsFrame.interior.slaves()
         for elem in slavelist:
             elem.destroy() 
 
         gridLogsFrame = tk.Frame(self.gridLogsFrame.interior)
         gridLogsFrame.pack(expand= True, side=LEFT, fill=X, padx=10)               
-        
+
+        if self.rangeLog == self.logCnt:
+            self.foundLog = 0
         stepCnt = self.logCnt - self.rangeLog
         index = 0
-        print(self.logsDataList[0])
+        #print(self.logsDataList[0])
+                
         for i in range(self.rangeLog-1,0,-1):
             data = self.logsDataList[i]
-            if cRes:
-                obj = json.loads(data)
-                if obj["c"] == cRes:
-                    #pdb.set_trace()
-                    showLog(data)
-            else:    
-                showLog(data)
-
             index += 1
-            if index > 298:
-                self.rangeLog -= index + 1
+
+            evalLog(index, data)
+            if self.foundLog > 299 + stepCnt:
+                self.rangeLog -= index 
                 break
 
-        stepCnt += index+1
+        stepCnt += index
         #print( "step = " + str(stepCnt))
-        if stepCnt == self.logCnt:
+        if stepCnt == (self.logCnt - 1):
+            index += 1
+            stepCnt += 1
+            evalLog(index, self.logsDataList[0])
+            #pdb.set_trace()
             self.rangeLog = self.logCnt
-        
+
+            
         self.logsFilter.affTot(str(stepCnt) + "/" + str(self.logCnt))
-    
+        print(str(self.foundLog))
+
+            
     def getLogDetail(self, event):
         #pdb.set_trace()
         txtLog=event.widget.get("1.0",END)
