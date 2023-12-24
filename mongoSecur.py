@@ -99,7 +99,7 @@ class filterForm():
         if nextcallBack is None:
             padXform = 50
         else:
-            padXform = 35
+            padXform = 10
         self.formframe = Frame(parent, borderwidth=3, relief = RIDGE )  #SUNKEN
         self.formframe.pack( fill=X, padx=padXform, pady=5)
         
@@ -117,7 +117,7 @@ class filterForm():
         button.grid(column=2, row=1, padx=15)
         #Hovertip(button,"Blanchir le formulaire")        
         self.searchBut = ttk.Button(self.mainBlock, text='Search', command=callBack).grid(column=3, row=1, padx=5)
-        ttk.Label(self.mainBlock, textvariable=self.totalCount, font= ('Segoe 11 bold'), width=9).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
+        ttk.Label(self.mainBlock, textvariable=self.totalCount, font= ('Segoe 10 bold'), width=9).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
         if not nextcallBack is None:
             ttk.Button(self.mainBlock, text='>', width=3, command=nextcallBack).grid(column=5, row=1)  #, padx=1
 
@@ -139,6 +139,9 @@ class filterLogForm(filterForm):
         self.sRes = StringVar()
         self.cEqu = StringVar()
         self.cRes = StringVar()
+        self.chxCtx = IntVar()
+        self.chxMes = IntVar()
+        self.foundMes = StringVar()
         
         secondBlock = Frame(self.formframe)
         secondBlock.pack()
@@ -178,13 +181,30 @@ class filterLogForm(filterForm):
         
         self.comboComp = ttk.Combobox(
             secondBlock,
-            width=9,
+            width=11,
             textvariable=self.cRes,
             state="readonly",
             values = LOG_component
             )
         self.comboComp.current(0)
         self.comboComp.grid(row=0, column=5, sticky=tk.W, padx=1, pady=3) 
+
+        checkCtx = ttk.Checkbutton(
+            secondBlock,
+            text="context",
+            variable=self.chxCtx,
+            onvalue=1,
+            offvalue=0)
+        checkCtx.grid(row=0, column=6, sticky=tk.W, padx=5, pady=3) 
+        checkMes = ttk.Checkbutton(
+            secondBlock,
+            text="message",
+            variable=self.chxMes,
+            onvalue=1,
+            offvalue=0)
+        checkMes.grid(row=0, column=7, sticky=tk.W, padx=5, pady=3) 
+        
+        ttk.Label(secondBlock, textvariable=self.foundMes, font= ('Segoe 10 bold'), width=12).grid(row=0, column=9, padx=1, pady=3, sticky=tk.EW)
         
         ttk.Button(self.mainBlock, text='Search', command=self.execCallBack).grid(column=3, row=1, padx=5)
         ttk.Button(self.mainBlock, text='>', width=3, command=self.execNextcallBack).grid(column=5, row=1)  #, padx=1
@@ -192,10 +212,10 @@ class filterLogForm(filterForm):
         
     def execCallBack(self):
         #pdb.set_trace()
-        self.callBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ)
+        self.callBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx)
 
     def execNextcallBack(self):
-        self.nextcallBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ)
+        self.nextcallBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx)
 
     def changeEqual(self, event):
         var=str(event.widget['textvariable'])
@@ -206,6 +226,10 @@ class filterLogForm(filterForm):
             tk.StringVar(name=var, value='==')
             event.widget._values = 1
         #print(str(event.widget._values))
+
+    def affFound(self, val):
+        #print(val)
+        self.foundMes.set(str(val) + " found")
         
 class master_form_find():
     def __init__(self, mainWin, *args, **kwargs):
@@ -402,8 +426,8 @@ class master_form_find():
         text_box.insert(tk.END, formatted_data)
         text_box.config( state="disabled")
             
-    def getLogs(self, sRes = None, sEqu = None, cRes = None, cEqu = None):
-
+    def getLogs(self, sRes = None, sEqu = None, cRes = None, cEqu = None, chxCtx = None):
+        
         #db.command(({ "hostInfo": 1 }))
         #sudo cat /var/log/mongodb/mongod.log
         """
@@ -437,12 +461,14 @@ class master_form_find():
         self.rangeLog = self.logCnt
         self.foundLog = 0
         #pdb.set_trace()
-        self.nextLogList(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu)
+        self.nextLogList(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu, chxCtx = chxCtx)
 
-    def nextLogList(self, sRes = None, sEqu = None, cRes = None, cEqu = None):
+    def nextLogList(self, sRes = None, sEqu = None, cRes = None, cEqu = None, chxCtx = None):
         if cRes:
             print(cRes)
-
+        self.filterSearch = False
+        if sRes or cRes:
+            self.filterSearch = True
         def showLog(data):
             formatted_data = data  #json.dumps(data, indent=4)  #, indent=4
             #nlines = formatted_data.count('\n')
@@ -454,11 +480,12 @@ class master_form_find():
             self.foundLog += 1
             
         def evalLog(index, data):
-            if sRes or cRes:
+            if self.filterSearch:
                 obj = json.loads(data)
                 exp = True
-                #if cRes:
-
+                if sRes:
+                    sExp = '"' + obj['s'] + '"' + ('==' if sEqu._values else '!=') + '"' + sRes + '"'
+                    exp = exp and eval(sExp)
                 if cRes:
                     cExp = '"' + obj['c'] + '"' + ('==' if cEqu._values else '!=') + '"' + cRes + '"'
                     exp = exp and eval(cExp)
@@ -502,6 +529,8 @@ class master_form_find():
 
             
         self.logsFilter.affTot(str(stepCnt) + "/" + str(self.logCnt))
+        if self.filterSearch:
+            self.logsFilter.affFound(self.foundLog)
         print(str(self.foundLog))
 
             
