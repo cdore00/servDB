@@ -660,7 +660,7 @@ class master_form_find():
 
     def login(self):
         dial = loginDialog(self.win, "Connecter : app - location", self)
-        dial.showDialog()
+        #dial.showDialog()
 
     def authentif(self):
         app = cdc.logonWin(self.win, self.data.data)
@@ -690,7 +690,7 @@ class dbaseObj():
                             APPR: APPRBD}        
         self.server = {
             "Local": "mongodb://localhost:27017/",
-            VSERV: "mongodb://cdore.ddns.net:6600/?authSource=admin&ssl=false"
+            VSERV: "mongodb://cdore:925@cdore.ddns.net:6600/?authSource=admin&ssl=false"
             }
         self.DBconnect = None
         self.isConnect = False
