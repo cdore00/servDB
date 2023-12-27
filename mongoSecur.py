@@ -1139,8 +1139,8 @@ class editRoleWin():
         self.menuFichier = Menubutton(self.formFrame, text='role :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuFichier.grid(row=0,column=0, sticky=tk.W)
         menu_file = Menu(self.menuFichier, tearoff = 0)
-        menu_file.add_cascade(label='Add...', command = self.addNewRole) 
-        menu_file.add_cascade(label='Remove...', command = self.delete) 
+        menu_file.add_cascade(label='Add role...', command = self.addNewRole) 
+        menu_file.add_cascade(label='Remove role...', command = self.delete) 
         self.menuFichier.configure(menu=menu_file)                 
 
         self.Database.set(self.roleData["db"])
@@ -1422,6 +1422,7 @@ class editUserWin():
                 
     def addRole(self):
         ttk.Button(self.butFrame, text='Save', command=self.grantRole).grid(row=0, column=0) 
+        ttk.Button(self.butFrame, text='Cancel', command=self.cancel).grid(row=1, column=0, pady=3)
 
     def delRole(self):
         role = self.rolesObj.getRole()
@@ -1457,7 +1458,11 @@ class editUserWin():
             self.close()
         else:
             self.objMess.showMess(str(res))    
- 
+
+    def cancel(self):
+        self.mainObj.getUsers([self.userName, self.Database.get()], [self.pop.winfo_x(), self.pop.winfo_y()])
+        self.pop.destroy()
+        
     def showUserWin(self):
         #print(self.userData)
 
@@ -1517,7 +1522,7 @@ class editUserWin():
         self.butFrame.grid(column=1, row=0)
     
         
-        ttk.Button(self.butFrame, text='Close', command=self.close).grid(row=1, column=0, pady=5)
+        ttk.Button(self.butFrame, text='Close', command=self.close).grid(row=2, column=0, pady=5)
         if self.pos is None:
             winChildPos(self)
 
