@@ -93,18 +93,25 @@ class VscrollFrame(ttk.Frame):
         
             
 class modalDialogWin():
-    def __init__(self, win, title = "Dialogue modal", optionalObject = None, geometry = None, *args, **kwargs):
+    def __init__(self, win, title = "Dialogue modal", optionalObject = None, geometry = None, modal = True, show = True , *args, **kwargs):
         self.win = win              #Parent window
         self.title = title          #Modal window title
         self.obj = optionalObject   #Optionnal object Ex.: data
+        self.geometry = geometry
         self.dframe = None
         self.pop = None
         self.modal = None
+        self.isModal = modal
+        if show:
+            self.showDialog()
         
     def createDialog(self):
         self.pop = Toplevel(self.win)
         self.pop.title(self.title)
         self.pop.bind("<KeyRelease>", self.checkKey)
+        #pdb.set_trace()
+        if self.geometry and isinstance(self.geometry, str):
+            self.pop.geometry(self.geometry)
         #self.pop.geometry("300x150")
         self.pop.attributes('-toolwindow', True)  #Removing minimize/maximize buttons    
         self.pop.bind('<Destroy>', self.closemodal)
@@ -121,12 +128,10 @@ class modalDialogWin():
         self.modal.place(x=0, y=0) 
         self.modal.bind("<Button-1>", self.clickModal)
 
-
     def createWidget(self):
         #To rewrite for user 
         button1 = Button(self.dframe, text="Ok", command=self.close)
         button1.grid(row=2, column=1)
- 
         
     def showDialog(self, event=None):
         self.createDialog()
@@ -144,12 +149,15 @@ class modalDialogWin():
     def closepop(self):
         self.pop.destroy()
     def closemodal(self, e):
+        
         self.modal.destroy()
         
     def clickModal(self, e):
-        self.win.bell()
         self.closepop()
-        self.showDialog()
+        if self.isModal:
+            self.win.bell()
+            self.showDialog()
+            
 
     def checkKey(self, event):
         #print(event.keysym, event.keysym=='a')
@@ -203,6 +211,49 @@ class messageObj():
         self.parent = parent
         self.height = height
         self.objToBind = objToBind  #Object to click to clear message
+        self.messframe = tk.Frame(self.parent)  #, height=height
+        self.messframe.pack(fill=X)
+        self.messValue = StringVar()
+        self.messLabel = tk.Label(self.messframe, textvariable=self.messValue, font=('Calibri 12'))       
+        self.messLabel.pack(expand= True,fill=X)        
+
+    def showMess(self, message, type = "E", color = ""):
+        
+        if color == "" :
+            color = '#f00' # color = rouge par défaut
+            if type == "I":
+                color = "#22B14C"   # Si type = Information: color = vert
+        self.clearMess()
+        self.messValue.set(message)
+        #pdb.set_trace()
+        self.parent.update_idletasks()
+        w = self.messframe.winfo_width() 
+        #print(str(w))
+        self.messLabel.config(wraplength=w)        
+        self.messLabel.config(foreground= color)
+
+        if not self.objToBind is None:
+            self.objToBind.bind("<Button-1>", self.clearMess)
+
+    def addMess(self, message, type = "E", color = ""):
+        self.showMess(self.messValue.get() + message, type, color)
+
+    def clearMess(self, event = None):
+        self.messValue.set("")
+        if not self.objToBind is None:
+            self.objToBind.update_idletasks()
+            self.objToBind.unbind("<Button-1>")
+        if not self.messLabel is None:
+            if self.messframe.winfo_height() > self.height:
+                self.messframe.config(height=self.height)
+                print(str(self.messframe.winfo_height()) + ", Adjust heigth to : " + str(self.height))
+            self.messframe.update_idletasks()
+        
+class messageObj2():
+    def __init__(self, parent, objToBind = None, height=0):
+        self.parent = parent
+        self.height = height
+        self.objToBind = objToBind  #Object to click to clear message
         self.messLabel = None
         self.messframe = tk.Frame(self.parent, height=height)
         self.messframe.pack(fill=X)
@@ -223,6 +274,7 @@ class messageObj():
         w = self.messframe.winfo_width() - 50
         self.messLabel.config(wraplength=w)
         self.messLabel.pack(expand= True, fill=X)
+        #self.messLabel.pack( )
         if not self.objToBind is None:
             self.objToBind.bind("<Button-1>", self.clearMess)
 
@@ -240,8 +292,7 @@ class messageObj():
             self.messLabel.destroy()
             self.messframe.config(height=self.height)
             self.messframe.update_idletasks()
-        
-        
+                
 class imageObj():
     def __init__(self, parentObj, parentContainer, imgURL = "", dim = (2,1),*args, **kwargs):
         self.objToBind = parentObj
@@ -299,7 +350,7 @@ class imageObj():
 
     def showImage(self, event):
         winImg = showRecImg(self.objToBind, "Image", self.recImage)
-        winImg.showDialog()
+        #winImg.showDialog()
         
     def editImgage(self):
         self.labImg.config(cursor="hand2")
@@ -319,7 +370,7 @@ class imageObj():
     
     def modifImage(self, event):
         winImg = modifRecImg(self.objToBind, "Modifier image", self)
-        winImg.showDialog()    
+        #winImg.showDialog()    
 
     def deleteImage(self):
         self.labImg.config(image="")
@@ -500,7 +551,7 @@ class resizeFrame(tk.Frame):
             
 class selectDate(modalDialogWin):
     def __init__(self, win, title = "Dialogue modal", optionalObject = None, geometry = None, theDate = None):
-        modalDialogWin.__init__(self, win=win, title = title, optionalObject = optionalObject, geometry = geometry)
+        modalDialogWin.__init__(self, win=win, title = title, optionalObject = optionalObject, geometry = geometry, show = False)
         self.theDate = theDate
 
         #geometry = 1, 1.5, 2 , 2,3, 3...
@@ -514,7 +565,6 @@ class selectDate(modalDialogWin):
         canvas.grid(row=0, column=0) 
         Hovertip(canvas,"Calendrier")
         canvas.bind("<Button-1>", self.showDialog )
-         
 
     
     def createWidget(self):
