@@ -2,6 +2,81 @@
 
 bdSystemList = ["", "admin", "local", "config"]
 
+clusterResActions = [
+            "addShard",
+            "allCollectionStats",
+            "appendOplogNote",
+            "applicationMessage",
+            "auditConfigure",
+            "authSchemaUpgrade",
+            "bypassWriteBlockingMode",
+            "checkFreeMonitoringStatus",
+            "checkMetadataConsistency",
+            "cleanupOrphaned",
+            "connPoolStats",
+            "connPoolSync",
+            "dropConnections",
+            "flushRouterConfig",
+            "forceUUID",
+            "fsync",
+            "getClusterParameter",
+            "getDefaultRWConcern",
+            "getCmdLineOpts",
+            "getLog",
+            "getParameter",
+            "getShardMap",
+            "hostInfo",
+            "inprog",
+            "invalidateUserCache",
+            "issueDirectShardOperations",
+            "killAnyCursor",
+            "killAnySession",
+            "killop",
+            "listDatabases",
+            "listSampledQueries",
+            "listSessions",
+            "listShards",
+            "logRotate",
+            "netstat",
+            "oidcListKeys",
+            "oidcRefreshKeys",
+            "oidReset",
+            "operationMetrics",
+            "telemetryRead",
+            "removeShard",
+            "replSetConfigure",
+            "replSetGetConfig",
+            "replSetGetStatus",
+            "replSetResizeOplog",
+            "replSetStateChange",
+            "resync",
+            "rotateCertificates",
+            "runTenantMigration",
+            "serverStatus",
+            "setClusterParameter",
+            "setDefaultRWConcern",
+            "setFeatureCompatibilityVersion",
+            "setFreeMonitoring",
+            "setParameter",
+            "setUserWriteBlockMode",
+            "shardedDataDistribution",
+            "shardingState",
+            "shutdown",
+            "top",
+            "touch",
+            "trafficRecord",
+            "transitionFromDedicatedConfigServer",
+            "transitionToDedicatedConfigServer",
+            "unlock",
+            "useTenant",
+            "useUUID",
+            "viewUser",
+            "applyOps",
+            "setChangeStreamState",
+            "getChangeStreamState"
+    ]
+
+
 actionsList = [
 {
 	"resource" : {
@@ -541,6 +616,8 @@ actionsList = [
 }
 ]
 
-systemRole = ['read','readWrite','dbAdmin','dbOwner','userAdmin','clusterAdmin','clusterManager','clusterMonitor','hostManager','backup','restore','readAnyDatabase','readWriteAnyDatabase','userAdminAnyDatabase','dbAdminAnyDatabase','dbOwner','userAdmin','userAdminAnyDatabase','root']
+systemRole = ['read','readWrite','dbAdmin','dbOwner','userAdmin', '   « Admin roles list »', 'clusterAdmin','clusterManager','clusterMonitor','hostManager','backup','restore','readAnyDatabase','readWriteAnyDatabase','dbAdminAnyDatabase','userAdminAnyDatabase','root']
+
+adminRole = ['clusterAdmin','clusterManager','clusterMonitor','hostManager','backup','restore','readAnyDatabase','readWriteAnyDatabase','dbAdminAnyDatabase','userAdminAnyDatabase','root']
 
 
