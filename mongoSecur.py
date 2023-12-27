@@ -34,7 +34,7 @@ from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
 from tkinter.scrolledtext import ScrolledText
 from tkinter import simpledialog
-#from idlelib.tooltip import Hovertip
+from idlelib.tooltip import Hovertip
 
 import urllib
 import urllib.request
@@ -95,11 +95,12 @@ def winChildPos(winObj):
         
 class filterForm():
     def __init__(self, parent, textVar, callBack, nextcallBack = None):
+        self.textVar = textVar
         self.totalCount = StringVar()
         if nextcallBack is None:
             padXform = 50
         else:
-            padXform = 10
+            padXform = 5
         self.formframe = Frame(parent, borderwidth=3, relief = RIDGE )  #SUNKEN
         self.formframe.pack( fill=X, padx=padXform, pady=5)
         
@@ -108,6 +109,7 @@ class filterForm():
         
         ttk.Label(self.mainBlock, text='Keyword :').grid(column=0, row=1, padx=5, pady=5, sticky=tk.W)
         self.keyword = tk.Entry(self.mainBlock, textvariable=textVar, width=20)
+        Hovertip(self.keyword,"Enter keyword for search")
         self.keyword.focus()
         self.keyword.grid(column=1, row=1, sticky=tk.W)  
         self.keyword.bind("<Return>", callBack)        
@@ -115,11 +117,14 @@ class filterForm():
         button = cdc.RoundedButton(self.mainBlock, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.resetForm)
         button.create_text(12,11, text="x", fill="black", font=('Helvetica 15 '))
         button.grid(column=2, row=1, padx=15)
-        #Hovertip(button,"Blanchir le formulaire")        
-        self.searchBut = ttk.Button(self.mainBlock, text='Search', command=callBack).grid(column=3, row=1, padx=5)
-        ttk.Label(self.mainBlock, textvariable=self.totalCount, font= ('Segoe 10 bold'), width=9).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
+        Hovertip(button,"Clear the form")        
+        self.searchBut = ttk.Button(self.mainBlock, text='Search', command=callBack)
+        self.searchBut.grid(column=3, row=1, padx=5)
+        Hovertip(self.searchBut,"Search in logs") 
+        ttk.Label(self.mainBlock, textvariable=self.totalCount, font= ('Segoe 10 bold'), width=10).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
         if not nextcallBack is None:
             ttk.Button(self.mainBlock, text='>', width=3, command=nextcallBack).grid(column=5, row=1)  #, padx=1
+            
 
     def resetForm(self):
         self.keyword.delete(0, END)
@@ -131,14 +136,16 @@ class filterForm():
         
         
 class filterLogForm(filterForm):
-    def __init__(self, parent, textVar, callBack, nextcallBack = None):
+    def __init__(self, parent, textVar, callBack, nextcallBack, parentWin):
         filterForm.__init__(self, parent, textVar, callBack, nextcallBack)
+        self.win = parentWin
         self.callBack = callBack
         self.nextcallBack = nextcallBack
         self.sEqu = StringVar()
         self.sRes = StringVar()
         self.cEqu = StringVar()
         self.cRes = StringVar()
+        self.chxID = IntVar()
         self.chxCtx = IntVar()
         self.chxMes = IntVar()
         self.foundMes = StringVar()
@@ -146,38 +153,32 @@ class filterLogForm(filterForm):
         secondBlock = Frame(self.formframe)
         secondBlock.pack()
         
-        """
-        s_checkEqu = ttk.Checkbutton(
-            secondBlock,
-            text="==",
-            variable=self.sEqu,
-            onvalue=1,
-            offvalue=0)
-        s_checkEqu.grid(row=0, column=1, sticky=tk.W, padx=5, pady=3) 
-        """
-        ttk.Label(secondBlock, text='Severity:').grid(row=0, column=0, padx=1, pady=3, sticky=tk.W)
+        ttk.Label(secondBlock, text='Severity').grid(row=0, column=0, padx=2, pady=3, sticky=tk.W)
         self.sEqu.set("==")
         self.s_Equ = tk.Label(secondBlock, textvariable=self.sEqu, borderwidth=2, relief = RAISED)
-        self.s_Equ.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3) 
+        self.s_Equ.grid(row=0, column=1, sticky=tk.W, padx=0, pady=3) 
         self.s_Equ._values = 1
+        Hovertip(self.s_Equ," == : equal \n <> : not equal ")
         self.s_Equ.bind("<Button-1>", self.changeEqual)
         
-        self.comboComp = ttk.Combobox(
+        self.comboSev = ttk.Combobox(
             secondBlock,
             width=2,
             textvariable=self.sRes,
             state="readonly",
             values = LOG_severity
             )
-        self.comboComp.current(0)
-        self.comboComp.grid(row=0, column=2, sticky=tk.W, padx=1, pady=3)
+        Hovertip(self.comboSev," I : Informational \n F : Fatal\n E : Error\n W : Warning")
+        self.comboSev.current(0)
+        self.comboSev.grid(row=0, column=2, sticky=tk.W, padx=0, pady=3)
         
-        ttk.Label(secondBlock, text='Comp:').grid(row=0, column=3, padx=1, pady=3, sticky=tk.W)
+        ttk.Label(secondBlock, text='Comp.').grid(row=0, column=3, padx=2, pady=3, sticky=tk.W)
         self.cEqu.set("==")
         self.c_Equ = tk.Label(secondBlock, textvariable=self.cEqu, borderwidth=2, relief = RAISED)
-        self.c_Equ.grid(row=0, column=4, sticky=tk.W, padx=1, pady=3) 
+        self.c_Equ.grid(row=0, column=4, sticky=tk.W, padx=0, pady=3) 
         self.c_Equ._values = 1
-        self.c_Equ.bind("<Button-1>", self.changeEqual)        
+        Hovertip(self.c_Equ," == : equal \n <> : not equal ")
+        self.c_Equ.bind("<Button-1>", self.changeEqual)     
         
         self.comboComp = ttk.Combobox(
             secondBlock,
@@ -186,36 +187,68 @@ class filterLogForm(filterForm):
             state="readonly",
             values = LOG_component
             )
+        Hovertip(self.comboComp," component : category of logged event ")
         self.comboComp.current(0)
-        self.comboComp.grid(row=0, column=5, sticky=tk.W, padx=1, pady=3) 
+        self.comboComp.grid(row=0, column=5, sticky=tk.W, padx=0, pady=3) 
 
+        checkID = ttk.Checkbutton(
+            secondBlock,
+            text="id",
+            variable=self.chxID,
+            onvalue=1,
+            offvalue=0)
+        checkID.grid(row=0, column=6, sticky=tk.W, padx=0, pady=3)
+        Hovertip(checkID," Keyword == specific log events id  ")
         checkCtx = ttk.Checkbutton(
             secondBlock,
             text="context",
             variable=self.chxCtx,
             onvalue=1,
             offvalue=0)
-        checkCtx.grid(row=0, column=6, sticky=tk.W, padx=5, pady=3) 
+        checkCtx.grid(row=0, column=7, sticky=tk.W, padx=0, pady=3) 
+        Hovertip(checkCtx," Keyword is IN Thread's name of log's statement ")
         checkMes = ttk.Checkbutton(
             secondBlock,
             text="message",
             variable=self.chxMes,
             onvalue=1,
             offvalue=0)
-        checkMes.grid(row=0, column=7, sticky=tk.W, padx=5, pady=3) 
+        checkMes.grid(row=0, column=8, sticky=tk.W, padx=0, pady=3) 
+        Hovertip(checkMes," Keyword is IN Log output message  ")
         
-        ttk.Label(secondBlock, textvariable=self.foundMes, font= ('Segoe 10 bold'), width=12).grid(row=0, column=9, padx=1, pady=3, sticky=tk.EW)
+        foundLabel = tk.Label(secondBlock, textvariable=self.foundMes, font= ('Segoe 9 bold'), fg="#0000FF", width=12)
+        foundLabel.grid(row=0, column=9, padx=0, pady=3, sticky=tk.EW)
+        Hovertip(foundLabel," Click to show search criteria  ")
+        foundLabel.bind("<Button-1>", self.getLogCritere)
         
-        ttk.Button(self.mainBlock, text='Search', command=self.execCallBack).grid(column=3, row=1, padx=5)
-        ttk.Button(self.mainBlock, text='>', width=3, command=self.execNextcallBack).grid(column=5, row=1)  #, padx=1
+        #ttk.Button(self.mainBlock, text='Search', command=self.execCallBack).grid(column=3, row=1, padx=5)
+        nextB = ttk.Button(self.mainBlock, text='>', width=3, command=self.execNextcallBack)
+        nextB.grid(column=5, row=1)  #, padx=1
+        Hovertip(nextB,"Next results")
         #command= lambda index=index: self.editUser(index)
         
     def execCallBack(self):
         #pdb.set_trace()
-        self.callBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx)
+        self.callBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx.get(), chxMes = self.chxMes.get(), chxID = self.chxID.get())
 
     def execNextcallBack(self):
-        self.nextcallBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx)
+        self.nextcallBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx.get(), chxMes = self.chxMes.get(), chxID = self.chxID.get())
+
+    def getLogCritere(self, event):
+        txtLog = ""
+        if self.sRes.get():
+            txtLog += "\t" + "severity " + self.sEqu.get() + " '" + self.sRes.get() + "'\n"
+        if self.cRes.get(): 
+            txtLog += "\t" + ("and \n\t" if len(txtLog) else "") + "component " + self.cEqu.get() + " '" + self.cRes.get() + "'\n"
+        if self.chxID.get(): 
+            txtLog += "\t" + ("and \n\t" if len(txtLog) else "") + self.textVar.get() + " == id\n"                 
+        if self.chxCtx.get(): 
+            txtLog += "\t" + ("and \n\t" if len(txtLog) else "") + "'" + self.textVar.get() + "' IN ctx\n"
+        if self.chxMes.get(): 
+            txtLog += "\t" + ("and \n\t" if len(txtLog) else "") + "'" + self.textVar.get() + "' IN msg\n" 
+        if not txtLog :
+            txtLog = "\tNo criteria"
+        showLogCritere(self.win, "Search Criteria : ", txtLog, geometry = "300x250", modal = False)
 
     def changeEqual(self, event):
         var=str(event.widget['textvariable'])
@@ -227,9 +260,22 @@ class filterLogForm(filterForm):
             event.widget._values = 1
         #print(str(event.widget._values))
 
-    def affFound(self, val):
+    def affFound(self, val = None):
         #print(val)
-        self.foundMes.set(str(val) + " found")
+        if val is None:
+            self.foundMes.set("no filter")
+        else:
+            self.foundMes.set(str(val) + " found")
+
+    def resetForm(self):
+        self.keyword.delete(0, END)
+        self.keyword.insert(0, "")
+        self.comboSev.current(0)
+        self.comboComp.current(0)
+        self.chxCtx.set(0)
+        self.chxMes.set(0)
+        self.chxID.set(0)
+        self.win.objMainMess.clearMess()
         
 class master_form_find():
     def __init__(self, mainWin, *args, **kwargs):
@@ -372,7 +418,7 @@ class master_form_find():
         self.gridRolesFrame.pack(expand= True, fill=BOTH)            
         self.getRoles()
 
-        self.logsFilter = filterLogForm(tabLogs, self.keyWordLog, self.getLogs, self.nextLogList)
+        self.logsFilter = filterLogForm(tabLogs, self.keyWordLog, self.getLogs, self.nextLogList, self.win)
         self.gridLogsFrame = cdc.VscrollFrame(tabLogs)
         self.gridLogsFrame.pack(expand= True, fill=BOTH)            
         #self.getLogs()
@@ -426,11 +472,12 @@ class master_form_find():
         text_box.insert(tk.END, formatted_data)
         text_box.config( state="disabled")
             
-    def getLogs(self, sRes = None, sEqu = None, cRes = None, cEqu = None, chxCtx = None):
+    def getLogs(self, sRes = None, sEqu = None, cRes = None, cEqu = None, chxCtx = None, chxMes = None, chxID = None):
         
         #db.command(({ "hostInfo": 1 }))
         #sudo cat /var/log/mongodb/mongod.log
         """
+            ls ~/.mongodb/mongosh/
             https://www.mongodb.com/docs/manual/reference/log-messages/
           "t": <Datetime>, // timestamp
           "s": <String>, // severity
@@ -461,14 +508,23 @@ class master_form_find():
         self.rangeLog = self.logCnt
         self.foundLog = 0
         #pdb.set_trace()
-        self.nextLogList(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu, chxCtx = chxCtx)
+        self.nextLogList(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu, chxCtx = chxCtx, chxMes = chxMes, chxID = chxID)
 
-    def nextLogList(self, sRes = None, sEqu = None, cRes = None, cEqu = None, chxCtx = None):
-        if cRes:
-            print(cRes)
+    def nextLogList(self, sRes = None, sEqu = None, cRes = None, cEqu = None, chxCtx = None, chxMes = None, chxID = None):
+
         self.filterSearch = False
-        if sRes or cRes:
+        self.win.objMainMess.clearMess()
+        self.logsFilter.affFound()
+        if sRes or cRes or (self.keyWordLog and (chxCtx or chxMes or chxID)):
+            if not self.keyWordLog.get() and (chxCtx or chxMes or chxID):
+                self.win.objMainMess.showMess("What keyword is being searched for.")
+                self.keyword.focus()
+                return
+            if chxID and not self.keyWordLog.get().isnumeric():
+                self.win.objMainMess.showMess("Keyword must be numeric to search for an id.")
+                return
             self.filterSearch = True
+            
         def showLog(data):
             formatted_data = data  #json.dumps(data, indent=4)  #, indent=4
             #nlines = formatted_data.count('\n')
@@ -489,8 +545,19 @@ class master_form_find():
                 if cRes:
                     cExp = '"' + obj['c'] + '"' + ('==' if cEqu._values else '!=') + '"' + cRes + '"'
                     exp = exp and eval(cExp)
-
-                
+                if chxID:
+                    #pdb.set_trace()
+                    id = int(self.keyWordLog.get())
+                    idExp = (id == obj['id'])
+                    exp = exp and idExp 
+                else:
+                    if chxCtx:
+                        ctxExp = '"' + self.keyWordLog.get() + '" in "' + obj['ctx'] + '"' 
+                        exp = exp and eval(ctxExp)
+                    else:
+                        if chxMes:
+                            mesExp = '"' + self.keyWordLog.get() + '" in "' + obj['msg'] + '"' 
+                            exp = exp and eval(mesExp)                
                 if exp:
                     showLog(data)       #str(index) +             
             else:    
@@ -528,16 +595,15 @@ class master_form_find():
             self.rangeLog = self.logCnt
 
             
-        self.logsFilter.affTot(str(stepCnt) + "/" + str(self.logCnt))
+        self.logsFilter.affTot(str(stepCnt) + " / " + str(self.logCnt))
         if self.filterSearch:
             self.logsFilter.affFound(self.foundLog)
-        print(str(self.foundLog))
 
             
     def getLogDetail(self, event):
         #pdb.set_trace()
         txtLog=event.widget.get("1.0",END)
-        showLogRec(self.win, "Log detail : ", txtLog, modal = False)
+        showLogRec(self.win, "Log detail : ", txtLog, geometry = "400x450", modal = False)        
 
     
     def afficherTitre(self, isConnected):
@@ -803,7 +869,7 @@ class editRoleWin():
         self.pop.destroy()
         
     def save(self):
-        
+        #pdb.set_trace()
         res = None
         db=self.data.DBconnect[self.Database.get()]
         role = self.rolesObj.getRole()   
@@ -834,11 +900,15 @@ class editRoleWin():
             for act in self.userActionsList:
                 if self.var_list[self.actionsList.index(act)].get() == 0:
                     revokeArr.append(act)      
-        except Exception as ex:
-            pdb.set_trace()
+        except pymongo.errors.OperationFailure as ex1:
+            self.objMess.showMess(ex1.details.get('errmsg', ''))
+            return
         if len(revokeArr):
-            res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": ressouce, "actions": revokeArr}]})
-        #print("revokeArr : " + str(revokeArr))
+            try:
+                res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": ressouce, "actions": revokeArr}]})
+            except pymongo.errors.OperationFailure as ex1:
+                self.objMess.showMess(ex1.details.get('errmsg', ''))
+                return
 
         grantArr = []
         for act in self.actionsList:
@@ -867,18 +937,21 @@ class editRoleWin():
         for x in curRole:
             if x["role"] == self.roleName:
                 #print(self.roleName + " used by current user : " + self.mainObj.userPass[0])
-                messagebox.showinfo(
-                    title="Role: " + self.roleName,
-                    message="Role «" + self.roleName + "» is used by current user : " + self.mainObj.userPass[0])                 
+                self.objMess.showMess("Role «" + self.roleName + "» is used by current user : " + self.mainObj.userPass[0])
                 return
             
         #roleUsed = next(x for x in reg if x["role"] == self.roleName )
         answer = askyesno(title='Remove',
             message='Remove role : ' + self.roleName)
         if answer:       
-            db=self.data.DBconnect[self.Database.get()]
-            res = db.command({"dropRole": self.roleName})
+            try:
+                db=self.data.DBconnect[self.Database.get()]
+                res = db.command({"dropRole": self.roleName})
+            except pymongo.errors.OperationFailure as ex1:
+                self.objMess.showMess(ex1.details.get('errmsg', ''))
+                return            
             if res:
+                self.mainObj.getUsers()
                 self.refreshRoles(res, notShow = True)             
 
     def addRole(self):
@@ -892,14 +965,19 @@ class editRoleWin():
             answer = askyesno(title='Remove role',
                 message="Remove role : " + str(role))
             if answer:         
-                db=self.data.DBconnect[self.Database.get()]
-                res = db.command("revokeRolesFromRole", self.roleName, roles=[role])   
+                try:
+                    db=self.data.DBconnect[self.Database.get()]
+                    res = db.command("revokeRolesFromRole", self.roleName, roles=[role])  
+                except pymongo.errors.OperationFailure as ex1:
+                    self.objMess.showMess(ex1.details.get('errmsg', ''))
+                    return
+                
                 if res:
                     self.refreshRoles(res)       
         else:
             self.objMess.showMess("No role to remove.")
         
-    def addPrivilege(self):
+    def addNewRole(self):
         #pdb.set_trace()
         self.menuFichier.destroy()
         #self.menuPriv.destroy()
@@ -911,6 +989,8 @@ class editRoleWin():
         ttk.Button(self.butFrame, text='Save', command=self.createRole).grid(row=0, column=0) 
         self.comboBD.current(0)
         self.comboCol.current(0)
+        self.rolesObj.init()
+        self.roleData["privileges"] = []
         self.setPriv()
         
         dbList = self.data.dbList.copy()
@@ -925,19 +1005,11 @@ class editRoleWin():
         self.comboDatabase.bind("<<ComboboxSelected>>", self.changeDatabase)
         self.comboDatabase.grid( row=1, column=1, sticky=tk.W, pady=3) 
         self.submenu_priv.delete(1)
-        self.rolesObj.init()
-        self.roleData["privileges"] = []
 
-    def changeDatabase(self, *args, message=None):
-        #pdb.set_trace()
-        mess = "Add role : «" + self.newRoleName.get() + "» to «" + self.Database.get() + "» database"
-        if not message is None:
-            mess += ("\n" + str(message))
-        self.objMess.showMess(mess, "I")
         
     
     def createRole(self):
-
+        #pdb.set_trace()
         if not self.newRoleName.get():
             self.objMess.showMess("Role name must be non-empty.")
             return
@@ -966,14 +1038,24 @@ class editRoleWin():
         else:
             role = []            
         
-        db=self.data.DBconnect[self.Database.get()]
-        res = db.command({"createRole": self.newRoleName.get(), "privileges": priv, "roles": role})
+        try:
+            db=self.data.DBconnect[self.Database.get()]
+            res = db.command({"createRole": self.newRoleName.get(), "privileges": priv, "roles": role})
+        except pymongo.errors.OperationFailure as ex1:
+            self.objMess.showMess(ex1.details.get('errmsg', '')) 
+            return
         if res:
             if res["ok"]:
                 self.roleName = self.newRoleName.get()
                 self.refreshRoles(res)
         
-
+    def changeDatabase(self, *args, message=None):
+        #pdb.set_trace()
+        mess = "Add role : «" + self.newRoleName.get() + "» to «" + self.Database.get() + "» database"
+        if not message is None:
+            mess += ("\n" + str(message))
+        self.objMess.showMess(mess, "I")
+        
     def refreshRoles(self, res, notShow = False):
         #pdb.set_trace()
         if res["ok"]:
@@ -995,9 +1077,14 @@ class editRoleWin():
                 ressouce = {"db": self.comboBD.get(), "collection" : self.comboCol.get()}
             answer = askyesno(title='Remove',
                 message='Remove privilege : { "resource":' + str(ressouce) + " }")
-            if answer:     
-                db=self.data.DBconnect[self.Database.get()]
-                res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": ressouce, "actions": self.actionsList}]})
+            if answer:    
+                try:
+                    db=self.data.DBconnect[self.Database.get()]
+                    res = db.command({"revokePrivilegesFromRole": self.roleName, "privileges": [{"resource": ressouce, "actions": self.actionsList}]})
+                except pymongo.errors.OperationFailure as ex1:
+                    self.objMess.showMess(ex1.details.get('errmsg', ''))
+                    return                
+                
                 self.refreshRoles(res)
         else:
             self.objMess.showMess("No privilege to remove.")
@@ -1052,7 +1139,7 @@ class editRoleWin():
         self.menuFichier = Menubutton(self.formFrame, text='role :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuFichier.grid(row=0,column=0, sticky=tk.W)
         menu_file = Menu(self.menuFichier, tearoff = 0)
-        menu_file.add_cascade(label='Add...', command = self.addPrivilege) 
+        menu_file.add_cascade(label='Add...', command = self.addNewRole) 
         menu_file.add_cascade(label='Remove...', command = self.delete) 
         self.menuFichier.configure(menu=menu_file)                 
 
@@ -1264,17 +1351,19 @@ class editUserWin():
         app = cdc.logonWin(self.pop)
         res = app.showChangeBDpass(self.userName)   
         if res:
-            db=self.data.DBconnect[self.Database.get()]
-            result = db.command({"updateUser": res[0], "pwd": res[1]})
+            try:
+                db=self.data.DBconnect[self.Database.get()]
+                result = db.command({"updateUser": res[0], "pwd": res[1]})
+            except pymongo.errors.OperationFailure as ex1:
+                self.objMess.showMess(ex1.details.get('errmsg', ''))
+                return              
+            
             if result["ok"]:
                 self.objMess.showMess("Password changed for " + res[0], "I") 
 
     def delete(self):
         if self.userName == self.mainObj.userPass[0]:
-            messagebox.showinfo(
-                title="User: " + self.userName,
-                message=f"Can't remove current user : " + self.userName + ".") 
-            #pdb.set_trace()
+            self.objMess.showMess("Can't remove current user : " + self.userName + ".") 
             reg = next(x["roles"] for x in self.mainObj.usersDataList if x["user"] == self.userName )
             #self.mainObj.usersDataList
             #self.userName
@@ -1282,10 +1371,14 @@ class editUserWin():
             
         answer = askyesno(title='Remove',
             message="Remove user : " + self.userName + "  db : " + self.Database.get())
-        if answer:       
-            db=self.data.DBconnect[self.Database.get()]
-            res = db.command({"dropUser": self.userName})  
-            self.refreshUsers(res, notShow = True)           
+        if answer:      
+            try:
+                db=self.data.DBconnect[self.Database.get()]
+                res = db.command({"dropUser": self.userName})  
+                self.refreshUsers(res, notShow = True) 
+            except pymongo.errors.OperationFailure as ex1:
+                self.objMess.showMess(ex1.details.get('errmsg', ''))
+                return              
 
     def addUser(self):
         self.menuFichier.destroy()
@@ -1310,23 +1403,22 @@ class editUserWin():
         self.comboDatabase.current(0)
         self.comboDatabase.grid( row=2, column=1, sticky=tk.W, pady=3) 
 
-
     def createUser(self):
         
         if not self.rolesObj.checkRole():
             return
         else:
             role = self.rolesObj.getRole()
-        #pdb.set_trace()
-        db=self.data.DBconnect[self.Database.get()]
-        self.userName = self.newUserName.get()
-        res = db.command({"createUser": self.userName, "pwd": self.newUserPass.get(), "roles": [ role ] } )
         try:
-            res = db.command("grantRolesToUser", self.userName, roles=[role])
+            db=self.data.DBconnect[self.Database.get()]
+            self.userName = self.newUserName.get()
+            res = db.command({"createUser": self.userName, "pwd": self.newUserPass.get(), "roles": [ role ] } )
+
+            #res = db.command("grantRolesToUser", self.userName, roles=[role])
             self.userName = self.newUserName.get()
             self.refreshUsers(res)
-        except Exception as ex:
-            self.objMess.showMess(str(ex))       
+        except pymongo.errors.OperationFailure as ex1:
+            self.objMess.showMess(ex1.details.get('errmsg', ''))       
                 
     def addRole(self):
         ttk.Button(self.butFrame, text='Save', command=self.grantRole).grid(row=0, column=0) 
@@ -1335,18 +1427,21 @@ class editUserWin():
         role = self.rolesObj.getRole()
         answer = askyesno(title='Remove role',
             message="Remove role : " + str(role))
-        if answer:         
-            db=self.data.DBconnect[self.Database.get()]
-            res = db.command("revokeRolesFromUser", self.userName, roles=[role])   
-            self.refreshUsers(res)
+        if answer:    
+            try:
+                db=self.data.DBconnect[self.Database.get()]
+                res = db.command("revokeRolesFromUser", self.userName, roles=[role])   
+                self.refreshUsers(res)
+            except pymongo.errors.OperationFailure as ex1:
+                self.objMess.showMess(ex1.details.get('errmsg', '')) 
             
     def grantRole(self):
         if not self.rolesObj.checkRole():
             return
         else:
-            role = self.rolesObj.getRole()
-            db=self.data.DBconnect[self.Database.get()]
             try:
+                role = self.rolesObj.getRole()
+                db=self.data.DBconnect[self.Database.get()]                
                 res = db.command("grantRolesToUser", self.userName, roles=[role])
                 self.refreshUsers(res)
             except Exception as ex:
@@ -1620,7 +1715,6 @@ class dbaseObj():
 
 class showLogRec(cdc.modalDialogWin):
     def createWidget(self):
-        #self.pop.resizable(0, 0)
         objLog = json.loads(self.obj)
         format_log = json.dumps(objLog, indent=4)
         text_box = tk.Text(self.dframe) #, height=5
@@ -1628,6 +1722,18 @@ class showLogRec(cdc.modalDialogWin):
         text_box.pack() 
         text_box.insert(tk.END, format_log)
         text_box.config( state="disabled")        
+
+class showLogCritere(cdc.modalDialogWin):
+    def createWidget(self):
+        #self.pop.resizable(0, 0)
+        #objLog = json.loads(self.obj)
+        #format_log = json.dumps(objLog, indent=4)
+        format_log = self.obj
+        text_box = tk.Text(self.dframe) #, height=5
+        text_box.pack(expand= True, fill=BOTH)
+        text_box.pack() 
+        text_box.insert(tk.END, format_log)
+        text_box.config( state="disabled") 
         
 class loginDialog(cdc.modalDialogWin):
     def createWidget(self):
