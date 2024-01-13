@@ -3,20 +3,85 @@
 #pyinstaller main.py --onefile --name test --icon test.ico --noconsole
 #Mise à jour et sécurité/Sécurité Windows/Protection contre les virus/Gérer les paramètres/Protection en temps réel
 #Scripts\pyinstaller win64MD.py --onefile --name golf --noconsole
-#Scripts\pyinstaller  -F --add-data C:\Users\charl\AppData\Local\Programs\Python\Python39\tcl\tix8.4.3;tcl\tix8.4.3 code\win64MD.py --noconsole
+#Scripts\pyinstaller -F --add-data C:\Users\charl\AppData\Local\Programs\Python\Python312\Lib\site-packages\tkinterweb\tkhtml:. code/mongoSecur.py --collect-all tkinterweb --noconsole
 #C:\Users\charl\AppData\Local\Programs\Python\Python39\Scripts
 #https://pypi.org/project/jsoneditor/
 #Built-In Roles
 #https://www.mongodb.com/docs/manual/reference/built-in-roles/#mongodb-authrole-dbOwner
 #https://www.mongodb.com/docs/v3.4/tutorial/enable-authentication/
 #/etc/mongod.conf     #/data/db
-#security:
-#	authorization: "enabled"
+#..\python mongoSecur.py
+#openssl key
+#cd  /etc/ssl
+#sudo openssl req -newkey rsa:2048 -new -x509 -days 3650 -nodes -out mongodb-cert.crt -keyout mongodb-certcd.key
+#sudo cat mongodb-certcd.key mongodb-cert.crt > mongodb.pem
+#https://pymongo.readthedocs.io/en/stable/examples/tls.html#ocsp
+#https://www.mongodb.com/docs/v7.0/tutorial/configure-x509-client-authentication/    *********à lire
+#https://www.mongodb.com/docs/manual/core/security-x.509/
+#https://dyma.fr/mongodb?campaignId=12643958796&device=c&utm_source=google&gad_source=2&gclid=EAIaIQobChMI2Njy3JLHgwMVYDfUAR1q6A_6EAAYASAAEgJHP_D_BwE
 
+#https://stackoverflow.com/questions/41302023/how-security-in-mongodb-works-using-x-509-cert/75043317#75043317
+#https://www.mongodb.com/docs/manual/tutorial/configure-ssl-clients/
+
+
+
+"""
+ÉTAPE 1
+https://dev.to/ozgurozvaris/x509-certificate-authentication-tlsssl-connection-to-mongodb-1-2hik
+Certificate Authority (CA)
+With passphrase
+openssl genrsa -des3 -out ca.key 2048
+Without passphrase
+openssl genrsa -out ca.key 2048
+openssl req -x509 -new -nodes -key ca.key -days 3650 -subj '/CN=MyCA/OU=cd/O=cdore/L=Quebec/ST=QC/C=CA' -out ca.crt
+
+Generating the server x.509 Certificate files. Run commands below
+openssl req -newkey rsa:2048 -days 3650 -nodes -subj '/CN=localhost/OU=cd/O=cdore/L=Quebec/ST=QC/C=CA' -out server.csr -keyout server.key
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3650 -extfile <(echo -e "keyUsage = digitalSignature, keyEncipherment\nextendedKeyUsage = clientAuth,serverAuth")
+cat server.key server.crt > server.pem
+
+Generating the client x.509 Certificate files. Run commands below
+openssl req -newkey rsa:2048 -days 3650 -nodes -subj '/CN=x509user/OU=cd/O=cdore/L=Quebec/ST=QC/C=CA' -out client.csr -keyout client.key
+openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 3650 -extfile <(echo -e "keyUsage = digitalSignature, keyEncipherment\nextendedKeyUsage = clientAuth")
+cat client.key client.crt > client.pem
+
+CREATE USER
+openssl x509 -in /home/cdore/CRT/server.pem -inform PEM -subject -nameopt RFC2253
+
+https://www.mongodb.com/docs/v7.0/tutorial/enable-authentication/
+https://www.mongodb.com/docs/manual/core/security-x.509/
+https://www.mongodb.com/docs/manual/tutorial/configure-x509-client-authentication/#prerequisites
+https://www.mongodb.com/docs/manual/tutorial/configure-x509-member-authentication/
+https://www.mongodb.com/docs/drivers/go/current/fundamentals/auth/#std-label-golang-x509
+https://www.mongodb.com/docs/manual/core/security-x.509/#std-label-client-x509-certificates-requirements
+
+ÉTAPE 2
+
+  tls:
+     mode: allowTLS
+     certificateKeyFile: /home/cdore/CRT/server.pem
+     CAFile: /home/cdore/CRT/ca.crt
+
+
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3650 -extfile <(echo -e "keyUsage = digitalSignature, keyEncipherment\nextendedKeyUsage = clientAuth, serverAuth") -extensions v3_req -extfile <(
+cat << EOF
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = 192.168.2.239
+DNS.2 = cdore.servehttp.com
+EOF
+)
+
+certutil -addstore root c:\tmp\rootca.cer
+
+"""
 import pdb
 #; pdb.set_trace()
-
-import sys, os, io, re, cgi, csv, urllib.parse
+# unt [line]
+import sys, os, io, re, csv, platform, urllib.parse
+from urllib.parse import urlparse, parse_qs
 import json
 import time 
 import datetime
@@ -28,21 +93,25 @@ from bson.json_util import loads
 from tkinter import *
 import tkinter as tk
 from tkinter import * 
-from tkinter import tix
 
 from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
 from tkinter.scrolledtext import ScrolledText
 from tkinter import simpledialog
+from tkinter import filedialog
 from idlelib.tooltip import Hovertip
-
+#import tksvg
+import pyperclip as cp
 import urllib
 import urllib.request
-
+from xml.etree import ElementTree as ET
+from PIL import ImageTk, Image
+from tkinterweb import HtmlFrame
 #import jsoneditor
 
 import mongoRoles
 import cdControl as cdc
+import mongoSecHelp as mh
 
 # JSON
 from bson import ObjectId
@@ -52,8 +121,9 @@ import json
 import pymongo
 from pymongo import MongoClient
 
-APPICON  = 'C:/Users/charl/github/cuisine/misc/favicon.ico'
-APPICON  = "mongo.ico"
+APPICON  = 'C:/Users/charl/AppData/Local/Programs/Python/Python39/code/mongo.ico'
+#C:\Users\charl\AppData\Local\Programs\Python\Python39\
+#APPICON  = "mongo.ico"
 if not os.path.exists(APPICON):
     APPICON = ''
 
@@ -61,14 +131,29 @@ BDSYSTEMLIST = mongoRoles.bdSystemList
 ACTIONLIST = mongoRoles.actionsList
 ACTIONCLUSTER = mongoRoles.clusterResActions
 BULTINROLELIST = mongoRoles.systemRole
-
+FSVGCOPY = "SVGCOPY.txt"
+SVGCOPY = """
+<svg fill="#000000" height="800px" width="800px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+	 viewBox="0 0 330 330" xml:space="preserve">
+<g>
+	<path d="M35,270h45v45c0,8.284,6.716,15,15,15h200c8.284,0,15-6.716,15-15V75c0-8.284-6.716-15-15-15h-45V15
+		c0-8.284-6.716-15-15-15H35c-8.284,0-15,6.716-15,15v240C20,263.284,26.716,270,35,270z M280,300H110V90h170V300z M50,30h170v30H95
+		c-8.284,0-15,6.716-15,15v165H50V30z"/>
+	<path d="M155,120c-8.284,0-15,6.716-15,15s6.716,15,15,15h80c8.284,0,15-6.716,15-15s-6.716-15-15-15H155z"/>
+	<path d="M235,180h-80c-8.284,0-15,6.716-15,15s6.716,15,15,15h80c8.284,0,15-6.716,15-15S243.284,180,235,180z"/>
+	<path d="M235,240h-80c-8.284,0-15,6.716-15,15c0,8.284,6.716,15,15,15h80c8.284,0,15-6.716,15-15C250,246.716,243.284,240,235,240z
+		"/>
+</g>
+</svg>
+"""
+#https://www.svgrepo.com/svg/24801/copy
 #https://www.mongodb.com/docs/manual/reference/log-messages/
 """
 id
 ctx
 msg
 """
-LOG_severity = ["", "I", "F", "E", "W"]
+LOG_severity = ["", " I", " F", " E", " W"]
 LOG_component = ["","ACCESS","COMMAND","CONTROL","ELECTION","FTDC","GEO","INDEX","INITSYNC","JOURNAL","NETWORK","QUERY","RECOVERY","REPL","REPL_HB","ROLLBACK","SHARDING","STORAGE","TXN","WRITE","WT","WTBACKUP","WTCHKPT","WTCMPCT","WTEVICT","WTHS","WTRECOV","WTRTS","WTSLVG","WTTIER","WTTS","WTTXN","WTVRFY","WTWRTLOG"]
 
 CONFFILE = "mongoSecur.conf"
@@ -121,7 +206,7 @@ class filterForm():
         self.searchBut = ttk.Button(self.mainBlock, text='Search', command=callBack)
         self.searchBut.grid(column=3, row=1, padx=5)
         Hovertip(self.searchBut,"Search in logs") 
-        ttk.Label(self.mainBlock, textvariable=self.totalCount, font= ('Segoe 10 bold'), width=10).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
+        ttk.Label(self.mainBlock, textvariable=self.totalCount, font= ('Segoe 10 bold'), width=12).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
         if not nextcallBack is None:
             ttk.Button(self.mainBlock, text='>', width=3, command=nextcallBack).grid(column=5, row=1)  #, padx=1
             
@@ -216,12 +301,12 @@ class filterLogForm(filterForm):
         checkMes.grid(row=0, column=8, sticky=tk.W, padx=0, pady=3) 
         Hovertip(checkMes," Keyword is IN Log output message  ")
         
-        foundLabel = tk.Label(secondBlock, textvariable=self.foundMes, font= ('Segoe 9 bold'), fg="#0000FF", width=12)
+        foundLabel = tk.Label(secondBlock, textvariable=self.foundMes, font= ('Segoe 9 bold'), fg="#0000FF", width=11)
         foundLabel.grid(row=0, column=9, padx=0, pady=3, sticky=tk.EW)
         Hovertip(foundLabel," Click to show search criteria  ")
         foundLabel.bind("<Button-1>", self.getLogCritere)
         
-        #ttk.Button(self.mainBlock, text='Search', command=self.execCallBack).grid(column=3, row=1, padx=5)
+        ttk.Button(self.mainBlock, text='Search', command=self.execCallBack).grid(column=3, row=1, padx=5)
         nextB = ttk.Button(self.mainBlock, text='>', width=3, command=self.execNextcallBack)
         nextB.grid(column=5, row=1)  #, padx=1
         Hovertip(nextB,"Next results")
@@ -229,7 +314,7 @@ class filterLogForm(filterForm):
         
     def execCallBack(self):
         #pdb.set_trace()
-        self.callBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx.get(), chxMes = self.chxMes.get(), chxID = self.chxID.get())
+        self.callBack(sRes=self.sRes.get().strip() , sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx.get(), chxMes = self.chxMes.get(), chxID = self.chxID.get())
 
     def execNextcallBack(self):
         self.nextcallBack(sRes=self.sRes.get(), sEqu=self.s_Equ, cRes=self.cRes.get(), cEqu=self.c_Equ, chxCtx = self.chxCtx.get(), chxMes = self.chxMes.get(), chxID = self.chxID.get())
@@ -303,7 +388,7 @@ class master_form_find():
         self.rolesDataList = None
         self.rolesNamesList = None
         self.logsDataList = None
-        
+
         self.setApp(self.actServ)
 
     def changeDatabase(self, event = None):
@@ -318,9 +403,9 @@ class master_form_find():
         self.actServ  = serv
         self.win.title(self.actServ)
         self.win.iconbitmap(APPICON)
-        self.win.geometry("550x500")
-        self.win.minsize(width = 550, height = 500)
-        
+        self.win.geometry("600x500")
+        self.win.minsize(width = 600, height = 500)
+
         self.closeRec()
         slavelist = self.win.slaves()
         for elem in slavelist:
@@ -337,31 +422,45 @@ class master_form_find():
         menuEdit.grid(row=0,column=2)
         
         menu_file = Menu(menuFichier, tearoff = 0)
-        menu_file.add_cascade(label='Connect to...', command = self.login)   #, activebackground='lightblue', activeforeground='black'
+        menu_file.add_command(label='Connect to...', command = self.login)   #, activebackground='lightblue', activeforeground='black'
         menu_file.add_separator()
-        menu_file.add_cascade(label='Sign in...', command = self.authentif)
-
+        menu_file.add_command(label='Sign in...', command = self.authentif)
+        menu_file.add_separator()
+        menu_file.add_command(label='Connection string...', command = self.showURI)
+        menu_file.add_separator()
+        menu_file.add_command(label='Help...', command = self.showHelp)        
         menuFichier.configure(menu=menu_file)            
         
+        #menu_file.add_cascade(label='Help...', command = self.showHelp)  
         # Progress bar frame
-        self.pbFrame = tk.Frame(self.win)
-        self.pbFrame.pack(fill=X)
+        #self.pbFrame = tk.Frame(self.win)
+        #self.pbFrame.pack(fill=X)
 
         # Zone de message
-        self.win.objMainMess = cdc.messageObj(self.win)
+        self.win.objMainMess = cdc.messageObj(self.win, height=25)
         self.win.objMainMess.showMess("Connecting...")
-        self.win.update_idletasks() 
-        
         isConnected = False
 
-        defInfo = self.setDefault()
-        hostName = defInfo["host"] if "host" in defInfo else ""
-        port = defInfo["port"] if "port" in defInfo else ""
+        servInfo = self.setDefault()
+        #print(str(servInfo))
+        userPassword = userPass
         if userPass is None:
             userPass = self.userPass
-        isConnected = self.data.connectTo(self.actServ, userPass, hostName=hostName, port=port)
-        self.afficherTitre(isConnected)
+        tmpFrame = tk.Frame(self.win)  #, bg="red"
+        tmpFrame.pack(expand=1, fill=BOTH)
+        self.win.update_idletasks()
+
+        self.userPass = userPass
+        isConnected = self.data.connectTo(self.actServ, userPass, servInfo)
+        self.win.objMainMess.clearMess() 
+        if userPassword:    # New authentication
+            if isConnected:
+                self.win.objMainMess.showMess(str(userPass[0]) + " connected on " + self.actServ, "I")
+            else:
+                self.win.objMainMess.showMess(str(userPass[0]) + " not connected.")  
+        self.afficherTitre(isConnected, servInfo)
         
+        tmpFrame.pack_forget()
         # Database form
         dbFrame = tk.Frame(self.win)
         dbFrame.pack(fill=X)
@@ -384,10 +483,8 @@ class master_form_find():
             self.comboDatabase.current(0)
             self.comboDatabase.bind("<<ComboboxSelected>>", self.changeDatabase)
             self.comboDatabase.grid( row=0, column=1)        
-        
-
-        self.win.objMainMess.clearMess()    
-
+             
+ 
         # Onglets
         tab_setup = ttk.Notebook(self.win)
         tab_setup.bind("<<NotebookTabChanged>>", self.on_tab_change)
@@ -429,17 +526,37 @@ class master_form_find():
         self.gridHostFrame.pack(expand= True, fill=BOTH)        
         #self.getHost()
 
+    def afficherTitre(self, isConnected, servInfo):
+        #pdb.set_trace()
+        typ = "TLS" if "tls" in servInfo else ""
+        if isConnected:
+            #pdb.set_trace()
+            auth = self.data.data.command({"connectionStatus" : 1})
+            user = auth['authInfo']['authenticatedUsers'][0]['user']
+            self.win.title( self.actServ + " : " + typ + " Connected - " + user)
+        else:
+            self.win.title( self.actServ + " : " + typ + " Not connected.")
+            
     def on_tab_change(self, event):
         if event.widget.index(event.widget.select()) == 3:
             self.getHost()
             event.widget.unbind("<<NotebookTabChanged>>")
+        
+    def showHelp(self):
+        
+        showHelpWin(self.win, "Manage MongoDB security - Help", None, geometry = "800x600", modal = False)
+        
+    def showURI(self):
+        txtURI = self.data.uri
+        #pdb.set_trace()
+        showConnString(self.win, "Connection string ", txtURI, geometry = "520x100", modal = False)
+        
 
     def getHost(self):
-  
+        self.version = 'MongoDB version: '
         if not self.data.isConnect or self.data.data is None:
             return   
-
-        
+        #pdb.set_trace()
         gridHostFrame = tk.Frame(self.gridHostFrame.interior)
         gridHostFrame.pack(expand= True, side=LEFT, fill=X, padx=10)   
         messFrame = tk.Frame(gridHostFrame)
@@ -448,7 +565,8 @@ class master_form_find():
         
         #self.messframe.winfo_width() 
         try:
-            db = self.data.data        
+            db = self.data.data      
+            self.version += self.data.DBconnect.server_info()["version"]
             res = db.command(({ "hostInfo": 1 }))
         except pymongo.errors.OperationFailure as ex1:
             objMess.showMess(ex1.details.get('errmsg', ''))
@@ -468,7 +586,8 @@ class master_form_find():
         nlines = formatted_data.count('\n')
         text_box = tk.Text(gridHostFrame) #, height= nlines+1
         text_box.pack(expand= True, fill=X)
-        #text_box.grid(row= 0, column=1, sticky="WE")             
+        #text_box.grid(row= 0, column=1, sticky="WE")   
+        formatted_data = self.version + '\n' + formatted_data
         text_box.insert(tk.END, formatted_data)
         text_box.config( state="disabled")
             
@@ -511,7 +630,10 @@ class master_form_find():
         self.nextLogList(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu, chxCtx = chxCtx, chxMes = chxMes, chxID = chxID)
 
     def nextLogList(self, sRes = None, sEqu = None, cRes = None, cEqu = None, chxCtx = None, chxMes = None, chxID = None):
-
+        if self.logsDataList is None:
+            self.getLogs(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu, chxCtx = chxCtx, chxMes = chxMes, chxID = chxID)
+            return
+            
         self.filterSearch = False
         self.win.objMainMess.clearMess()
         self.logsFilter.affFound()
@@ -586,7 +708,8 @@ class master_form_find():
                 break
 
         stepCnt += index
-        #print( "step = " + str(stepCnt))
+        #pdb.set_trace()
+        #print( "Range = " + str(self.rangeLog) + " step = " + str(stepCnt) + " self.logCnt = " + str(self.logCnt))
         if stepCnt == (self.logCnt - 1):
             index += 1
             stepCnt += 1
@@ -594,8 +717,12 @@ class master_form_find():
             #pdb.set_trace()
             self.rangeLog = self.logCnt
 
-            
-        self.logsFilter.affTot(str(stepCnt) + " / " + str(self.logCnt))
+        tot = str(stepCnt) + " / " + str(self.logCnt)
+        if (stepCnt == self.logCnt):
+            tot = str(stepCnt) + " records"
+
+
+        self.logsFilter.affTot(tot)
         if self.filterSearch:
             self.logsFilter.affFound(self.foundLog)
 
@@ -604,13 +731,6 @@ class master_form_find():
         #pdb.set_trace()
         txtLog=event.widget.get("1.0",END)
         showLogRec(self.win, "Log detail : ", txtLog, geometry = "400x450", modal = False)        
-
-    
-    def afficherTitre(self, isConnected):
-        if isConnected:
-            self.win.title( self.actServ + " : Connected - " + self.userPass[0])
-        else:
-            self.win.title( self.actServ + " : Not connected.")
     
 
     def readConfFile(self):
@@ -620,7 +740,7 @@ class master_form_find():
                 js = eval(f.read())
                 return (js)            
         else:
-            return {}
+            return {'init': 'localhost', 'localhost': {'roleKeyword': '', 'userKeyword': '', 'userPass': ['', ''], 'host': 'localhost', 'port': '27017'}}
 
     def setConfFile(self, param = None):
         #pdb.set_trace()
@@ -631,8 +751,10 @@ class master_form_find():
             initInfo[(self.actServ)] = {}
         initInfo[(self.actServ)]["roleKeyword"] = self.keyWordRole.get()
         initInfo[(self.actServ)]["userKeyword"] = self.keyWordUser.get()
-        initInfo[(self.actServ)]["userPass"] = self.userPass
+        
+        #pdb.set_trace()
         if not param is None:
+            initInfo[(self.actServ)]["userPass"] = self.userPass
             if not param[0]:
                 self.userPass[0] = ""
             if not param[1]:
@@ -646,24 +768,57 @@ class master_form_find():
             f.close()
 
     def setServerConfFile(self, param = None):
-        #pdb.set_trace()
+        #print(str(param))
         initInfo = (self.readConfFile())
-        if param["server"] is None:
+        if param["server"] is None:     # Delete server
             #pdb.set_trace()
             del initInfo[param["delServ"]]
             if initInfo["init"] == param["delServ"]:
                 del initInfo["init"]
-        else:
-            if param["server"] != self.actServ and param["server"] not in initInfo:
+        else:                           # Modify or Add new server
+            upass = ""
+            actualModified = False
+            if "delServ" in param:      # Modify server name
+                upass = initInfo[(self.actServ)]["userPass"]
+                del initInfo[param["delServ"]]
+                if initInfo["init"] == param["delServ"]:
+                    initInfo["init"] = param["server"]
+                    actualModified = True
+            if param["server"] != self.actServ and param["server"] not in initInfo: # Add new server
                 initInfo[param["server"]] = {}
                 initInfo[param["server"]]["roleKeyword"] = ""
                 initInfo[param["server"]]["userKeyword"] = ""
                 initInfo[param["server"]]["userPass"] = ["", ""]
-        
+                if upass:               # set userPass for Modify server name
+                    initInfo[param["server"]]["userPass"] = upass
+            else:
+                if initInfo["init"] == param["server"]:
+                    actualModified = True
+
             initInfo[param["server"]]["host"] = param["host"]
             initInfo[param["server"]]["port"] = param["port"]
+            if 'caFile' in param:
+                initInfo[param["server"]]["tls"] = {}
+                initInfo[param["server"]]["tls"]["caFile"] = param["caFile"]
+                if 'caFile' in param:
+                    initInfo[param["server"]]["tls"]["keyFile"] = param["keyFile"]
+                if 'keyPass' in param:
+                    initInfo[param["server"]]["tls"]["keyPass"] = param["keyPass"]                    
+                if 'indAccNoSec' in param:
+                    initInfo[param["server"]]["tls"]["indAccNoSec"] = param["indAccNoSec"]  
+                if 'indHostNoVal' in param:
+                    initInfo[param["server"]]["tls"]["indHostNoVal"] = param["indHostNoVal"] 
+                if 'indCertNoVal' in param:
+                    initInfo[param["server"]]["tls"]["indCertNoVal"] = param["indCertNoVal"]  
+                if 'indx509Cli' in param:
+                    initInfo[param["server"]]["tls"]["indx509Cli"] = param["indx509Cli"]   
+                    
+            else:
+                if "tls" in initInfo[param["server"]] :
+                    del initInfo[param["server"]]["tls"]
         self.writeConfFile(initInfo)
-
+        if actualModified:         
+            self.setApp(param["server"])
         
     def setDefault(self, initInfo = None):
         actInfo = {}
@@ -671,7 +826,6 @@ class master_form_find():
             initInfo = (self.readConfFile())
         if self.actServ is None:
             self.actServ = LOCALSERV
-        #pdb.set_trace()
         if not initInfo is None and self.actServ in initInfo:
             actInfo = initInfo[(self.actServ)]
             self.userPass = actInfo["userPass"]
@@ -684,14 +838,19 @@ class master_form_find():
         slavelist = self.gridUsersFrame.interior.slaves()
         for elem in slavelist:
             elem.destroy() 
-            
+        objMess = cdc.messageObj(self.gridUsersFrame)
         if not self.data.isConnect or self.data.data is None:
             return   
+        try:                      
+            dat = self.data.data.system.users
+            res=dat.find()
+            self.setConfFile()
+            self.usersDataList=list(res)
+        except pymongo.errors.OperationFailure as ex1:
+            objMess.showMess(ex1.details.get('errmsg', ''))
+            objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
+            return
 
-        self.setConfFile()            
-        dat = self.data.data.system.users
-        res=dat.find()
-        self.usersDataList=list(res)
         
         gridUsersFrame = tk.Frame(self.gridUsersFrame.interior)
         gridUsersFrame.pack(expand= True, side=LEFT, fill=X, padx=10)
@@ -702,10 +861,11 @@ class master_form_find():
             
         userNameIndex = -1
         cnt = 0
+        index = 0
         for index, data in enumerate(self.usersDataList):
 
             if (self.Database.get() == "All" or self.Database.get() == data["db"]):
-                #print(data)
+                #print(str(data))
                 if "userId" in data and "credentials" in data :
                     data.pop("userId")
                     data.pop("credentials")
@@ -724,6 +884,7 @@ class master_form_find():
 
                     #pdb.set_trace()
                     text_box.config( state="disabled")
+                    
         self.usersFilter.affTot(str(cnt) + "/" + str(index+1))
         self.gridUsersFrame.scroll(0)
         if userNameIndex > -1:
@@ -731,10 +892,13 @@ class master_form_find():
         #jsoneditor.editjson(data)
 
     def createRoot(self):
-        #pdb.set_trace()
-        app = cdc.logonWin(self.win)
-        res = app.showAdminUserBD()   
         
+        app = cdc.logonWin(self.win)
+        res = app.showAdminUserBD(self.userPass)   
+        res = res[0]
+        if not res[0] or not res[1]:
+            self.win.objMainMess.showMess("User name and password must be non-empty.")
+            return
         if res:
             db = self.data.data
             result = db.command({"createUser": res[0], "pwd": res[1], "roles": [ {'role': 'root', 'db': 'admin'} ] } )
@@ -748,16 +912,19 @@ class master_form_find():
         for elem in slavelist:
             elem.destroy()
         #pdb.set_trace()
-        
+        objMess = cdc.messageObj(self.gridRolesFrame)
         if not self.data.isConnect or self.data.data is None:
             return
-        dat = self.data.data.system.roles
-        res=dat.find()
-        if res is None:
+        try:
+            dat = self.data.data.system.roles
+            res=dat.find()
+            self.setConfFile()
+            self.rolesDataList = list(res)
+        except pymongo.errors.OperationFailure as ex1:
+            objMess.showMess(ex1.details.get('errmsg', ''))
+            objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
             return
-        self.setConfFile()
-        self.rolesDataList = list(res)
-
+            
         gridRolesFrame = tk.Frame(self.gridRolesFrame.interior)
         gridRolesFrame.pack(expand= True, side=LEFT, fill=X, padx=10)
 
@@ -766,7 +933,7 @@ class master_form_find():
 
         self.rolesNamesList = []
         userRoleIndex = -1
-        cnt = 0
+        cnt, index = 0, 0
         for index, data in enumerate(self.rolesDataList):
             #data = self.rolesDataList[index]
             self.rolesNamesList.append(data["role"])
@@ -784,6 +951,7 @@ class master_form_find():
                     text_box.grid(row= index, column=1, sticky="WE") 
                     text_box.insert(tk.END, formatted_data)
                     text_box.config( state="disabled")
+        
         self.rolesFilter.affTot(str(cnt) + "/" + str(index+1))
         self.gridRolesFrame.scroll(0)
         if userRoleIndex > -1:
@@ -815,12 +983,15 @@ class master_form_find():
     def login(self):
         initInfo = (self.readConfFile())
         info = initInfo.keys()
-        self.servers = []
+        self.servers, tmpServ = [], []
         for k in info:
             if k != "init":
-                self.servers.append(k)
-        dial = loginDialog(self.win, "Connecter : app - location", self)
-        #dial.showDialog()
+                tmpServ.append(k.upper())
+        tmpServ.sort()
+        for s in tmpServ:
+            self.servers.append(next(x for x in info if x.upper() == s ))
+        loginDialog(self.win, self.win.title(), self)
+
 
     def authentif(self):
         app = cdc.logonWin(self.win)
@@ -865,6 +1036,7 @@ class editRoleWin():
         self.pop.destroy()
 
     def cancel(self):
+        #pdb.set_trace()
         self.mainObj.getRoles([self.roleName, self.Database.get()], [self.pop.winfo_x(), self.pop.winfo_y()])
         self.pop.destroy()
         
@@ -933,12 +1105,13 @@ class editRoleWin():
 
     def delete(self):
         #pdb.set_trace()
-        curRole = next(x["roles"] for x in self.mainObj.usersDataList if x["user"] == self.mainObj.userPass[0] )
-        for x in curRole:
-            if x["role"] == self.roleName:
-                #print(self.roleName + " used by current user : " + self.mainObj.userPass[0])
-                self.objMess.showMess("Role «" + self.roleName + "» is used by current user : " + self.mainObj.userPass[0])
-                return
+        if self.mainObj.userPass[0]:    #If authentication active with user
+            curRole = next(x["roles"] for x in self.mainObj.usersDataList if x["user"] == self.mainObj.userPass[0] )
+            for x in curRole:
+                if x["role"] == self.roleName:
+                    #print(self.roleName + " used by current user : " + self.mainObj.userPass[0])
+                    self.objMess.showMess("Role «" + self.roleName + "» is used by current user : " + self.mainObj.userPass[0])
+                    return
             
         #roleUsed = next(x for x in reg if x["role"] == self.roleName )
         answer = askyesno(title='Remove',
@@ -980,7 +1153,7 @@ class editRoleWin():
     def addNewRole(self):
         #pdb.set_trace()
         self.menuFichier.destroy()
-        #self.menuPriv.destroy()
+        self.pop.title("Add Role")
         self.newRoleTxt = StringVar()
         self.newRoleTxt.trace('w', self.changeDatabase)
         self.newRoleName = ttk.Entry(self.formFrame, textvariable=self.newRoleTxt, width=20)
@@ -1108,7 +1281,7 @@ class editRoleWin():
         self.pop = tk.Toplevel(self.mainObj.win)
         self.pop.geometry("400x800")
         self.pop.title("Modify Role")
-        #self.pop.iconbitmap(GOLFICON)   
+        self.pop.iconbitmap(APPICON)   
         self.mainObj.childWin.append(self.pop)
 
         if not self.pos is None:
@@ -1127,10 +1300,10 @@ class editRoleWin():
         self.formFrame = tk.Frame(mainFrame)
         self.formFrame.grid(column=0, row=0)        
         ttk.Label(self.formFrame, text=" role : ").grid(row=0, column=0, sticky=tk.W)
-        identFrame = tk.Frame(self.formFrame)
-        identFrame.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)
-        ttk.Label(identFrame, text=self.roleName, font= ('Segoe 9 bold')).grid(row=0, column=0, sticky=tk.W, padx=1, pady=3)  
-        button = cdc.RoundedButton(identFrame, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.setKeyWordRole)
+        self.identFrame = tk.Frame(self.formFrame)
+        self.identFrame.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)
+        ttk.Label(self.identFrame, text=self.roleName, font= ('Segoe 9 bold')).grid(row=0, column=0, sticky=tk.W, padx=1, pady=3)  
+        button = cdc.RoundedButton(self.identFrame, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.setKeyWordRole)
         button.create_text(12,11, text=" >", fill="black", font=('Helvetica 15 '))
         button.grid(row=0, column=1, padx=30, pady=5)
         #Hovertip(button,"Blanchir le formulaire")
@@ -1139,8 +1312,8 @@ class editRoleWin():
         self.menuFichier = Menubutton(self.formFrame, text='role :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuFichier.grid(row=0,column=0, sticky=tk.W)
         menu_file = Menu(self.menuFichier, tearoff = 0)
-        menu_file.add_cascade(label='Add role...', command = self.addNewRole) 
-        menu_file.add_cascade(label='Remove role...', command = self.delete) 
+        menu_file.add_command(label='Add role...', command = self.addNewRole) 
+        menu_file.add_command(label='Remove role...', command = self.delete) 
         self.menuFichier.configure(menu=menu_file)                 
 
         self.Database.set(self.roleData["db"])
@@ -1153,8 +1326,8 @@ class editRoleWin():
         self.menuPriv = Menubutton(self.formFrame, text='privileges :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuPriv.grid(row=2,column=0, sticky=tk.W)
         self.submenu_priv = Menu(self.menuPriv, tearoff = 0)
-        self.submenu_priv.add_cascade(label='Add system', command = self.addSystemPrivilege) 
-        self.submenu_priv.add_cascade(label='Remove...', command = self.delPriv) 
+        self.submenu_priv.add_command(label='Add system', command = self.addSystemPrivilege) 
+        self.submenu_priv.add_command(label='Remove...', command = self.delPriv) 
         self.menuPriv.configure(menu=self.submenu_priv)        
         
         ttk.Label(self.formFrame, text="{  resources : { ").grid(row=3, column=0, sticky=tk.E, padx=30, pady=3)
@@ -1170,15 +1343,19 @@ class editRoleWin():
         dbList = self.data.dbList.copy()
         # self.Database.get() != self.data.dbase:
 
+        objResBDFrame = tk.Frame(self.formFrame)
+        objResBDFrame.grid(row=4, column=0, columnspan=2)
+        self.objResBD = tk.Frame(objResBDFrame)
+        self.objResBD.pack()
         
-        ttk.Label(self.formFrame, text= "db : ").grid( row=4, column=0, sticky=tk.E, padx=1, pady=3)
+        ttk.Label(self.objResBD, text= "db : ").grid( row=0, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboBD = ttk.Combobox(
-            self.formFrame,
+            self.objResBD,
             state="readonly",
             values = dbList
             )
         self.comboBD.bind("<<ComboboxSelected>>", self.setPriv)
-        self.comboBD.grid( row=4, column=1, sticky=tk.W)
+        self.comboBD.grid( row=0, column=1, sticky=tk.W)
         
         if self.roleData["privileges"] and "db" in self.roleData["privileges"][0]["resource"]:
             if self.roleData["privileges"][0]["resource"]["db"] in self.data.dbList:
@@ -1189,16 +1366,20 @@ class editRoleWin():
             self.comboBD.current(0)
         self.clusterRes.trace('w', self.changeCluster)     
             
-        ttk.Label(self.formFrame, text= "collection : ").grid( row=5, column=0, sticky=tk.E, padx=1, pady=3)
+        ttk.Label(self.objResBD, text= "collection : ").grid( row=1, column=0, sticky=tk.E, padx=1, pady=3)
         self.comboCol = ttk.Combobox(
-            self.formFrame,
+            self.objResBD,
             state="readonly",
             values=[""]
             )
         self.comboCol.bind("<<ComboboxSelected>>", self.setPriv)
-        self.comboCol.grid( row=5, column=1, sticky=tk.W)      
+        self.comboCol.grid( row=1, column=1, sticky=tk.W) 
+        #Fin obj Res BD
+        
         ttk.Label(self.formFrame, text="} , ").grid(row=6, column=0, sticky=tk.W, padx=45, pady=3)
         ttk.Label(self.formFrame, text="actions : [").grid(row=7, column=0, columnspan=2, sticky=tk.W, padx=50, pady=3)
+        
+        
         #pdb.set_trace()
 
         # Button        
@@ -1231,8 +1412,13 @@ class editRoleWin():
             winChildPos(self)
 
     def changeCluster(self, *args):
-        self.pop.update_idletasks()     
+        self.pop.update_idletasks() 
         self.setPriv()
+        if self.clusterRes.get():
+            self.objResBD.pack_forget() 
+        else:
+            self.objResBD.pack()
+            
         
     def setPriv(self, event = None, setCol = False):
         self.userActionsList = []                           #Empty user action list
@@ -1381,30 +1567,47 @@ class editUserWin():
                 return              
 
     def addUser(self):
+        #pdb.set_trace()
         self.menuFichier.destroy()
-        
-        self.newUserName = ttk.Entry(self.formFrame, width=20)
+        self.pop.title("Add User")
+        self.userLbl.config(text="")
+        self.newUserTxt = StringVar()
+        self.newUserTxt.trace('w', self.changeDatabase)
+        self.newUserName = ttk.Entry(self.identFrame, textvariable=self.newUserTxt, width=30)
         self.newUserName.focus()
         self.newUserName.grid(column=1, row=0, sticky=tk.W)
         self.rolesObj.addRole()
-        ttk.Label(self.formFrame, text=" Password : ").grid(row=1, column=0, sticky=tk.W)
-        self.newUserPass = ttk.Entry(self.formFrame, width=20)
+        ttk.Label(self.identFrame, text=" Password : ").grid(row=1, column=0, sticky=tk.W)
+        self.newUserPass = ttk.Entry(self.identFrame, width=30)
         self.newUserPass.grid(row=1, column=1, sticky=tk.W)
         ttk.Button(self.butFrame, text='Save', command=self.createUser).grid(row=0, column=0)  
-
+        self.changeDatabase()
         dbList = self.data.dbList.copy()
+        dbList.append("$external")
         dbList[0] = "admin"
         self.comboDatabase = ttk.Combobox(
-            self.formFrame,
+            self.dbFrame,
             textvariable=self.Database,
             state="readonly",
             values = dbList
             )
         self.comboDatabase.current(0)
-        self.comboDatabase.grid( row=2, column=1, sticky=tk.W, pady=3) 
+        self.comboDatabase.bind("<<ComboboxSelected>>", self.changeDatabase)
+        self.comboDatabase.grid( row=0, column=1, sticky=tk.W, pady=3, padx=1) 
 
-    def createUser(self):
+    def changeDatabase(self, *args, message=None):
+        mess = "Add user : «" + self.newUserName.get() + "» to «" + self.Database.get() + "» database"
+        if not message is None:
+            mess += ("\n" + str(message))
+        self.objMess.showMess(mess, "I")
         
+    def createUser(self):
+        if not self.newUserName.get():
+            self.objMess.showMess("User name must be non-empty.")
+            return       
+        if not self.newUserPass.get() and not "external" in self.Database.get():
+            self.objMess.showMess("Password must be non-empty.")
+            return 
         if not self.rolesObj.checkRole():
             return
         else:
@@ -1412,8 +1615,12 @@ class editUserWin():
         try:
             db=self.data.DBconnect[self.Database.get()]
             self.userName = self.newUserName.get()
-            res = db.command({"createUser": self.userName, "pwd": self.newUserPass.get(), "roles": [ role ] } )
-
+            #pdb.set_trace()
+            if "external" in self.Database.get():
+                res = db.command({"createUser": self.userName, "roles": [ role ] } )
+            else:
+                res = db.command({"createUser": self.userName, "pwd": self.newUserPass.get(), "roles": [ role ] } )
+                
             #res = db.command("grantRolesToUser", self.userName, roles=[role])
             self.userName = self.newUserName.get()
             self.refreshUsers(res)
@@ -1467,16 +1674,17 @@ class editUserWin():
         #print(self.userData)
 
         self.pop = tk.Toplevel(self.mainObj.win)
-        self.pop.geometry("350x270")
+        #self.pop.geometry("370x270")
+        self.pop.minsize(370,270)
         self.pop.title("Modify User")
-        #self.pop.iconbitmap(GOLFICON)   
+        self.pop.iconbitmap(APPICON)   
         self.mainObj.childWin.append(self.pop)
         #pdb.set_trace()
         
         if not self.pos is None:
             self.pop.geometry(f"+{self.pos[0]}+{self.pos[1]}")  
         
-        self.objMess = cdc.messageObj(self.pop, height=15)
+        self.objMess = cdc.messageObj(self.pop, height=25)
 
         # Form frame
         mainFrame = tk.Frame(self.pop, borderwidth = 1, relief=RIDGE)
@@ -1488,40 +1696,42 @@ class editUserWin():
 
         self.formFrame = tk.Frame(mainFrame)
         self.formFrame.grid(column=0, row=0)        
-        ttk.Label(self.formFrame, text=" User : ").grid(row=0, column=0, sticky=tk.W)  
-
-        identFrame = tk.Frame(self.formFrame)
-        identFrame.grid(row=0, column=1, sticky=tk.W, padx=1, pady=3)
-        ttk.Label(identFrame, text=self.userName, font= ('Segoe 9 bold')).grid(row=0, column=0, sticky=tk.W, padx=1)  
-        button = cdc.RoundedButton(identFrame, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.setKeyWordUser)
+        self.formFrame.columnconfigure(0, weight=1)
+        self.formFrame.columnconfigure(1, weight=1)
+        
+        self.identFrame = tk.Frame(self.formFrame)
+        self.identFrame.grid(row=0, column=0, columnspan=2, sticky=tk.W, padx=1, pady=3)
+        ttk.Label(self.identFrame, text=" User : ").grid(row=0, column=0, sticky=tk.W)
+        self.userLbl = ttk.Label(self.identFrame, text=self.userName, font= ('Segoe 9 bold')) 
+        self.userLbl.grid(row=0, column=1, sticky=tk.W, padx=10) 
+        button = cdc.RoundedButton(self.identFrame, 25, 25, 10, 2, 'lightgrey', "#EEEEEE", command=self.setKeyWordUser)
         button.create_text(12,11, text=" >", fill="black", font=('Helvetica 15 '))
-        button.grid(row=0, column=1, padx=30)
+        button.grid(row=0, column=2, padx=10)
         #Hovertip(button,"Blanchir le formulaire")
 
-        
         # Création du menu user
-        self.menuFichier = Menubutton(self.formFrame, text='User :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
+        self.menuFichier = Menubutton(self.identFrame, text='User :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuFichier.grid(row=0,column=0, sticky=tk.W)
         menu_file = Menu(self.menuFichier, tearoff = 0)  
-        menu_file.add_cascade(label='Change password...', command = self.changePass) 
-        menu_file.add_cascade(label='Add user...', command = self.addUser) 
-        menu_file.add_cascade(label='Remove user...', command = self.delete) 
+        menu_file.add_command(label='Change password...', command = self.changePass) 
+        menu_file.add_command(label='Add user...', command = self.addUser) 
+        menu_file.add_command(label='Remove user...', command = self.delete) 
         self.menuFichier.configure(menu=menu_file) 
-        
-        self.Database.set(self.userData["db"])
-        ttk.Label(self.formFrame, text="db :").grid(row=2, column=0, sticky=tk.E, padx=5, pady=3)
-        ttk.Label(self.formFrame, textvariable=self.Database).grid(row=2, column=1, sticky=tk.W)
 
+        self.dbFrame = tk.Frame(self.formFrame)
+        self.dbFrame.grid(row=2, column=0, sticky=tk.W, pady=3, padx=30)
+        self.Database.set(self.userData["db"])
+        ttk.Label(self.dbFrame, text="db :").grid(row=0, column=0, sticky=tk.E, padx=5, pady=3)
+        ttk.Label(self.dbFrame, textvariable=self.Database).grid(row=0, column=1, sticky=tk.W)
+        
         # Création de l'objet Roles
         rolesFrame = tk.Frame(self.formFrame)
-        rolesFrame.grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=1, pady=3)
+        rolesFrame.grid(row=3, column=0, sticky=tk.W, padx=1, pady=3)
         self.rolesObj = rolesSelect(self, rolesFrame, self.rolesList)
 
         # Button        
-        self.butFrame = tk.Frame(mainFrame)
-        self.butFrame.grid(column=1, row=0)
-    
-        
+        self.butFrame = tk.Frame(self.formFrame)
+        self.butFrame.grid(row=1, column=1, rowspan=3, padx=15)
         ttk.Button(self.butFrame, text='Close', command=self.close).grid(row=2, column=0, pady=5)
         if self.pos is None:
             winChildPos(self)
@@ -1563,7 +1773,7 @@ class rolesSelect():
         bdList[0]='admin'
         self.comboBD.config(values=bdList)
         self.comboBD.unbind("<<ComboboxSelected>>")
-        self.menuRole.destroy()
+        self.menuBut.destroy()
         self.addRoleFlag = True
         self.parent.addRole()
         
@@ -1593,6 +1803,9 @@ class rolesSelect():
 
     def getRole(self):
         return {"role": self.comboRoleText.get(), "db": self.comboBDText.get()}
+        
+    #def clearMenu(self):
+    #    self.menuBut.destroy()
         
     def checkRole(self):
         role = self.comboRoleText.get()
@@ -1625,12 +1838,12 @@ class rolesSelect():
         ttk.Label(self.rolesFrame, text= "[").grid( row=0, column=1, sticky=tk.W, padx=1, pady=3) 
         
         # Création du menu roles
-        menuBut = Menubutton(self.rolesFrame, text='roles :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
-        menuBut.grid(row=0,column=0)
-        self.menuRole = Menu(menuBut, tearoff = 0)
-        self.menuRole.add_cascade(label='Add...', command = self.addRole) 
-        self.menuRole.add_cascade(label='Remove...', command = self.delRole) 
-        menuBut.configure(menu=self.menuRole)        
+        self.menuBut = Menubutton(self.rolesFrame, text='roles :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
+        self.menuBut.grid(row=0,column=0)
+        self.menuRole = Menu(self.menuBut, tearoff = 0)
+        self.menuRole.add_command(label='Add...', command = self.addRole) 
+        self.menuRole.add_command(label='Remove...', command = self.delRole) 
+        self.menuBut.configure(menu=self.menuRole)        
         
         roleList = []
         dbList = []
@@ -1673,21 +1886,51 @@ class dbaseObj():
         self.dbase = ""
         self.DBconnect = None
         self.isConnect = False
+        self.uri = None
 
-    def connectTo(self, Server = LOCALSERV, userPass = None, hostName = "", port = ""):
+    
+    def getURI(self, userPass, servInfo):
         #pdb.set_trace()
-
-        self.dbase = 'admin'
+        self.hostName = servInfo["host"] if "host" in servInfo else ""
+        port = servInfo["port"] if "port" in servInfo else ""        
+              
+        uri = """mongodb://%s:%s@"""  % (userPass[0], userPass[1])        
         
-        uri = """mongodb://%s:%s@"""  % (userPass[0], userPass[1])
-        uri += hostName + ":" + port + "/?authSource=admin&ssl=false"
+        uri += self.hostName + ":" + port + "/?authSource=admin"
+        if "tls" in servInfo:
+            if "indx509Cli" in servInfo["tls"]:
+                uri = "mongodb://" + self.hostName + ":" + port + "/?authMechanism=MONGODB-X509&authSource=%24external"
+                
+            uri += "&tls=true&tlsCAFile=" + servInfo["tls"]["caFile"]
+            if "keyFile" in servInfo["tls"]:
+                uri += "&tlsCertificateKeyFile=" + servInfo["tls"]["keyFile"]
+            if "keyPass" in servInfo["tls"]:
+                uri += "&tlsCertificateKeyFilePassword=" + servInfo["tls"]["keyPass"]
+            if "indAccNoSec" in servInfo["tls"]:
+                uri += "&tlsInsecure=true"
+            if "indHostNoVal" in servInfo["tls"]:
+                uri += "&tlsAllowInvalidHostnames=true"
+            if "indCertNoVal" in servInfo["tls"]:
+                uri += "&tlsAllowInvalidCertificates=true"               
+
+               
+                #https://www.mongodb.com/docs/manual/reference/program/mongod/#std-option-mongod.--tlsCertificateKeyFilePassword
+        else:
+            uri += "&tls=false" 
+            
         if userPass[0] == "":
-            uri = "mongodb://" + hostName + ":" + port + "/"
-        if hostName == LOCALSERV:
-            uri = "mongodb://" + LOCALSERV + ":27017/"
+            uri = "mongodb://" + self.hostName + ":" + port + "/"
+   
+        return uri
+    
+    def connectTo(self, Server = LOCALSERV, userPass = None, servInfo = None):
+        #pdb.set_trace()
+        
+        self.dbase = 'admin'
+        self.uri = self.getURI( userPass, servInfo)
             
         #print(uri)
-        if Server == LOCALSERV or hostName == LOCALSERV:
+        if Server == LOCALSERV or self.hostName == LOCALSERV:
             timeout = 2000
         else:
             timeout = 15000
@@ -1696,13 +1939,13 @@ class dbaseObj():
             self.DBconnect.close()
             self.isConnect = False
         try:
-            self.DBconnect = MongoClient(uri,socketTimeoutMS=timeout,
+            self.DBconnect = MongoClient(self.uri,socketTimeoutMS=timeout,
                         connectTimeoutMS=timeout,
                         serverSelectionTimeoutMS=timeout,)
             #pdb.set_trace()
+            #auth = self.DBconnect["admin"].command({"connectionStatus" : 1})
             if "ok" in self.DBconnect.server_info():
                 dbs=self.DBconnect.list_database_names()
-                #pdb.set_trace()
                 for db in BDSYSTEMLIST:
                     if db != "" and db in dbs:
                         dbs.remove(db)                
@@ -1713,8 +1956,11 @@ class dbaseObj():
                 self.dbList = dbs
                 self.data = self.DBconnect[self.dbase]
                 self.isConnect = True
+            else:
+                self.dbList = []
         except Exception as ex:
             print(ex)
+            self.dbList = []
             self.isConnect = False
         return self.isConnect
 
@@ -1730,15 +1976,94 @@ class showLogRec(cdc.modalDialogWin):
 
 class showLogCritere(cdc.modalDialogWin):
     def createWidget(self):
-        #self.pop.resizable(0, 0)
-        #objLog = json.loads(self.obj)
-        #format_log = json.dumps(objLog, indent=4)
+        
         format_log = self.obj
         text_box = tk.Text(self.dframe) #, height=5
         text_box.pack(expand= True, fill=BOTH)
         text_box.pack() 
         text_box.insert(tk.END, format_log)
         text_box.config( state="disabled") 
+
+class showHelpWin(cdc.modalDialogWin):
+    def createWidget(self):
+        self.pop.minsize(500,400)
+        import mongoSecHelp as mh
+        self.htmlFrame = HtmlFrame(self.dframe, messages_enabled = False) #create HTML browser
+        self.htmlFrame.load_html(mh.htmlHelp) #load a website
+        self.htmlFrame.add_css(mh.cssTxt)
+        self.htmlFrame.pack(fill="both", expand=True) 
+        self.htmlFrame.on_link_click(self.load_new_page)
+                
+    def load_new_page(self, url, e = None):
+        ## Do stuff - insert code here
+        if "ServicesConsole" in url:
+            #pdb.set_trace()
+            if os.name == 'nt' :
+                os.system("services.msc")
+            else:
+                messagebox.showinfo(
+                        title="OS System",
+                        message=f"You run " + str(platform.platform())) 
+            return
+        if "file:///" in url:
+            self.htmlFrame.load_url(url) #Go to tag
+        else:
+            cdc.showWebURL(url) #load the new website in a browser
+        #print("CALL=" + url)        
+
+class showConnString(cdc.modalDialogWin):
+    def createWidget(self):
+        self.pop.minsize(520,100)
+        self.connStr = self.obj
+        
+        #svg_image = tksvg.SvgImage( data = SVGCOPY, scaletoheight = 50 )
+        #tk.Label( image = svg_image ).pack()
+        #pdb.set_trace()
+        self.objMess = cdc.messageObj(self.pop, height=12)
+        self.formframe = tk.Frame(self.dframe, borderwidth = 1, relief=RIDGE, padx=10, pady=3)
+        self.formframe.pack(expand= True, fill=X)
+        self.formframe.grid_columnconfigure(0, weight=12)
+        self.formframe.grid_columnconfigure(0, weight=1)
+        self.col_1 = tk.Frame(self.formframe)
+        self.col_1.grid(row=0, column=0, sticky=W)
+        self.uri = ttk.Entry(self.col_1, width=120)
+        self.uri.insert(0, self.connStr)
+        self.uri.config(state="readonly")
+        self.uri.pack(expand= True, fill=X)
+        #https://stackoverflow.com/questions/55943631/putting-svg-images-into-tkinter-frame
+        self.col_2 = tk.Frame(self.formframe, width=20, height=20)
+        self.col_2.grid(row=0, column=1, sticky=W)
+        #self.pop.update_idletasks()
+        """
+        svg_image = tksvg.SvgImage( data = SVGCOPY) #, scaletoheight = 20  
+        tree = ET.parse(FSVGCOPY)
+        root = tree.getroot()
+        width = int(root.attrib["width"].replace("px", ""))
+        height = int(root.attrib["height"].replace("px", ""))
+        # Calculer la nouvelle taille pour le redimensionnement
+        new_width = int(width / 20)
+        new_height = int(height / 20)        
+        image = tk.PhotoImage(width=new_width, height=new_height)
+        image.tk.call(image, "copy", svg_image, "-subsample", new_width, new_height)
+        
+        self.buttonCopy = tk.Label( self.col_2, image = image ) #ou directement =svg_image à la place de =image et avec , scaletoheight = 20 
+        self.buttonCopy.pack() 
+        self.pop.update_idletasks()
+        pdb.set_trace()
+        """
+        
+        self.buttonCopy = Label(self.col_2, text="📋", font=('Segoe 13 bold'), pady=1)
+        self.buttonCopy.pack()
+
+        self.buttonCopy.bind('<Button-1>', self.copyToClipboard)
+        
+        buttonC = ttk.Button(self.dframe, text="Close", command=self.close, width=10)
+        buttonC.pack(pady=3)        
+        
+    def copyToClipboard(self, e = None):
+        
+        self.objMess.showMess("Connection string copied to clipboard.", "I")
+        cp.copy(self.connStr)
         
 class loginDialog(cdc.modalDialogWin):
     def createWidget(self):
@@ -1746,8 +2071,8 @@ class loginDialog(cdc.modalDialogWin):
         self.pop.resizable(0, 0)
         self.actServ = self.mainApp.actServ
         #pdb.set_trace()
-        self.labAct = Label(self.dframe, text="Actuel : " + self.actServ, font=('Calibri 12 bold'), pady=5)
-        self.labAct.grid(row=0, column=0, columnspan=3, sticky=EW)
+        self.labAct = Label(self.dframe, text=self.actServ + " selected", font=('Calibri 12 bold'), borderwidth=3, relief = SUNKEN, pady=5)
+        self.labAct.grid(row=0, column=0, columnspan=3, sticky=EW, pady=5, padx=5)
         
         if len(self.mainApp.servers) == 0:
             self.mainApp.servers.append(LOCALSERV)
@@ -1757,22 +2082,22 @@ class loginDialog(cdc.modalDialogWin):
             globals()["but" + str(ind)].bind("<Double-Button-1>", self.setAppDB) 
         
         lab1 = Label(self.dframe, text=" ", font=('Calibri 1'))
-        lab1.grid(row=5, column=0, columnspan=2)
+        lab1.grid(row=ind+2, column=0, columnspan=2)
 
         self.dframe.columnconfigure(0, weight=1)
         self.dframe.columnconfigure(1, weight=1)
         buttonC = ttk.Button(self.dframe, text="Ok", command=self.setAppDB, width=10)
-        buttonC.grid(row=6, column=0) 
+        buttonC.grid(row=ind+3, column=0) 
         buttonC = ttk.Button(self.dframe, text="Modify", command=self.modifyServ, width=10)
-        buttonC.grid(row=6, column=1)
+        buttonC.grid(row=ind+3, column=1)
         buttonC = ttk.Button(self.dframe, text="Cancel", command=self.close, width=10)
-        buttonC.grid(row=6, column=2)         
+        buttonC.grid(row=ind+3, column=2)         
         lab1 = Label(self.dframe, text=" ", font=('Calibri 1'))
-        lab1.grid(row=7, column=0, columnspan=2)
+        lab1.grid(row=ind+4, column=0, columnspan=2)
 
     def selectAppDB(self, serv):
         self.actServ = serv
-        self.labAct.config(text="Actuel = " + serv)
+        self.labAct.config(text=serv + " selected")
         
     def setAppDB(self, e = None):  
         self.close()
@@ -1797,44 +2122,138 @@ class modifyServerDialog(simpledialog.Dialog):
         self.server = StringVar()
         self.host = StringVar()
         self.port = StringVar()
-        self.servToRemove = ""
-        
+        self.caFile = StringVar()
+        self.keyFile = StringVar()
+        self.keyPass = StringVar()
+        self.indAccNoSec = IntVar()
+        self.indHostNoVal = IntVar()
+        self.indCertNoVal = IntVar()
+        self.indx509Cli = IntVar()
+        self.servToRemove = ""      
         simpledialog.Dialog.__init__(self, parent)
-
-        
+    
     def body(self, master):
         #pdb.set_trace()
         if "host" in self.servInfo[self.actServ]:
             self.host.set(self.servInfo[self.actServ]["host"])
         if "port" in self.servInfo[self.actServ]:
             self.port.set(self.servInfo[self.actServ]["port"])
+        if "tls" in self.servInfo[self.actServ]:
+            self.caFile.set(self.servInfo[self.actServ]["tls"]["caFile"])            
+            if "keyFile" in self.servInfo[self.actServ]["tls"]:
+                self.keyFile.set(self.servInfo[self.actServ]["tls"]["keyFile"])
+            if "keyPass" in self.servInfo[self.actServ]["tls"]:
+                self.keyPass.set(self.servInfo[self.actServ]["tls"]["keyPass"])
+            if "indAccNoSec" in self.servInfo[self.actServ]["tls"]:
+                self.indAccNoSec.set(self.servInfo[self.actServ]["tls"]["indAccNoSec"])                
+            if "indHostNoVal" in self.servInfo[self.actServ]["tls"]:
+                self.indHostNoVal.set(self.servInfo[self.actServ]["tls"]["indHostNoVal"])
+            if "indCertNoVal" in self.servInfo[self.actServ]["tls"]:
+                self.indCertNoVal.set(self.servInfo[self.actServ]["tls"]["indCertNoVal"])
+            if "indx509Cli" in self.servInfo[self.actServ]["tls"]:
+                self.indx509Cli.set(self.servInfo[self.actServ]["tls"]["indx509Cli"])
+                
         self.formframe = tk.Frame(master, borderwidth = 1, relief=RIDGE, padx=10, pady=10)
         self.formframe.grid(row=1)
         tk.Label(self.formframe, text="Server :").grid(row=0, column=0, sticky=E)
-        tk.Label(self.formframe, text= self.actServ, font=('Calibri 12 bold')).grid(row=0, column=1, sticky=W)
+        #tk.Label(self.formframe, text= self.actServ, font=('Calibri 12 bold')).grid(row=0, column=1, sticky=W)
         tk.Label(self.formframe, text= "Host : ").grid(row=1, column=0, sticky=E)
+        tk.Label(self.formframe, text= "Port : ").grid(row=2, column=0, sticky=E)    
+        tk.Label(self.formframe, text= "CA file : ").grid(row=3, column=0, sticky=E)
+        tk.Label(self.formframe, text= "Key file : ").grid(row=4, column=0, sticky=E)
+        tk.Label(self.formframe, text= "Key pass : ").grid(row=5, column=0, sticky=E)
+        
+        self.server.set(self.actServ)
+        serv = tk.Entry(self.formframe, textvariable = self.server, width=30)
+        serv.grid(row=0, column=1, sticky=W)        
         self.entry = tk.Entry(self.formframe, textvariable = self.host, width=30)
-        self.entry.grid(row=1, column=1)        
-        tk.Label(self.formframe, text= "Port : ").grid(row=2, column=0, sticky=E)
+        self.entry.grid(row=1, column=1)      
+        Hovertip(self.entry," Host name or ip address. ")
         port = tk.Entry(self.formframe, textvariable = self.port, width=10)
-        port.grid(row=2, column=1, sticky=W)        
+        port.grid(row=2, column=1, sticky=W)
+        Hovertip(port," Communication port.\n 27017 = MongoDB default.")
+        ca = tk.Entry(self.formframe, textvariable = self.caFile, width=30)
+        ca.grid(row=3, column=1, sticky=W)
+        butCA = ttk.Button(self.formframe, text="...", command=self.selFCA, width=3)
+        butCA.grid(row=3, column=2, pady=5, padx=5)         
+        Hovertip(ca," Certificate authority (CA).")
+        
+        key = tk.Entry(self.formframe, textvariable = self.keyFile, width=30)
+        key.grid(row=4, column=1, sticky=W)
+        Hovertip(key," Certificate key file (private key)\n Required for self-signed certificate as x509 auth.")
+        butFK = ttk.Button(self.formframe, text="...", command=self.selFK, width=3)
+        butFK.grid(row=4, column=2, pady=5, padx=5)        
+
+        passw = tk.Entry(self.formframe, textvariable = self.keyPass, width=30)
+        passw.grid(row=5, column=1, sticky=W)
+        Hovertip(passw," Passphrase to decrypt private key.")
+        #port = tk.Entry(self.formframe, textvariable = self.indAccNoSec, width=10)
+        #port.grid(row=6, column=1, sticky=W)
+        chkInsec = ttk.Checkbutton(
+            self.formframe,
+            text="tls Insecure",
+            variable=self.indAccNoSec,
+            onvalue=1,
+            offvalue=0)
+        chkInsec.grid(row=6, column=1, sticky=tk.W, padx=0, pady=3)
+        Hovertip(chkInsec," This includes tlsAllowInvalidHostnames and tlsAllowInvalidCertificates.\n Ex. x509: certificate signed by unknown authority. ")
+        chkInsec = ttk.Checkbutton(
+            self.formframe,
+            text="tlsAllowInvalidHostnames",
+            variable=self.indHostNoVal,
+            onvalue=1,
+            offvalue=0)
+        chkInsec.grid(row=7, column=1, sticky=tk.W, padx=0, pady=3)
+        Hovertip(chkInsec," Disable the validation of the hostnames in the certificate presented by the mongod/mongos instance. ")
+        chkInsec = ttk.Checkbutton(
+            self.formframe,
+            text="tlsAllowInvalidCertificates",
+            variable=self.indCertNoVal,
+            onvalue=1,
+            offvalue=0)
+        chkInsec.grid(row=8, column=1, sticky=tk.W, padx=0, pady=3)
+        Hovertip(chkInsec," Disable the validation of the server certificates. ")  
+        chkx509 = ttk.Checkbutton(
+            self.formframe,
+            text="x509 client authenticate ",
+            variable=self.indx509Cli,
+            onvalue=1,
+            offvalue=0)
+        chkx509.grid(row=9, column=1, sticky=tk.W, padx=0, pady=3)
+        Hovertip(chkx509," Authenticate client with a x.509 Certificate. ")
         
         butframe = tk.Frame(self.formframe, padx=10, pady=10)
-        butframe.grid(row=3, column=0, columnspan=2) 
+        butframe.grid(row=10, column=0, columnspan=3) 
         buttonC = ttk.Button(butframe, text="Add server", command=self.addServer, width=15)
         buttonC.grid(row=0, column=0, pady=5, padx=5) 
         buttonC = ttk.Button(butframe, text="Remove server", command=self.removeServer, width=15)
         buttonC.grid(row=0, column=1, pady=5, padx=5) 
 
-
+    def selFK(self):
+        file_path = filedialog.askopenfilename( title="Select Certificat key file")
+        if file_path:
+            self.keyFile.set(file_path)
+    def selFCA(self):
+        file_path = filedialog.askopenfilename( title="Select Certificat authority file")
+        if file_path:
+            self.caFile.set(file_path)
+        
     def addServer(self):
-        serv = tk.Entry(self.formframe, textvariable = self.server, width=10)
-        serv.grid(row=0, column=1, sticky=W)
+
+        self.server.set("")
+        self.host.set("")
         self.port.set("27017")
+        self.keyFile.set("")
+        self.caFile.set("")
+        self.keyPass.set("")
+        self.indAccNoSec.set(0) 
+        self.indHostNoVal.set(0) 
+        self.indCertNoVal.set(0) 
+        self.indx509Cli.set(0) 
+        
 
     def removeServer(self):
         answer = askyesno(title='Remove',
-
             message='Remove server : ' + self.actServ)
         if answer:
             self.servToRemove = self.actServ
@@ -1843,6 +2262,13 @@ class modifyServerDialog(simpledialog.Dialog):
             self.destroy()
     
     def validate(self):
+        if self.indAccNoSec.get() and (self.indHostNoVal.get() or self.indCertNoVal.get()):
+            messagebox.showinfo(
+                    title="Options selection",
+                    message="Options tlsInsecure and tlsAllowInvalidHostnames cannot be specified simultaneously.")
+            return False        
+        if self.server.get() != self.actServ:
+            self.servToRemove = self.actServ
         if self.server.get() != "":
             self.actServ = self.server.get()
         return True
@@ -1850,14 +2276,27 @@ class modifyServerDialog(simpledialog.Dialog):
     def apply(self):
         # Cette méthode est appelée lorsque le bouton "OK" est cliqué
         resObj = {"server": self.actServ, "host": self.host.get(), "port": self.port.get()}
+        if self.caFile.get():
+            resObj["caFile"] = self.caFile.get()        
+        if self.keyFile.get():
+            resObj["keyFile"] = self.keyFile.get()
+        if self.keyPass.get():
+            resObj["keyPass"] = self.keyPass.get()
+        if self.indAccNoSec.get():
+            resObj["indAccNoSec"] = self.indAccNoSec.get()
+        if self.indHostNoVal.get():
+            resObj["indHostNoVal"] = self.indHostNoVal.get()   
+        if self.indCertNoVal.get():
+            resObj["indCertNoVal"] = self.indCertNoVal.get()  
+        if self.indx509Cli.get():
+            resObj["indx509Cli"] = self.indx509Cli.get()             
         if self.servToRemove != "":
             resObj["delServ"] = self.servToRemove
         self.result = resObj
         
 def create_main_window():
 
-    win = tix.Tk()
-    win.minsize(480,300)
+    win = tk.Tk()
     #win.resizable(0, 0)
 
     l = int(win.winfo_screenwidth() / 2)

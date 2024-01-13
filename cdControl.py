@@ -105,6 +105,7 @@ class modalDialogWin():
         if show:
             self.showDialog()
         
+        
     def createDialog(self):
         self.pop = Toplevel(self.win)
         self.pop.title(self.title)
@@ -113,7 +114,8 @@ class modalDialogWin():
         if self.geometry and isinstance(self.geometry, str):
             self.pop.geometry(self.geometry)
         #self.pop.geometry("300x150")
-        self.pop.attributes('-toolwindow', True)  #Removing minimize/maximize buttons    
+        if os.name == 'nt' :
+            self.pop.attributes('-toolwindow', True)  #Removing minimize/maximize buttons    
         self.pop.bind('<Destroy>', self.closemodal)
         self.dframe = Frame(self.pop)  # not ttk
         self.dframe.grid_rowconfigure(0, weight=1)
@@ -168,7 +170,7 @@ class modalDialogWin():
     
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, width, height, cornerradius, padding, color, bg, command=None, cursor=None):
-        tk.Canvas.__init__(self, parent, borderwidth=0, 
+        tk.Canvas.__init__(self, parent, borderwidth=1, 
             relief="flat", highlightthickness=0, bg=bg, cursor="hand2")
         self.command = command
             
@@ -199,10 +201,10 @@ class RoundedButton(tk.Canvas):
 
 
     def _on_press(self, event):
-        self.configure(relief="sunken")
+        self.configure(relief="sunken", borderwidth=1)
 
     def _on_release(self, event):
-        self.configure(relief="raised")
+        self.configure(relief="raised", borderwidth=0)
         if self.command is not None:
             self.command()
             
@@ -864,6 +866,7 @@ class adminBDpass(logonBDdialog):
         self.userIdent = optionalObject[1][0]
         self.password = optionalObject[1][1]
         self.chkUser = IntVar()
+        self.chkPass = IntVar()
         logonBDdialog.__init__(self, parent)
  
     def body(self, master):
@@ -889,7 +892,7 @@ class adminBDpass(logonBDdialog):
         #pdb.set_trace()
         if self.userIdent:
             self.chkUser.set(1)        
-        self.chkPass = IntVar()
+        
         pass_check = ttk.Checkbutton(
             chxframe,
             text="Password",
@@ -897,8 +900,7 @@ class adminBDpass(logonBDdialog):
             onvalue=1,
             offvalue=0)
         pass_check.grid(row=0, column=1, sticky=tk.W, padx=5, pady=3)        
-        if self.password:
-            self.chkPass.set(1)      
+    
             
     def apply(self):
         # Cette méthode est appelée lorsque le bouton "OK" est cliqué
