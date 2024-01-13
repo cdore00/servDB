@@ -75,7 +75,7 @@ EOF
 )
 
 certutil -addstore root c:\tmp\rootca.cer
-
+certmgr.msc
 """
 import pdb
 #; pdb.set_trace()
@@ -428,8 +428,10 @@ class master_form_find():
         menu_file.add_separator()
         menu_file.add_command(label='Connection string...', command = self.showURI)
         menu_file.add_separator()
-        menu_file.add_command(label='Help...', command = self.showHelp)        
-        menuFichier.configure(menu=menu_file)            
+        menu_file.add_command(label='Help...', command = self.showHelp) 
+        
+        menuFichier.configure(menu=menu_file) 
+        self.menu_file = menu_file
         
         #menu_file.add_cascade(label='Help...', command = self.showHelp)  
         # Progress bar frame
@@ -518,22 +520,22 @@ class master_form_find():
         self.logsFilter = filterLogForm(tabLogs, self.keyWordLog, self.getLogs, self.nextLogList, self.win)
         self.gridLogsFrame = cdc.VscrollFrame(tabLogs)
         self.gridLogsFrame.pack(expand= True, fill=BOTH)            
-        #self.getLogs()
-
         
-        #self.hostFilter = filterForm(tabHost, self.keyWordLog, self.getHost)
         self.gridHostFrame = cdc.VscrollFrame(tabHost)
         self.gridHostFrame.pack(expand= True, fill=BOTH)        
-        #self.getHost()
+
 
     def afficherTitre(self, isConnected, servInfo):
         #pdb.set_trace()
         typ = "TLS" if "tls" in servInfo else ""
         if isConnected:
-            #pdb.set_trace()
             auth = self.data.data.command({"connectionStatus" : 1})
-            user = auth['authInfo']['authenticatedUsers'][0]['user']
-            self.win.title( self.actServ + " : " + typ + " Connected - " + user)
+            userObj = auth['authInfo']['authenticatedUsers'][0]
+            if 'external' in  userObj['db']:
+                self.userPass[0] = userObj['user']
+                self.menu_file.delete(2)
+                self.menu_file.delete(1)
+            self.win.title( self.actServ + " : " + typ + " Connected - " + self.userPass[0])
         else:
             self.win.title( self.actServ + " : " + typ + " Not connected.")
             
@@ -838,7 +840,7 @@ class master_form_find():
         slavelist = self.gridUsersFrame.interior.slaves()
         for elem in slavelist:
             elem.destroy() 
-        objMess = cdc.messageObj(self.gridUsersFrame)
+        objMess = cdc.messageObj(self.gridUsersFrame.interior)
         if not self.data.isConnect or self.data.data is None:
             return   
         try:                      
@@ -848,7 +850,7 @@ class master_form_find():
             self.usersDataList=list(res)
         except pymongo.errors.OperationFailure as ex1:
             objMess.showMess(ex1.details.get('errmsg', ''))
-            objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
+            objMess.addMess("\n\nUser with userAdmin role on database is required.")
             return
 
         
@@ -912,7 +914,7 @@ class master_form_find():
         for elem in slavelist:
             elem.destroy()
         #pdb.set_trace()
-        objMess = cdc.messageObj(self.gridRolesFrame)
+        objMess = cdc.messageObj(self.gridRolesFrame.interior)
         if not self.data.isConnect or self.data.data is None:
             return
         try:
@@ -922,7 +924,7 @@ class master_form_find():
             self.rolesDataList = list(res)
         except pymongo.errors.OperationFailure as ex1:
             objMess.showMess(ex1.details.get('errmsg', ''))
-            objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
+            objMess.addMess("\n\nUser with userAdmin role on database is required.")
             return
             
         gridRolesFrame = tk.Frame(self.gridRolesFrame.interior)
@@ -1712,15 +1714,17 @@ class editUserWin():
         # Création du menu user
         self.menuFichier = Menubutton(self.identFrame, text='User :', width='8', font= ('Segoe 9 bold'), borderwidth=2, relief = RAISED)  #, activebackground='lightblue'
         self.menuFichier.grid(row=0,column=0, sticky=tk.W)
-        menu_file = Menu(self.menuFichier, tearoff = 0)  
-        menu_file.add_command(label='Change password...', command = self.changePass) 
+        menu_file = Menu(self.menuFichier, tearoff = 0) 
+        self.Database.set(self.userData["db"])
+        if not "external" in self.Database.get():
+            menu_file.add_command(label='Change password...', command = self.changePass) 
         menu_file.add_command(label='Add user...', command = self.addUser) 
         menu_file.add_command(label='Remove user...', command = self.delete) 
         self.menuFichier.configure(menu=menu_file) 
 
         self.dbFrame = tk.Frame(self.formFrame)
         self.dbFrame.grid(row=2, column=0, sticky=tk.W, pady=3, padx=30)
-        self.Database.set(self.userData["db"])
+        
         ttk.Label(self.dbFrame, text="db :").grid(row=0, column=0, sticky=tk.E, padx=5, pady=3)
         ttk.Label(self.dbFrame, textvariable=self.Database).grid(row=0, column=1, sticky=tk.W)
         
