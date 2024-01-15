@@ -360,7 +360,7 @@ class filterLogForm(filterForm):
         self.chxCtx.set(0)
         self.chxMes.set(0)
         self.chxID.set(0)
-        self.win.objMainMess.clearMess()
+        self.objMainMess.clearMess()
         
 class master_form_find():
     def __init__(self, mainWin, *args, **kwargs):
@@ -397,6 +397,25 @@ class master_form_find():
 
     def quitter(self, e):
         self.win.quit
+
+    def readDBcolList(self):
+        self.DBlist = []
+        self.COLlist = {}
+        try:
+            dbs=self.data.DBconnect.list_database_names()
+            for db in BDSYSTEMLIST:
+                if db != "" and db in dbs:
+                    dbs.remove(db)   
+            #pdb.set_trace()
+            for db in dbs:
+                theDB = self.data.DBconnect[db]
+                self.COLlist[db] = theDB.list_collection_names()
+            dbs.insert(0, "")
+            self.DBlist = dbs
+        except pymongo.errors.OperationFailure as ex1:
+            self.objMainMess.showMess(ex1.details.get('errmsg', ''))
+            #objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
+            return        
     
     def setApp(self, serv, userPass = None):
 
@@ -439,8 +458,8 @@ class master_form_find():
         #self.pbFrame.pack(fill=X)
 
         # Zone de message
-        self.win.objMainMess = cdc.messageObj(self.win, height=25)
-        self.win.objMainMess.showMess("Connecting...")
+        self.objMainMess = cdc.messageObj(self.win, height=25)
+        self.objMainMess.showMess("Connecting...")
         isConnected = False
 
         servInfo = self.setDefault()
@@ -454,12 +473,12 @@ class master_form_find():
 
         self.userPass = userPass
         isConnected = self.data.connectTo(self.actServ, userPass, servInfo)
-        self.win.objMainMess.clearMess() 
+        self.objMainMess.clearMess() 
         if userPassword:    # New authentication
             if isConnected:
-                self.win.objMainMess.showMess(str(userPass[0]) + " connected on " + self.actServ, "I")
+                self.objMainMess.showMess(str(userPass[0]) + " connected on " + self.actServ, "I")
             else:
-                self.win.objMainMess.showMess(str(userPass[0]) + " not connected.")  
+                self.objMainMess.showMess(str(userPass[0]) + " not connected.")  
         self.afficherTitre(isConnected, servInfo)
         
         tmpFrame.pack_forget()
@@ -472,7 +491,7 @@ class master_form_find():
         #pdb.set_trace()
         dt = ttk.Label(dbForm, text= "Database : ", font=('Calibri 12 bold'))
         dt.grid( row=0, column=0, padx=5, sticky="WE")
-        dbList = self.data.dbList.copy()
+        dbList = self.DBlist.copy()
         if dbList:
             dbList[0] = "admin"
             dbList.insert(0, "All")
@@ -536,6 +555,7 @@ class master_form_find():
                 self.menu_file.delete(2)
                 self.menu_file.delete(1)
             self.win.title( self.actServ + " : " + typ + " Connected - " + self.userPass[0])
+            self.readDBcolList()
         else:
             self.win.title( self.actServ + " : " + typ + " Not connected.")
             
@@ -575,7 +595,7 @@ class master_form_find():
             objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
             return
         except Exception as ex:
-            self.win.objMainMess.showMess(str(ex))
+            self.objMainMess.showMess(str(ex))
             return        
         #cle = list(res)
         #print("cle= " + str(cle))
@@ -613,39 +633,41 @@ class master_form_find():
         """
         if not self.data.isConnect or self.data.data is None:
             return   
-
+        objMess = cdc.messageObj(self.gridLogsFrame.interior)
         try:
             db = self.data.data
             res = db.command(({ "getLog": "global" }))
         except pymongo.errors.OperationFailure as ex1:
-            self.win.objMainMess.showMess(ex1.details.get('errmsg', ''))
+            objMess.showMess(ex1.details.get('errmsg', ''))
+            objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
+            self.gridLogsFrame.scroll(0)
             return
         except Exception as ex:
-            self.win.objMainMess.showMess(str(ex))
+            objMess.showMess(str(ex))
             return 
-            
+        
         self.logsDataList=list(res["log"])
         self.logCnt = len(self.logsDataList)
         self.rangeLog = self.logCnt
         self.foundLog = 0
         #pdb.set_trace()
         self.nextLogList(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu, chxCtx = chxCtx, chxMes = chxMes, chxID = chxID)
-
+        
     def nextLogList(self, sRes = None, sEqu = None, cRes = None, cEqu = None, chxCtx = None, chxMes = None, chxID = None):
         if self.logsDataList is None:
             self.getLogs(sRes = sRes, sEqu = sEqu, cRes = cRes, cEqu = cEqu, chxCtx = chxCtx, chxMes = chxMes, chxID = chxID)
             return
             
         self.filterSearch = False
-        self.win.objMainMess.clearMess()
+        self.objMainMess.clearMess()
         self.logsFilter.affFound()
         if sRes or cRes or (self.keyWordLog and (chxCtx or chxMes or chxID)):
             if not self.keyWordLog.get() and (chxCtx or chxMes or chxID):
-                self.win.objMainMess.showMess("What keyword is being searched for.")
+                self.objMainMess.showMess("What keyword is being searched for.")
                 self.keyword.focus()
                 return
             if chxID and not self.keyWordLog.get().isnumeric():
-                self.win.objMainMess.showMess("Keyword must be numeric to search for an id.")
+                self.objMainMess.showMess("Keyword must be numeric to search for an id.")
                 return
             self.filterSearch = True
             
@@ -772,6 +794,7 @@ class master_form_find():
     def setServerConfFile(self, param = None):
         #print(str(param))
         initInfo = (self.readConfFile())
+        #pdb.set_trace()
         if param["server"] is None:     # Delete server
             #pdb.set_trace()
             del initInfo[param["delServ"]]
@@ -836,7 +859,7 @@ class master_form_find():
         return actInfo    
             
     def getUsers(self, userNameDB = None, pos = None):
-        #pdb.set_trace()
+        #db.set_trace()
         slavelist = self.gridUsersFrame.interior.slaves()
         for elem in slavelist:
             elem.destroy() 
@@ -851,6 +874,7 @@ class master_form_find():
         except pymongo.errors.OperationFailure as ex1:
             objMess.showMess(ex1.details.get('errmsg', ''))
             objMess.addMess("\n\nUser with userAdmin role on database is required.")
+            self.gridUsersFrame.scroll(0)
             return
 
         
@@ -899,13 +923,13 @@ class master_form_find():
         res = app.showAdminUserBD(self.userPass)   
         res = res[0]
         if not res[0] or not res[1]:
-            self.win.objMainMess.showMess("User name and password must be non-empty.")
+            self.objMainMess.showMess("User name and password must be non-empty.")
             return
         if res:
             db = self.data.data
             result = db.command({"createUser": res[0], "pwd": res[1], "roles": [ {'role': 'root', 'db': 'admin'} ] } )
             if result["ok"]:
-                self.win.objMainMess.showMess("Root user created : " + res[0], "I") 
+                self.objMainMess.showMess("Root user created : " + res[0], "I") 
                 self.getUsers()
     
     def getRoles(self, userRole = None, pos = None):
@@ -925,6 +949,7 @@ class master_form_find():
         except pymongo.errors.OperationFailure as ex1:
             objMess.showMess(ex1.details.get('errmsg', ''))
             objMess.addMess("\n\nUser with userAdmin role on database is required.")
+            self.gridRolesFrame.scroll(0)
             return
             
         gridRolesFrame = tk.Frame(self.gridRolesFrame.interior)
@@ -965,7 +990,7 @@ class master_form_find():
         db = self.data.data
         result = db.command({"createRole": "Read", "privileges": [{"resource": {"db": "", "collection": ""}, "actions": ["find", "listCollections"]}], "roles": []})
         if result["ok"]:
-            self.win.objMainMess.showMess("Role created : 'Read'" , "I") 
+            self.objMainMess.showMess("Role created : 'Read'" , "I") 
             self.getRoles()
 
     def editRole(self, index = None, pos = None):
@@ -1130,7 +1155,7 @@ class editRoleWin():
                 self.refreshRoles(res, notShow = True)             
 
     def addRole(self):
-        self.objMess.addMess("\nAdd role to role: " + self.roleName, "I")
+        self.objMess.addMess("\nAdd role to roles.", "I")
         self.addRoleFlag = True
 
     def delRole(self):
@@ -1168,7 +1193,7 @@ class editRoleWin():
         self.roleData["privileges"] = []
         self.setPriv()
         
-        dbList = self.data.dbList.copy()
+        dbList = self.mainObj.DBlist.copy()
         dbList[0] = "admin"
         self.comboDatabase = ttk.Combobox(
             self.formFrame,
@@ -1342,7 +1367,7 @@ class editRoleWin():
         cluster_check.grid(row=3, column=1, sticky=tk.W, padx=5, pady=3) 
          
         
-        dbList = self.data.dbList.copy()
+        dbList = self.mainObj.DBlist.copy()
         # self.Database.get() != self.data.dbase:
 
         objResBDFrame = tk.Frame(self.formFrame)
@@ -1360,8 +1385,8 @@ class editRoleWin():
         self.comboBD.grid( row=0, column=1, sticky=tk.W)
         
         if self.roleData["privileges"] and "db" in self.roleData["privileges"][0]["resource"]:
-            if self.roleData["privileges"][0]["resource"]["db"] in self.data.dbList:
-                self.comboBD.current( self.data.dbList.index(self.roleData["privileges"][0]["resource"]["db"]) )
+            if self.roleData["privileges"][0]["resource"]["db"] in self.mainObj.DBlist:
+                self.comboBD.current( self.mainObj.DBlist.index(self.roleData["privileges"][0]["resource"]["db"]) )
         else:
             if self.roleData["privileges"] and "cluster" in self.roleData["privileges"][0]["resource"]:
                 self.clusterRes.set(1)
@@ -1430,7 +1455,8 @@ class editRoleWin():
 
         colList = []
         if self.comboBD.get() not in BDSYSTEMLIST:          # Si valeur "bd" n'est pas dans la liste system
-            colList = self.data.colList[self.comboBD.get()].copy()
+            #colList = self.data.colList[self.comboBD.get()].copy()
+            colList = self.mainObj.COLlist[self.comboBD.get()].copy()
         if not "" in colList:
             colList.insert(0,"")
         self.comboCol.config(values=colList) 
@@ -1450,7 +1476,7 @@ class editRoleWin():
                 self.comboCol.current(0)
             privObj = {"db" : self.comboBD.get(), "collection" : self.comboCol.get()}
         else:
-            dbList = self.data.dbList.copy()
+            dbList = self.mainObj.DBlist.copy()
             self.comboBD.config(values=dbList.copy())      
         if self.clusterRes.get():                        # Si privilege Cluster
             dbList = []
@@ -1470,7 +1496,7 @@ class editRoleWin():
                 if not priv["resource"]["db"] in dbList:
                     dbList.append(priv["resource"]["db"])
                     self.comboBD.config(values=dbList)
-                if not priv["resource"]["db"] in self.data.dbList and priv["resource"]["db"] == self.comboBD.get():
+                if not priv["resource"]["db"] in self.mainObj.DBlist and priv["resource"]["db"] == self.comboBD.get():
                     colList.append(priv["resource"]["collection"])
                     self.comboCol.config(values=colList)
             else:
@@ -1584,7 +1610,7 @@ class editUserWin():
         self.newUserPass.grid(row=1, column=1, sticky=tk.W)
         ttk.Button(self.butFrame, text='Save', command=self.createUser).grid(row=0, column=0)  
         self.changeDatabase()
-        dbList = self.data.dbList.copy()
+        dbList = self.mainObj.DBlist.copy()
         dbList.append("$external")
         dbList[0] = "admin"
         self.comboDatabase = ttk.Combobox(
@@ -1773,11 +1799,12 @@ class rolesSelect():
         self.comboRole.config(values=self.mainObj.rolesNamesList.copy())
         self.comboRole.unbind("<<ComboboxSelected>>")
         self.comboRole.current(0)
-        bdList = self.data.dbList.copy()
+        bdList = self.mainObj.DBlist.copy()
         bdList[0]='admin'
         self.comboBD.config(values=bdList)
         self.comboBD.unbind("<<ComboboxSelected>>")
         self.menuBut.destroy()
+        self.menuRole = None
         self.addRoleFlag = True
         self.parent.addRole()
         
@@ -1795,7 +1822,8 @@ class rolesSelect():
         self.comboBD.config(values=[])
         self.comboRoleText.set("")
         self.comboBDText.set("") 
-        self.menuRole.delete(1)
+        if not self.menuRole is None:
+            self.menuRole.delete(1)
 
     def delRole(self):
         self.parent.delRole()
@@ -1874,7 +1902,7 @@ class rolesSelect():
             width = 22,
             state="readonly",
             values = dbList.copy()
-            )   #self.data.dbList
+            ) 
         if dbList:
             self.comboBD.current(0)
         self.comboBD.bind("<<ComboboxSelected>>", self.setRole)
@@ -1900,11 +1928,16 @@ class dbaseObj():
               
         uri = """mongodb://%s:%s@"""  % (userPass[0], userPass[1])        
         
-        uri += self.hostName + ":" + port + "/?authSource=admin"
+        uri += self.hostName
+        if port:
+            uri += ":" + port 
+            
+        uri += "/?authSource=admin"
+        isx509auth = False
         if "tls" in servInfo:
             if "indx509Cli" in servInfo["tls"]:
                 uri = "mongodb://" + self.hostName + ":" + port + "/?authMechanism=MONGODB-X509&authSource=%24external"
-                
+                isx509auth = True
             uri += "&tls=true&tlsCAFile=" + servInfo["tls"]["caFile"]
             if "keyFile" in servInfo["tls"]:
                 uri += "&tlsCertificateKeyFile=" + servInfo["tls"]["keyFile"]
@@ -1922,14 +1955,20 @@ class dbaseObj():
         else:
             uri += "&tls=false" 
             
-        if userPass[0] == "":
+        if not isx509auth and userPass[0] == "":
             uri = "mongodb://" + self.hostName + ":" + port + "/"
-   
+
+        #uri = """mongodb+srv://%s:%s@"""  % (userPass[0], userPass[1])        
+        #uri += self.hostName
+        #Atlas connection
+        #uri = "mongodb+srv://cdore00:925045@cluster0.qlggbka.mongodb.net/?retryWrites=true&w=majority"
+
         return uri
     
     def connectTo(self, Server = LOCALSERV, userPass = None, servInfo = None):
         #pdb.set_trace()
         
+        #print(str(servInfo))
         self.dbase = 'admin'
         self.uri = self.getURI( userPass, servInfo)
             
@@ -1949,15 +1988,6 @@ class dbaseObj():
             #pdb.set_trace()
             #auth = self.DBconnect["admin"].command({"connectionStatus" : 1})
             if "ok" in self.DBconnect.server_info():
-                dbs=self.DBconnect.list_database_names()
-                for db in BDSYSTEMLIST:
-                    if db != "" and db in dbs:
-                        dbs.remove(db)                
-                for db in dbs:
-                    theDB = self.DBconnect[db]
-                    self.colList[db] = theDB.list_collection_names()
-                dbs.insert(0, "")
-                self.dbList = dbs
                 self.data = self.DBconnect[self.dbase]
                 self.isConnect = True
             else:
@@ -2133,6 +2163,7 @@ class modifyServerDialog(simpledialog.Dialog):
         self.indHostNoVal = IntVar()
         self.indCertNoVal = IntVar()
         self.indx509Cli = IntVar()
+        self.indAddServer = 0
         self.servToRemove = ""      
         simpledialog.Dialog.__init__(self, parent)
     
@@ -2254,7 +2285,7 @@ class modifyServerDialog(simpledialog.Dialog):
         self.indHostNoVal.set(0) 
         self.indCertNoVal.set(0) 
         self.indx509Cli.set(0) 
-        
+        self.indAddServer = 1
 
     def removeServer(self):
         answer = askyesno(title='Remove',
@@ -2271,7 +2302,7 @@ class modifyServerDialog(simpledialog.Dialog):
                     title="Options selection",
                     message="Options tlsInsecure and tlsAllowInvalidHostnames cannot be specified simultaneously.")
             return False        
-        if self.server.get() != self.actServ:
+        if not self.indAddServer and self.server.get() != self.actServ:
             self.servToRemove = self.actServ
         if self.server.get() != "":
             self.actServ = self.server.get()
