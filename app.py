@@ -1,43 +1,33 @@
 import random
 import string
 import cherrypy
-import dropbox, base64
+#import certifi
+import ssl
 
-#Import for chat
-from datetime import datetime
-import os, time, urllib.parse
-from socket import gethostname, gethostbyname
-from random import random
-userOnPage = []
-connectUser = []
-
-#import rpdb
+#pdb expects a usable terminal with a TTY.
+#docker run -it foo
 import pdb
-#; pdb.set_trace()
+#pdb.set_trace()
 import sys, os, io, re, cgi, csv, urllib.parse
 from urllib.parse import urlparse, parse_qs
 from sys import argv
-
+#from datetime import datetime  , time
 # JSON
 from bson import ObjectId
 from bson.json_util import dumps
 from bson.json_util import loads
 import json
 
-from os.path import abspath  # For upload
-
-LOCAL_HOST = 'http://127.0.0.1'
+LOCAL_HOST = 'http://127.0.0.1:3000/'
 HOSTserv = LOCAL_HOST
 HOSTclient = 'http://localhost:8080/'
 global HOSTcors
 HOSTcors = 'https://cdore00.github.io'
-#HOSTcors = 'http://cdore.servehttp.com'
-DATA_DIR = ""
-IMG_DIR = ""
+#'*'
+#'https://cdore00.github.io'
 
 #global logPass 
 logPass = ""
-
 if os.getenv('PINFO') is not None:
     logPass = os.environ['PINFO']
 
@@ -48,10 +38,9 @@ if os.getenv('HOST') is not None:
 import pymongo
 from pymongo import MongoClient
 
-dbase = "resto"
+dbase = "golf"
 port = 27017
 uri = "mongodb://localhost"
-#pdb.set_trace()
 if os.environ.get('MONGODB_USER'):
     if os.environ.get('MONGODB_PORT'):
         port = int(os.environ['MONGODB_PORT'])
@@ -60,58 +49,37 @@ if os.environ.get('MONGODB_USER'):
     domain = urllib.parse.quote_plus(os.environ['MONGODB_SERVICE'])
     #dbase = urllib.parse.quote_plus(os.environ['MONGODB_DATABASE'])
     uri = "mongodb://%s:%s@%s/%s?authSource=admin" % (user, passw, domain, "admin")
-    #pdb.set_trace()
+    #uri = "mongodb://%s:%s@%s/%s?ssl=true&ssl_cert_reqs=CERT_NONE&retryWrites=true&w=majority" % (user, passw, domain, dbase)
     if 'tls' in argv and os.environ.get('MONGODB_CA'):
         argv.remove('tls')
         uri += "&tls=true&tlsCAFile=" + (os.environ['MONGODB_CA'])
         if os.environ.get('MONGODB_CERT'):
             uri += "&tlsCertificateKeyFile=" + (os.environ['MONGODB_CERT'])
         uri += "&tlsInsecure=true"
-    #uri = "mongodb://%s:%s@%s/%s?authMechanism=SCRAM-SHA-1, authSource=admin" % (user, passw, domain, dbase)
-    DATA_DIR = "/data/"
-    IMG_DIR = DATA_DIR + "lou/photos/"
-    #IMG_URL = HOSTclient + "/photos/"
     if domain == "192.168.10.11":
-        HOSTclient = 'https://loupop.ddns.net/'
-        HOSTserv = 'https://loupop.ddns.net/pyt/'
+        HOSTclient = 'https://cdore.ddns.net/'
+        HOSTserv = 'https://cdore.ddns.net/pyt/'
 
-IMG_URL = HOSTclient + "/photos/"
-print("HOSTclient=" + HOSTclient + " IMG_URL=" + IMG_URL)
+    print("HOSTclient=" + HOSTclient)
 
-#pdb.set_trace()
-#uri = "mongodb://admin:111@192.168.2.239:27017/?authSource=admin&tls=true&tlsCAFile=D:/data/db/CRT/ca.crt&tlsCertificateKeyFile=D:/data/db/CRT/client.pem&tlsInsecure=true"
-#uri = "mongodb://cdore:925@cdore.servehttp.com:27017/?authSource=admin&tls=true&tlsCAFile=D:/data/db/CRT/ca.crt&tlsCertificateKeyFile=D:/data/db/CRT/client.pem&tlsInsecure=true"
-
+#DBclient = MongoClient(uri, port, tlsCAFile=certifi.where())  
 DBclient = MongoClient(uri, port)
+#ssl_cert_reqs=ssl.CERT_NONE 
 data = DBclient[dbase]
-#pdb.set_trace()
-print("uri= " + uri + "  Port= " + str(port))
+print("uri= " + uri)
 print(str(data))
 # END MongoDB
-
-""" App functions """
-import recFunc as gf
+#pdb.set_trace()
+""" Golf functions """
+import golfFunc as gf
 import logFunc as lf
-import chatFunc as cf
-cf.dataBase = data
-cf.sendChatCode = gf.sendChatCode
 gf.dataBase = data
-gf.DATA_DIR = DATA_DIR
 gf.cherry = cherrypy
 gf.usepdb = -1
-lf.init("lou.access.log")
-if (IMG_DIR != "" ):
-    gf.IMG_DIR = IMG_DIR
-    gf.IMG_URL = IMG_URL
-else:
-    IMG_DIR = gf.IMG_DIR
-    IMG_URL = gf.IMG_URL
-    
 lf.dataBase = data
 lf.log_Info = gf.log_Info
 lf.CLOUDpass = None
-
-
+lf.init("golf.access.log")
 if os.environ.get('CPASS'):
     lf.CLOUDpass = os.environ['CPASS']
 
@@ -127,17 +95,9 @@ def exception_handler(status, message, traceback, version):
     return logInfo
 
 lf.except_handler = gf.except_handler
-cf.except_handler = gf.except_handler
 
-def millis():
-    """ returns the elapsed milliseconds (1970/1/1) since now """
-    obj = time.gmtime(0)
-    epoch = time.asctime(obj)
-    return round(time.time()*1000)
-
-    
 class webServer(object):
-    """ Serve Recettes functions """
+    """ Serve Golf functions """
     def __init__(self):
         gf.logPass = logPass
         #print('logPass=' + logPass)
@@ -147,66 +107,18 @@ class webServer(object):
         randId = ''.join(random.sample(string.hexdigits, 8))
         return 'Call ID: ' + randId
 
-    # Chat functions
     @cherrypy.expose
-    def confirmMail(self, info = False):
-        data = json.loads(info)
-        return cf.sendConfirmMail(self, data)
-
-    @cherrypy.expose
-    def confirmCode(self, info = False):
-        data = json.loads(info)
-        return cf.validChatUserCode(data)
-
-    @cherrypy.expose
-    #@cherrypy.tools.json_in()
-    #@cherrypy.tools.json_out()
-    def updChat(self, info = False):
-        data = json.loads(info)
-        return cf.updChat(self, data)
-
-    @cherrypy.expose
-    def chat(self, lastTime, cID, uID, coID, rN):
-        return cf.chat(self, lastTime, cID, uID, coID, rN)
-
-
-    @cherrypy.expose
-    def fetchHisto(self, lastTime, cID):
-        return cf.fetchHisto(self, lastTime, cID)
-
-    #FIN Chat functions
-    
-    @cherrypy.expose
-    def getCat(self, info = False):
+    def getRegions(self, info = False):
+        #pdb.set_trace()
         """ cookies = cherrypy.request.cookie        
         cookie = cherrypy.response.cookie
         cookie['tcookie'] = 'testcookieValue'
-        cookie['tcookie']['max-age'] = 3600 """     
-        #pdb.set_trace()
-        col = gf.dataBase.categorie
+        cookie['tcookie']['max-age'] = 3600 """
+
+        col = gf.dataBase.regions
         docs = col.find({})
         res = dumps(docs)
         return res
-
-    @cherrypy.expose
-    def identUser(self, info = False, user = False, passw = False):
-        if user:
-           info = "user=" + user + "&pass=" + passw
-        cookieOut = cherrypy.response.cookie
-        param = parse_qs(urlparse('url?' + info).query)
-        return gf.authUser(param, self, cookieOut)
-
-    @cherrypy.expose
-    def getPass(self, info = False):
-        param = parse_qs(urlparse('url?' + info).query)
-        return gf.getPass(param, self)
-
-    @cherrypy.expose
-    def confInsc(self, data = False):
-        pos = cherrypy.request.query_string.find('?')
-        info = cherrypy.request.query_string[pos+1:]
-        param = parse_qs(urlparse('url?' + info).query)
-        return gf.confInsc(param, HOSTclient, self)
 
     @cherrypy.expose
     def getFav(self, info = False):
@@ -224,113 +136,55 @@ class webServer(object):
         return gf.searchResult(param, self)
 
     @cherrypy.expose
-    def getRecList(self, info = False):
+    def getClubList(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
-        return gf.getRecList(param, self)
+        return gf.getClubList(param, self)
 
     @cherrypy.expose
-    def getRecette(self, info = False):
+    def getClubData(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
-        return gf.getRecette(param, self)
+        return gf.getClubData(param, self)
 
     @cherrypy.expose
-    def saveRecet(self, info = False):
+    def getClubParc(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
-        return gf.saveRecet(param, self)
+        return gf.getClubParc(param, self)
 
     @cherrypy.expose
-    def delRecet(self, info = False):
+    def getParcInfo(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
-        return gf.delRecet(param, self)
-
-
-    @cherrypy.expose
-    def sendRecetMail(self, info = False):
-        param = parse_qs(urlparse('url?' + info).query)
-        return gf.sendRecetMail(param, self)    
-
-
-    @cherrypy.expose
-    def addFile(self, upfile, type):
-        #pdb.set_trace()
-        if (hasattr(upfile, 'file')):    #File type image   
-            upload_filename = upfile.filename
-            upload_file = os.path.normpath(
-                os.path.join(gf.IMG_DIR, upload_filename))
-            size = 0
-            with open(upload_file, 'wb') as out:
-                while True:
-                    data = upfile.file.read(8192)
-                    if not data:
-                        break
-                    out.write(data)
-                    size += len(data)
-            out = ""
-            print('1 - IMG_DIR=' + IMG_DIR + ' upload_file=' + upload_file + ' IMG_URL=' + IMG_URL + ' HOSTclient' + HOSTclient)
-            
-        else:    # Camera image Base64 PNG
-            upload_filename = getattr(upfile, 'filename', str(ObjectId()) + ".png")
-            fileData = getattr(upfile, 'file', upfile)
-            upload_file = os.path.normpath(
-                os.path.join(gf.IMG_DIR, upload_filename))
-            content = fileData.split(';')[1]
-            image_encoded = content.split(',')[1]
-            with open(upload_file, 'wb') as out:
-                out.write(base64.decodebytes(image_encoded.encode('utf-8')))
-            out = ""
-            print('2 - IMG_DIR=' + IMG_DIR + ' upload_file=' + upload_file + ' IMG_URL=' + IMG_URL + ' HOSTclient' + HOSTclient)
-
-        file_to = IMG_URL + upload_filename
-
-        return dumps({"ok": 1, "url": file_to})
-
+        return gf.getParcInfo(param, self)
         
     @cherrypy.expose
-    def getPassForm(self):
-        return gf.getPassForm(self)
-
-    @cherrypy.expose
-    def savePass(self, info = False):
+    def setGolfGPS(self, info = False):
         gf.cookie = cherrypy.request.cookie
         param = parse_qs(urlparse('url?' + info).query)
-        return gf.savePassword(param, self)
+        return gf.setGolfGPS(param, self)
 
     @cherrypy.expose
-    def getUser(self, info = False):
+    def saveClub(self, info = False):
         gf.cookie = cherrypy.request.cookie
         param = parse_qs(urlparse('url?' + info).query)
-        return gf.getUserInfo(param, self)
-
-    @cherrypy.expose
-    def updUser(self, info = False):
-        param = parse_qs(urlparse('url?' + info).query)
-        return gf.updateUser(param, self)
-
-    @cherrypy.expose
-    def addUserIdent(self, info = False):
-        param = parse_qs(urlparse('url?' + info).query)
-        return gf.addUserIdent(param, HOSTclient, HOSTserv, self)
-     
-    @cherrypy.expose
-    def delUser(self, info = False):
-        param = parse_qs(urlparse('url?' + info).query)
-        return gf.delUser(param, self)
-     
-    @cherrypy.expose
-    def listNews(self, info = False):
-        param = parse_qs(urlparse('url?' + info).query)
-        return gf.listNews(param, self)
+        return gf.saveClub(param, self)
         
     @cherrypy.expose
-    def getNews(self, info = False):
+    def getClubParcTrous(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
-        return gf.getNews(param, self)
+        return gf.getClubParcTrous(param, self)
+        
+    @cherrypy.expose
+    def getBloc(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.getBloc(param, self)
 
     @cherrypy.expose
-    def writeNews(self, info = False):
+    def identUser(self, info = False, user = False, passw = False):
+        if user:
+           info = "user=" + user + "&pass=" + passw
+        cookieOut = cherrypy.response.cookie
         param = parse_qs(urlparse('url?' + info).query)
-        return gf.writeNews(param, self)
-        
+        return gf.authUser(param, self, cookieOut)
+
     @cherrypy.expose
     #@cherrypy.tools.json_in()
     def listLog(self, passw = ""): 
@@ -347,6 +201,136 @@ class webServer(object):
         return gf.showLog(param)        
 
     @cherrypy.expose
+    def getUser(self, info = False):
+        gf.cookie = cherrypy.request.cookie
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.getUserInfo(param, self)
+
+    @cherrypy.expose
+    def saveUser(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.saveUser(param, self)
+
+    @cherrypy.expose
+    def getPassForm(self):
+        return gf.getPassForm(self)
+
+    @cherrypy.expose
+    def savePass(self, info = False):
+        gf.cookie = cherrypy.request.cookie
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.savePassword(param, self)
+        
+    @cherrypy.expose
+    def addUserIdent(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.addUserIdent(param, HOSTclient, HOSTserv, self)
+
+    @cherrypy.expose
+    def updUser(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.updateUser(param, self)
+        
+    @cherrypy.expose
+    def confInsc(self, data = False):
+        pos = cherrypy.request.query_string.find('?')
+        info = cherrypy.request.query_string[pos+1:]
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.confInsc(param, HOSTclient, self)
+
+    @cherrypy.expose
+    def getPass(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.getPass(param, self)        
+    
+    @cherrypy.expose
+    def updateUser(self, info = False):
+        gf.cookie = cherrypy.request.cookie
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.updateUser(param, self)
+    
+    @cherrypy.expose
+    def savePassword(self, info = False):
+        gf.cookie = cherrypy.request.cookie
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.savePassword(param, self)        
+
+    @cherrypy.expose
+    def endDelGame(self, info = False):
+        gf.cookie = cherrypy.request.cookie
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.endDelGame(param, self)    
+
+    @cherrypy.expose
+    def getGolfGPS(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.getGolfGPS(param, self)
+
+    @cherrypy.expose
+    def getGame(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.getGame(param, self)        
+
+    @cherrypy.expose
+    def countUserGame(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.countUserGame(param, self)
+
+    @cherrypy.expose
+    def getGameList(self, info = False, user = False, parc = False, skip = False, limit = False, is18 = False, date = False, tele = False, rand = False):
+        #pdb.set_trace() 
+        if user and isinstance(parc, (list)):
+            pos = cherrypy.request.query_string.find('?')
+            info = cherrypy.request.query_string[pos+1:]
+        elif user:
+            info = "user=" + user + "&parc=" + parc + "&skip=" + skip + "&limit=" + limit + "&is18=" + is18  + "&date=" + date + "&tele=" + tele
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.getGameList(param, cherrypy)
+        
+    @cherrypy.expose
+    def updateGame(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.updateGame(param, self)
+        
+    @cherrypy.expose
+    def getGameTab(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.getGameTab(param, self)
+
+    @cherrypy.expose
+    def endDelGame(self, info = False):
+        gf.cookie = cherrypy.request.cookie
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.endDelGame(param, self)
+        
+    @cherrypy.expose
+    def delClub(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.delClub(param, self)
+
+    @cherrypy.expose
+    def setPosition(self, info = False, data= False):
+        if (data):
+           info = "data=" + data
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.setPosition(param, self)
+
+    @cherrypy.expose
+    def delPosition(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.delPosition(param, self)
+
+    @cherrypy.expose
+    def setBallPosition(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.setBallPosition(param, self)
+
+    @cherrypy.expose
+    def getPosition(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return gf.getPosition(param, self)
+
+    @cherrypy.expose
     def getLogState(self, info = False):
         return lf.getState()
         
@@ -357,21 +341,20 @@ class webServer(object):
     @cherrypy.expose    
     def getLogs(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
-        return lf.getLogs(param)        
+        return lf.getLogs(param)
 
     @cherrypy.expose    
     def getLocation(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
         return lf.getLocation(param)
-
+        
 # Start server listening request
 def run( args):
    #global HOSTcors
-   print("args= " + str(args))
    port = int(args[0])
    domain = args[1]
-   print( 'HOSTcors=' + HOSTcors + ' Domain=' + domain + ' Port=' + str(port) + ("  -Debug= " + str(gf.usepdb) if (gf.usepdb >= 0) else "")  )
-   #pdb.set_trace()     
+   print('HOSTcors=' + HOSTcors + ' Domain=' + domain + ' Port=' + str(port) + ("  -Debug= " + str(gf.usepdb) if (gf.usepdb >= 0) else "") )
+
    config = {'server.socket_host': domain,
              'server.socket_port': port,   
              'tools.response_headers.on': True, 
@@ -424,33 +407,31 @@ if __name__ == "__main__":
         arg = [x for x in argv]
         del arg[0]
         param = build_arg_dict(arg)
-        #print(str(arg))
         if param:
             args = []
-            if "deb" in param:  #Mode debug
+            if "deb" in param:
                 gf.usepdb = int(param["deb"])
-                print(str(gf.usepdb))               
-            if "cors" in param:  #CORS
-                #pdb.set_trace()
+                print(str(gf.usepdb))
+            if "cors" in param:
                 #global HOSTcors
                 HOSTcors = param["cors"]
-            if "cpass" in param:  #
+            if "cpass" in param:
                 lf.CLOUDpass = param["cpass"]
-            if "serv" in param:  #Serveur de BD
+            if "serv" in param:
                 HOSTserv = param["serv"]
             #print(str(len(argv)))
-            if "pass" in param:  # Mot de pass VM
+            if "pass" in param:
+                #global logPass 
                 logPass = param["pass"]
-            #pdb.set_trace()
-            if "port" in param:   #Port de communication
+                print("pass= " + logPass)
+            if "port" in param: 
                 args.append(param["port"])
             else:
                 args.append(8080)
-            if "domain" in param:  # Nom de doamine de l'app
+            if "domain" in param: 
                 args.append(param["domain"])
             else:
                 args.append("0.0.0.0")
-
             run(args)
         else:
             run( [8080,"0.0.0.0"] )
@@ -458,4 +439,4 @@ if __name__ == "__main__":
     else:
         run([8080,"0.0.0.0"])
         
-        
+# Python39>python code/app.py port 3000 pass xxxxxxxx cors *

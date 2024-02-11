@@ -442,7 +442,7 @@ def searchResult(param, self):
         query = searchString(qNom, qVille, qReg, dist, lng, lat)
         #pdb.set_trace()
         docs = col.find(query).collation({"locale": "fr","strength": 1}).sort("nom")
-        print("MODE = 0 " + str(query))
+        #print("MODE = 0 " + str(query))
         li = list(docs)
         res={}
         res["ph"] = False

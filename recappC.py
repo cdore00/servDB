@@ -29,8 +29,8 @@ from os.path import abspath  # For upload
 LOCAL_HOST = 'http://127.0.0.1:3000/'
 HOSTserv = LOCAL_HOST
 HOSTclient = 'http://localhost:8080/'
-#HOSTcors = 'https://cdore00.github.io'
-HOSTcors = 'http://cdore.servehttp.com'
+HOSTcors = 'https://cdore00.github.io'
+#HOSTcors = 'http://cdore.servehttp.com'
 DATA_DIR = ""
 IMG_DIR = ""
 
@@ -55,8 +55,8 @@ if os.environ.get('MONGODB_USER'):
     user = urllib.parse.quote_plus(os.environ['MONGODB_USER'])
     passw = urllib.parse.quote_plus(os.environ['MONGODB_PASSWORD'])
     domain = urllib.parse.quote_plus(os.environ['MONGODB_SERVICE'])
-    dbase = urllib.parse.quote_plus(os.environ['MONGODB_DATABASE'])
-    uri = "mongodb://%s:%s@%s/%s?authSource=admin" % (user, passw, domain, dbase)
+    #dbase = urllib.parse.quote_plus(os.environ['MONGODB_DATABASE'])
+    uri = "mongodb://%s:%s@%s/%s?authSource=admin" % (user, passw, domain, "admin")
     #uri = "mongodb://%s:%s@%s/%s?authMechanism=SCRAM-SHA-1, authSource=admin" % (user, passw, domain, dbase)
     DATA_DIR = "/data/"
     IMG_DIR = DATA_DIR + "lou/photos/"
@@ -71,7 +71,6 @@ if os.environ.get('MONGODB_USER'):
     IMG_URL = HOSTclient + "/photos/"
     print("HOSTclient=" + HOSTclient + " IMG_URL=" + IMG_URL)
 
-#client = "host=%s, username=%s, password=%s, authSource=%s" % (domain, user, passw, "admin")
 #pdb.set_trace()
 DBclient = MongoClient(uri, port)
 data = DBclient[dbase]
@@ -354,7 +353,7 @@ class webServer(object):
 
 # Start server listening request
 def run( args):
-   global HOSTcors
+   #global HOSTcors
    port = int(args[0])
    domain = args[1]
    print('HOSTcors=' + HOSTcors + ' Domain=' + domain + ' Port=' + str(port) + ("  -Debug= " + str(gf.usepdb) if (gf.usepdb >= 0) else "")  )

@@ -69,8 +69,10 @@ cat << EOF
 subjectAltName = @alt_names
 
 [ alt_names ]
-DNS.1 = 192.168.2.239
+DNS.1 = cdore.ddns.net
 DNS.2 = cdore.servehttp.com
+IP.3 = 70.52.73.58
+IP.4 = 192.168.2.239
 EOF
 )
 
@@ -546,11 +548,16 @@ class master_form_find():
 
     def afficherTitre(self, isConnected, servInfo):
         #pdb.set_trace()
+        self.DBlist = []
         typ = "TLS" if "tls" in servInfo else ""
         if isConnected:
             auth = self.data.data.command({"connectionStatus" : 1})
-            userObj = auth['authInfo']['authenticatedUsers'][0]
-            if 'external' in  userObj['db']:
+            #db.set_trace()
+            if len(auth['authInfo']['authenticatedUsers']):
+                userObj = auth['authInfo']['authenticatedUsers'][0]
+            else:
+                userObj = {}
+            if 'db' in userObj and 'external' in  userObj['db']:
                 self.userPass[0] = userObj['user']
                 self.menu_file.delete(2)
                 self.menu_file.delete(1)

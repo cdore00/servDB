@@ -10,7 +10,7 @@
 import pdb
 #; pdb.set_trace()
 
-import sys, os, io, re, cgi, csv, urllib.parse
+import sys, os, io, re, csv, urllib.parse
 import json
 import time 
 import datetime
@@ -23,7 +23,6 @@ from bson.json_util import loads
 from tkinter import *
 import tkinter as tk
 from tkinter import * 
-from tkinter import tix
 
 from tkinter import messagebox, TclError, ttk
 from tkinter.messagebox import askyesno
@@ -572,9 +571,10 @@ class master_form_find():
         if self.actServ == VSERV :
             app = cdc.logonWin(self.win)
             res = app.showLogonBD()
-            
+            #pdb.set_trace()
             if not res is None:
                 answer = self.data.connectTo(self.actServ, self.actApp, res)
+                #answer = self.data.connectTo(self.actServ, self.actApp)
                 if answer:
                     database = self.data.data
                     collections = database.list_collection_names()
@@ -584,6 +584,7 @@ class master_form_find():
         else:    
             answer = askyesno(title='Importer', message='Importer les données ? ')
         database = self.data.data
+        
         if answer:
             self.pb = cdc.progressBarObj(self.pbFrame)
             self.pb.showBar()
@@ -993,7 +994,7 @@ class loginDialog(cdc.modalDialogWin):
 
 def create_main_window():
 
-    win = tix.Tk()
+    win = Tk()
     win.minsize(480,300)
     #win.resizable(0, 0)
 
