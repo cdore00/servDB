@@ -248,7 +248,7 @@ class messageObj():
         if not self.messLabel is None:
             if self.messframe.winfo_height() > self.height:
                 self.messframe.config(height=self.height)
-                print(str(self.messframe.winfo_height()) + ", Adjust heigth to : " + str(self.height))
+                #print(str(self.messframe.winfo_height()) + ", Adjust heigth to : " + str(self.height))
             self.messframe.update_idletasks()
         
 class messageObj2():
@@ -472,14 +472,27 @@ class modifRecImg(modalDialogWin):
             
             
 class menuEdit():
-    def __init__(self, parentWin, inputToBind, *args, **kwargs):
+    def __init__(self, parentWin, inputToBind, lang = "en", options = [1,1,1,1], *args, **kwargs):
         self.win = parentWin
+        cutLbl = 'Cut'
+        copyLbl = 'Copy'
+        pasteLbl = 'Paste'
+        selLbl = 'Select all'
+        if lang == "fr":
+            cutLbl = 'Couper'
+            copyLbl = 'Copier'
+            pasteLbl = 'Coller'
+            selLbl = 'Sélectionner tout'            
         self.inputToBind = inputToBind  #Object to right click to pop menuEdit
         self.menu = Menu(self.win,tearoff=0) # Create a menu
-        self.menu.add_command(label='Couper',command=self.cut, accelerator="Ctrl+X") # Create labels and commands
-        self.menu.add_command(label='Copier',command=self.copy, accelerator="Ctrl+C") 
-        self.menu.add_command(label='Coller',command=self.paste, accelerator="Ctrl+V")
-        self.menu.add_command(label='Sélectionner tout',command=self.selectAll, accelerator="Ctrl+A")
+        if options[0]:
+            self.menu.add_command(label=cutLbl,command=self.cut, accelerator="Ctrl+X") # Create labels and commands
+        if options[1]:
+            self.menu.add_command(label=copyLbl,command=self.copy, accelerator="Ctrl+C") 
+        if options[2]:
+            self.menu.add_command(label=pasteLbl,command=self.paste, accelerator="Ctrl+V")
+        if options[3]:
+            self.menu.add_command(label=selLbl,command=self.selectAll, accelerator="Ctrl+A")
         
         self.inputToBind.bind('<Button-3>',self.popup) # Bind to right click
 
@@ -516,7 +529,7 @@ class editEntry(tk.Entry):
         self.win = parent.win
         self.cntTry = 0
         self.maxlen = maxlen
-        menuEdit(parent.win, self)
+        menuEdit(parent.win, self, lang = "fr")
         if maxlen:
             self.config(validatecommand=(parent.register(self.validate), '%P', maxlen, isNum))
         
@@ -935,3 +948,42 @@ class logonWin:
         return custom_dialog.result #Retourner les valeurs par le bouton Ok, sinon None   
         
 # FIN Logon modal dialog
+
+
+# Logon modal dialog
+class getStrInput(simpledialog.Dialog):
+    def __init__(self, parent, title=None, question=None):
+        self.question = question
+        super().__init__(parent, title=title)
+
+
+    def body(self, master):
+        #self.dataArray = []
+        #pdb.set_trace()
+        self.titleframe = tk.Frame(master)
+        self.titleframe.grid(row=0)        
+        lblTitle = tk.Label(self.titleframe, text=self.question, font=('Calibri 12 bold')).grid(row=0)
+        #lblTitle.pack()
+        
+        self.formframe = tk.Frame(master, borderwidth = 1, relief=RIDGE, padx=10, pady=10)
+        self.formframe.grid(row=1)
+        #tk.Label(self.formframe, text="User :").grid(row=0, sticky=E)
+        self.entry = tk.Entry(self.formframe, width=30)
+        self.entry.grid(row=0, column=0)
+       
+        return self.entry  # Mettez le focus sur le champ de saisie
+
+    def validate(self):
+        #self.dataArray.append(self.entry.get())
+        return True
+            
+    def apply(self):
+        # Cette méthode est appelée lorsque le bouton "OK" est cliqué
+        #pdb.set_trace()
+        self.result = self.entry.get()  #self.dataArray   #Permet de récupérer les valeurs dans un array
+
+class getInput:
+    @classmethod
+    def string(self, master, title = "", question = ""):    
+        custom_dialog = getStrInput(master, title, question )
+        return custom_dialog.result

@@ -106,7 +106,7 @@ from idlelib.tooltip import Hovertip
 import pyperclip as cp
 import urllib
 import urllib.request
-from xml.etree import ElementTree as ET
+#from xml.etree import ElementTree as ET
 from PIL import ImageTk, Image
 from tkinterweb import HtmlFrame
 #import jsoneditor
@@ -162,6 +162,13 @@ CONFFILE = "mongoSecur.conf"
 LOCALSERV= "localhost"
 VSERV   = "Vultr"
 
+
+def getID(strID):
+    if len(strID) < 5:
+        return int(strID)
+    else:    
+        return ObjectId(strID)
+
 def winChildPos(winObj):
     winObj.mainObj.win.update_idletasks()                                                             ##update_idletasks
     w=winObj.pop.winfo_width()
@@ -195,7 +202,8 @@ class filterForm():
         self.mainBlock.pack()
         
         ttk.Label(self.mainBlock, text='Keyword :').grid(column=0, row=1, padx=5, pady=5, sticky=tk.W)
-        self.keyword = tk.Entry(self.mainBlock, textvariable=textVar, width=20)
+        self.keyword = tk.Entry(self.mainBlock, textvariable=textVar, width=30)
+        cdc.menuEdit(parent, self.keyword )
         Hovertip(self.keyword,"Enter keyword for search")
         self.keyword.focus()
         self.keyword.grid(column=1, row=1, sticky=tk.W)  
@@ -210,7 +218,9 @@ class filterForm():
         Hovertip(self.searchBut,"Search in logs") 
         ttk.Label(self.mainBlock, textvariable=self.totalCount, font= ('Segoe 10 bold'), width=12).grid(column=4, row=1, padx=3, pady=5, sticky=tk.E)
         if not nextcallBack is None:
-            ttk.Button(self.mainBlock, text='>', width=3, command=nextcallBack).grid(column=5, row=1)  #, padx=1
+            nextBut = ttk.Button(self.mainBlock, text='>', width=3, command=nextcallBack)
+            nextBut.grid(column=5, row=1)  #, padx=1
+            Hovertip(nextBut,"Nexts records in logs") 
             
 
     def resetForm(self):
@@ -376,7 +386,9 @@ class master_form_find():
         self.Database = StringVar()
         self.keyWordRole = StringVar()
         self.keyWordUser = StringVar() 
-        self.keyWordLog = StringVar() 
+        self.keyWordLog = StringVar()
+        self.keyWordEdit = StringVar()        
+        self.hostInfo = False
 
         initInfo = self.readConfFile()
         if "init" in initInfo: 
@@ -396,6 +408,9 @@ class master_form_find():
     def changeDatabase(self, event = None):
         self.getUsers()
         self.getRoles()
+        if self.tabSelection == 4:
+            self.editData()
+        #print( "Change to : "  + self.Database.get()) 
 
     def quitter(self, e):
         self.win.quit
@@ -411,12 +426,15 @@ class master_form_find():
             #pdb.set_trace()
             for db in dbs:
                 theDB = self.data.DBconnect[db]
-                self.COLlist[db] = theDB.list_collection_names()
+                #pdb.set_trace()
+                colList = theDB.list_collection_names()
+                colList.sort()
+                self.COLlist[db] = colList
             dbs.insert(0, "")
             self.DBlist = dbs
         except pymongo.errors.OperationFailure as ex1:
             self.objMainMess.showMess(ex1.details.get('errmsg', ''))
-            #objMess.addMess("\n\nUser with hostInfo action on Cluster privilege is required.")
+            self.objMainMess.addMess("\n\nUser with listCollections action on database privilege is required.")
             return        
     
     def setApp(self, serv, userPass = None):
@@ -426,6 +444,7 @@ class master_form_find():
         self.win.iconbitmap(APPICON)
         self.win.geometry("600x500")
         self.win.minsize(width = 600, height = 500)
+        self.tabSelection = 0
 
         self.closeRec()
         slavelist = self.win.slaves()
@@ -472,7 +491,7 @@ class master_form_find():
         tmpFrame = tk.Frame(self.win)  #, bg="red"
         tmpFrame.pack(expand=1, fill=BOTH)
         self.win.update_idletasks()
-
+        
         self.userPass = userPass
         isConnected = self.data.connectTo(self.actServ, userPass, servInfo)
         self.objMainMess.clearMess() 
@@ -527,6 +546,10 @@ class master_form_find():
         tabHost = LabelFrame(tab_setup, text = " Host ", font=('Calibri 12 bold'))
         tab_setup.add(tabHost, text = "    Host    ")
         tab_setup.pack(expand=1, fill = "both", padx = 10)
+
+        tabEdit = LabelFrame(tab_setup, text = " Edit ", font=('Calibri 12 bold'))
+        tab_setup.add(tabEdit, text = "    Edit    ")
+        tab_setup.pack(expand=1, fill = "both", padx = 10)
         
         self.usersFilter = filterForm(tabUsers, self.keyWordUser, self.getUsers)        
         self.gridUsersFrame = cdc.VscrollFrame(tabUsers)
@@ -545,6 +568,11 @@ class master_form_find():
         self.gridHostFrame = cdc.VscrollFrame(tabHost)
         self.gridHostFrame.pack(expand= True, fill=BOTH)        
 
+        #self.gridEditFrame = cdc.VscrollFrame(tabEdit)
+        #self.gridEditFrame.pack(expand= True, fill=BOTH)
+        self.editDataObj = editDatabase( self, tabEdit)
+        self.editFilter = filterForm(tabEdit, self.keyWordEdit, self.editDataObj.showRecReset, self.editDataObj.showRec)
+        self.editDataObj.initObj(self.editFilter)
 
     def afficherTitre(self, isConnected, servInfo):
         #pdb.set_trace()
@@ -567,9 +595,17 @@ class master_form_find():
             self.win.title( self.actServ + " : " + typ + " Not connected.")
             
     def on_tab_change(self, event):
-        if event.widget.index(event.widget.select()) == 3:
-            self.getHost()
-            event.widget.unbind("<<NotebookTabChanged>>")
+        self.tabSelection = event.widget.index(event.widget.select())
+        if self.tabSelection == 3:
+            if not self.hostInfo:
+                self.hostInfo = True
+                self.getHost()
+        if self.tabSelection == 4:
+            self.editData()
+            #event.widget.unbind("<<NotebookTabChanged>>")
+
+    def editData(self):
+        self.editDataObj.showDatabase(self.Database.get())
         
     def showHelp(self):
         
@@ -580,7 +616,7 @@ class master_form_find():
         #pdb.set_trace()
         showConnString(self.win, "Connection string ", txtURI, geometry = "520x100", modal = False)
         
-
+    
     def getHost(self):
         self.version = 'MongoDB version: '
         if not self.data.isConnect or self.data.data is None:
@@ -615,6 +651,7 @@ class master_form_find():
         nlines = formatted_data.count('\n')
         text_box = tk.Text(gridHostFrame) #, height= nlines+1
         text_box.pack(expand= True, fill=X)
+        cdc.menuEdit(self.win, text_box, options = [0,1,0,1])
         #text_box.grid(row= 0, column=1, sticky="WE")   
         formatted_data = self.version + '\n' + formatted_data
         text_box.insert(tk.END, formatted_data)
@@ -682,7 +719,8 @@ class master_form_find():
             formatted_data = data  #json.dumps(data, indent=4)  #, indent=4
             #nlines = formatted_data.count('\n')
             text_box = tk.Text(gridLogsFrame, height=5) #, height= nlines+1
-            text_box.pack(expand= True, fill=X)            
+            text_box.pack(expand= True, fill=X)  
+            cdc.menuEdit(self.win, text_box, options = [0,1,0,1])
             text_box.insert(tk.END, formatted_data)
             text_box.config( state="disabled")
             text_box.bind("<Double-Button-1>", self.getLogDetail)
@@ -866,7 +904,7 @@ class master_form_find():
         return actInfo    
             
     def getUsers(self, userNameDB = None, pos = None):
-        #db.set_trace()
+        #pdb.set_trace()
         slavelist = self.gridUsersFrame.interior.slaves()
         for elem in slavelist:
             elem.destroy() 
@@ -912,9 +950,10 @@ class master_form_find():
                     formatted_data = json.dumps(data, indent=4)
                     nlines = formatted_data.count('\n')
                     text_box = tk.Text(gridUsersFrame, height= nlines+1)
+                    cdc.menuEdit(self.win, text_box, options = [0,1,0,1])
                     text_box.grid(row= index, column=1, sticky="WE")             
                     text_box.insert(tk.END, formatted_data)
-
+                    
                     #pdb.set_trace()
                     text_box.config( state="disabled")
                     
@@ -983,6 +1022,7 @@ class master_form_find():
                     nlines = formatted_data.count('\n')            
                     text_box = tk.Text(gridRolesFrame, height= nlines+1)
                     text_box.grid(row= index, column=1, sticky="WE") 
+                    cdc.menuEdit(self.win, text_box, options = [0,1,0,1])
                     text_box.insert(tk.END, formatted_data)
                     text_box.config( state="disabled")
         
@@ -2012,6 +2052,7 @@ class showLogRec(cdc.modalDialogWin):
         text_box = tk.Text(self.dframe) #, height=5
         text_box.pack(expand= True, fill=BOTH)
         text_box.pack() 
+        cdc.menuEdit(self.win, text_box, options = [0,1,0,1])
         text_box.insert(tk.END, format_log)
         text_box.config( state="disabled")        
 
@@ -2335,7 +2376,208 @@ class modifyServerDialog(simpledialog.Dialog):
         if self.servToRemove != "":
             resObj["delServ"] = self.servToRemove
         self.result = resObj
+
+
+class editDatabase():
+    def __init__(self, parent, editFrame):
+        self.mainObj = parent
+        #self.editFrame = editFrame
+        self.editFrame = tk.Frame(editFrame)  #, bg="red"
+        self.editFrame.columnconfigure(0, weight=1) 
+        self.editFrame.columnconfigure(1, weight=20)
+        self.editFrame.rowconfigure(0, weight=1)
+        self.recList = []
+        self.recTot = 0
+        self.recCnt = 0
+        self.recSkip = 0
+        self.recLimit = 20
+        self.databaseName = ""
+        self.colNameSelect = None
+        self.collections = []
+        self.keyObj = ""
         
+        self.menuCollDel = Menu(self.mainObj.win,tearoff=0) # Create a menu
+        self.menuCollDel.add_command(label="Delete", command=self.dropCollection, accelerator="🗑") # Create labels and commands   ,command=self.cut, accelerator="Ctrl+X"
+        self.menuCollCre = Menu(self.mainObj.win,tearoff=0) # Create a menu
+        self.menuCollCre.add_command(label="Create", command=self.createCollection, accelerator="🛢") # Create labels and commands   ,command=self.cut, accelerator="Ctrl+X"
+    def initObj(self, editFilter):
+        self.editFrame.pack(expand=1, fill=BOTH) 
+        self.editFilter = editFilter
+
+    def dropCollection(self):
+        answer = askyesno(title='Remove collection',
+            message='Remove collection : ' + self.colNameSelect + " ?")
+        if answer:
+            print("dropCollection: " + self.colNameSelect)
+            res=self.dbObj[self.colNameSelect].drop()
+            #pdb.set_trace()
+            self.mainObj.COLlist[self.databaseName].remove(self.colNameSelect)
+            iid = self.colltreeview.selection()[0]
+            self.colltreeview.delete(iid)
+
+    def createCollection(self):
+        colName = cdc.getInput.string(self.mainObj.win, "New collection", "Collection name")
+        if colName:
+            #pdb.set_trace()
+            res=self.dbObj[colName]
+            res.insert_one({"_id": 1})
+            res.delete_one({"_id": 1})
+            self.mainObj.COLlist[self.databaseName].append(colName)
+            colList = self.mainObj.COLlist[self.databaseName]
+            colList.sort()
+            self.mainObj.COLlist[self.databaseName] = colList.copy()
+            self.showDatabase(self.databaseName, refresh = True)
+            print("New Collection: " + colName)
+            
+    def showDatabase(self, dbName, refresh = False):
+        
+        if (self.databaseName != dbName and dbName != "admin" and dbName != "All") or refresh :
+            
+            for widget in self.editFrame.winfo_children():  # Delete collections list and records list
+                widget.destroy()                
+                
+            self.databaseName = dbName
+            self.dbObj=self.mainObj.data.DBconnect[self.databaseName]
+            self.collections = self.mainObj.COLlist[dbName] 
+            print(str(self.collections))
+            collFrame = tk.Frame(self.editFrame)   #, bg="red"     # Reset collections frame
+            collFrame.grid(row=0, column=0, sticky='NSWE', padx=0, pady=3)
+            collFrame.rowconfigure(0, weight=1)
+            self.recFrame = tk.Frame(self.editFrame, bg="yellow")  # Reset records frame
+            self.recFrame.grid(row=0, column=1, sticky='NSWE', padx=5, pady=3)            
+            self.recFrame.rowconfigure(0, weight=1)
+            self.colltreeview = ttk.Treeview(collFrame, height=len(self.collections))
+                        
+            self.colltreeview.column("#0",anchor=W, stretch=NO, width=110)
+            self.colltreeview.heading("#0", text= dbName + " :\nCollections")
+
+            #style.configure('Treeview.Heading', foreground='black', background='blue', font=('Arial',25),)
+            
+            self.colltreeview.tag_bind("selecttag", "<<TreeviewSelect>>", self.showColl)
+            self.colltreeview.bind("<Button-3>", self.popup)
+            
+            for ind, coll in enumerate(self.collections):   # Set collections list
+                self.colltreeview.insert('', 'end',text=coll,values=(coll), tags=("selecttag"))  #,values=('1','C++')
+            self.colltreeview.pack()
+            
+            style = ttk.Style()
+            style.configure('Treeview.Heading', foreground='#559', font=('Segoe',10))  
+            
+            self.scrollrecFrame = cdc.VscrollFrame(self.recFrame)
+            self.scrollrecFrame.pack(expand= True, fill=BOTH)            
+
+    
+
+    def popup(self, event):
+        """action in event of button 3 on tree view"""
+        # select row under mouse
+        #pdb.set_trace()
+        iid = self.colltreeview.identify_row(event.y)
+        if iid == '':
+            print("Create")
+            self.menuCollCre.tk_popup(event.x_root,event.y_root)
+        if iid and self.colltreeview.selection():
+            # mouse pointer over item
+            #self.colltreeview.selection_set(iid)
+            if iid == self.colltreeview.selection()[0]:
+                self.menuCollDel.tk_popup(event.x_root,event.y_root)
+
+    
+    def showColl(self, e = None):
+        #pdb.set_trace()
+        #print("event = " + str(e))
+        if self.colltreeview.selection():
+            self.resetList()
+            self.colNameSelect = self.colltreeview.item( self.colltreeview.selection()[0], option="text")
+            self.dataObj = self.dbObj[self.colNameSelect]
+            self.showRec(newRec=True) #newRec=True
+
+    def showRecReset(self):
+        self.showRec(newRec=True)
+
+    def showRec(self, newRec=False):  #, newRec=False
+        #pdb.set_trace()
+        if self.colNameSelect is None:
+            messagebox.showinfo(  title="Collection ?",  message="Select a collection first.")
+            return
+
+        if self.recCnt == self.recTot:
+            tot = self.recTot
+            self.resetList()
+            self.recTot = tot
+        
+        self.getdata(newRec)
+        slavelist = self.scrollrecFrame.interior.slaves()
+        for elem in slavelist:
+            elem.destroy() 
+        #print(str(self.recList))
+         
+        
+        for ind, coll in enumerate(self.recList):
+            recFrame = tk.Frame(self.scrollrecFrame.interior, padx=2)
+            recFrame.columnconfigure(0, weight=30) 
+            recFrame.columnconfigure(1, weight=1) 
+            recFrame.pack(expand=1, fill=BOTH)
+            
+            formatted_data = json.dumps(coll, indent=4, default=str)  #, indent=4
+            nlines = formatted_data.count('\n')
+            text_box = tk.Text(recFrame, height=nlines+1) #, height= nlines+1
+            #text_box.pack(expand= True, fill=X) 
+            text_box.grid(row= 0, column=0, sticky="WE")
+            cdc.menuEdit(self.mainObj.win, text_box, options = [0,1,0,1])
+            text_box.insert(tk.END, formatted_data)
+            text_box.config( state="disabled")
+            text_box.bind("<Double-Button-1>", self.editRec)
+            butDel = tk.Button(recFrame, text="🗑", command= lambda listObj=recFrame, rec_id=coll["_id"]: self.delRecord(listObj, rec_id), width=5)  #, command=self.selFK
+            butDel.grid(row= 0, column=1)
+            self.recCnt += 1
+        self.editFilter.affTot(str(self.recCnt) + "/" + str(self.recTot))
+
+    def delRecord(self, listObj, rec_id):
+        answer = askyesno(title='Remove record ?',
+            message='Remove record : "_id": "' + str(rec_id) + '"')
+        if answer:
+            res=self.dbObj[self.colNameSelect]
+            res.delete_one({"_id": rec_id})
+            listObj.destroy()   
+        
+    def getdata(self, newRec):
+ 
+            keyObj=self.mainObj.keyWordEdit.get()
+            if len(keyObj) and keyObj[0:1] != "{":
+                keyObj = '{ ' + keyObj + ' }'
+            isValid = True
+            try:
+                keyObj = loads( keyObj ) if keyObj else {}
+                if "_id" in keyObj:
+                    keyObj['_id']=getID(keyObj['_id'])
+            except Exception as ex:
+                messagebox.showinfo(
+                    title="Keyword error",
+                    message=f"Keyword is not a valid json object.\n" + str(keyObj) + "\n" + str(ex))
+                isValid = False            
+            
+            if not isValid:                              # If keyword is not valid, return with empty records list
+                self.resetList()
+                self.recList = []
+                return
+            if self.keyObj != keyObj or newRec:          # Clear records list if filter change and count records
+                self.keyObj = keyObj
+                self.resetList()
+                self.recTot = self.dataObj.count_documents(keyObj)             
+
+            res = self.dataObj.find(keyObj).skip(self.recSkip).limit(self.recLimit)  
+            self.recList = list(res) 
+            self.recSkip += len(self.recList)
+            
+    def editRec(self, e = None):
+        print("edit")
+    
+    def resetList(self):
+        self.recTot = 0
+        self.recCnt = 0
+        self.recSkip = 0      
+    
 def create_main_window():
 
     win = tk.Tk()
