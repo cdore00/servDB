@@ -123,27 +123,14 @@ class VscrollFrame(ttk.Frame):
         if self.interior.winfo_reqwidth() != self.canvas.winfo_width():
             #Update the inner canvas's width to fit the inner frame
             self.canvas.config(width = self.interior.winfo_reqwidth())
-        #if self.interior.winfo_reqheight() != self.canvas.winfo_height():
-            #Update the inner canvas's height to fit the inner frame
-            #ht = min(self.maxInitHeight,self.interior.winfo_reqheight()) if self.maxInitHeight else self.interior.winfo_reqheight()
-            #self.canvas.config(height = ht)
-            #print(str(ht))
-
         #print("configure_interior")
         
     def configure_canvas(self, event):   
         if self.interior.winfo_reqwidth() != self.canvas.winfo_width():
             #Update the inner frame's width to fill the canvas
             self.canvas.itemconfigure(self.interior_id, width=self.canvas.winfo_width())
+        #print("configure_canvas")
 
-    def initialize(self, ht = None, wt = None):
-        self.maxInitHeight = None
-        if not ht:
-            ht = min(self.maxInitHeight,self.interior.winfo_reqheight()) if self.maxInitHeight else self.interior.winfo_reqheight()
-        print('initialize ' + str(ht) + "  wt= " + str(wt))
-        self.canvas.config(height = ht)
-        if wt:
-            self.canvas.config(width = wt)
             
     def scroll(self, scrollTo = '1'):
         self.win.update_idletasks()
@@ -749,31 +736,33 @@ class progressBarObj():
         self.pbZone.destroy()
 
 class tooltip:
-    def __init__(self, widget, text, parent):
+    def __init__(self, widget, text, parent = None):
         self.widget = widget
         self.text = text
         self.parent = parent
         self.tooltip_visible = False
-
+        self.tooltip_label = tk.Label(self.parent, text=self.text, background="lightyellow", relief="solid", borderwidth=1)
         # Bind events to show/hide the tooltip
         widget.bind("<Enter>", self.show_tooltip)
         widget.bind("<Leave>", self.hide_tooltip)
+        widget.bind("<Destroy>", self.on_destroy)
+
+    def on_destroy(self, e):
+        self.tooltip_label.destroy()
 
     def show_tooltip(self, event):
         #tw.wm_attributes("-topmost", 1)
-        if not self.tooltip_visible:
-        
+        if not self.tooltip_visible:        
             #pdb.set_trace()
-            self.tooltip_label = tk.Label(self.parent, text=self.text, background="lightyellow", relief="solid", borderwidth=1)
-            #self.tooltip_label.place(x=0, y=-30)
-            #widgetW = self.tooltip_label.winfo_width()
             x, y, _, _ = self.widget.bbox("insert")
             x += self.widget.winfo_rootx() 
             y += self.widget.winfo_rooty() 
             if self.parent is not None:
                 y = y - self.parent.winfo_y()
                 x = x - self.parent.winfo_x() 
-                x -= (int((len(self.text) * 4.8)) - 10 )
+                #pdb.set_trace()
+                if (self.parent.winfo_rootx() + self.parent.winfo_width()) - (self.widget.winfo_rootx() + self.widget.winfo_width()) < 5 :
+                    x -= (int((len(self.text) * 4.8)) - 10 )
                 #- widgetW + self.widget.winfo_width()
                 
             #text = "x=" + str(event.x) + " y=" + str(event.y)

@@ -38,12 +38,10 @@ class editJsonObject():
         self.saveCallback = saveCallback
         self.error = None
         self.adjustHeight = 120
-        self.winHeight = 0
-        self.winWidht = 0
-        self.load = False
+
         
         if self.mainFrame is None:
-            self.mainFrame = tk.Frame(self.win, bg='blue')   #, borderwidth=3, relief = RIDGE
+            self.mainFrame = tk.Frame(self.win)   #, bg='blue', borderwidth=3, relief = RIDGE
             self.mainFrame.pack(expand=1, fill=BOTH, padx = 1, pady = 10, anchor=NW) #expand=1, fill=BOTH
  
         self.createFrmEdit(editMode = editMode)   
@@ -370,28 +368,28 @@ class editJsonObject():
     def savedata(self, updType = 1):       
         #pdb.set_trace()
         self.error = None
-        self.dictObj = self.initData
-        #pdb.set_trace()
+
         if self.typeTrx > 1:
             updType = self.typeTrx
         else:
             self.typeTrx = updType
-        
-        if updType == 2:     #Remove data
-            print("delData")  
-           
-        else:
-            for ind, elem in enumerate(self.arrToDel):  # Remove deleted elements
-                elem[0].remove(elem[1])   
-            self.dictObj = self.convertToDict(self.dictArr)
             
-            #print(self.dictObj)
-            if self.dictObj:
-                self.clearMainFrame()
-                self.initFrmEdit(self.dictObj, editMode = False)
-                if self.error:
+        if self.editMode:            
+            if updType == 2:     #Remove data
+                print("delData")  
+               
+            else:
+                for ind, elem in enumerate(self.arrToDel):  # Remove deleted elements
+                    elem[0].remove(elem[1])   
+                self.dictObj = self.convertToDict(self.dictArr)
+                
+                #print(self.dictObj)
+                if self.dictObj:
                     self.clearMainFrame()
-                    self.initFrmEdit(self.dictObj, editMode = True)
+                    self.initFrmEdit(self.dictObj, editMode = False)
+                    if self.error:
+                        self.clearMainFrame()
+                        self.initFrmEdit(self.dictObj, editMode = True)
         
         if self.saveCallback:
             self.saveCallback(self.dictObj, updType)
@@ -421,7 +419,7 @@ class editJsonObject():
         data = json.dumps(data, default=str)
         cp.copy(data)
         self.objMainMess.showMess("JSON data copied to clipboard.", "I")
-        pdb.set_trace()
+        #pdb.set_trace()
         x=1
 
     def cloneData(self):         
@@ -465,23 +463,25 @@ class editJsonObject():
                 txtEdit = "🖊"
                 txtSave = "💾"
                 txtRemove = "🗑"
+                rFont = ('Calibri 9')
             else:
                 w = 10
-                txtCancel = "Cancel"
+                txtCancel = "Reset"
                 txtCopy = "Copy"
                 txtClone = "Clone"
                 txtEdit = "Edit"
                 txtSave = "Save"
                 txtRemove = "Remove"
+                rFont = ('Calibri 12')
  
             if editMode:              
                 butSave = tk.Button(self.butFrame, text= txtSave, font= ('Calibri 12'), command=self.savedata, width=w)
                 #Hovertip(butSave,"Save")
-                cdc.tooltip(butSave,"Save all data partout partout partout", self.win)
+                cdc.tooltip(butSave,"Save", self.win)
                 #ToolTip(butSave, msg="Hover info")
-                butCancel = tk.Button(self.butFrame, text= txtCancel, font= ('Calibri 12'), command=self.canceldata, width=w)
+                butCancel = tk.Button(self.butFrame, text= txtCancel, font= rFont , command=self.canceldata, width=w)
                 #Hovertip(butCancel,"Cancel")
-                cdc.tooltip(butCancel,"Cancel", self.win)
+                cdc.tooltip(butCancel,"Reset", self.win)
                 if 'E' in self.withButton or 'W' in self.withButton:
                     if self.typeTrx != 2:  # If not deleted
                         butSave.pack()
@@ -492,13 +492,13 @@ class editJsonObject():
                     butCancel.grid(row= 0, column=1, sticky="EW")             
             else:
                 butEdit = tk.Button(self.butFrame, text= txtEdit, font= ('Calibri 12'), command=self.editData, width=w) 
-                Hovertip(butEdit,"Edit")
-                butCopy = tk.Button(self.butFrame, text= txtCopy, font= ('Calibri 12'), command=self.copyData, width=w)     
-                Hovertip(butCopy,"Copy")
-                butClone = tk.Button(self.butFrame, text= txtClone, font= ('Calibri 12'), command=self.cloneData, width=w)     
-                Hovertip(butClone,"Clone")
-                butDel = tk.Button(self.butFrame, text= txtRemove, font= ('Calibri 9'), padx=3, pady=3, command=self.delData, width=w)
-                Hovertip(butDel,"Remove")
+                cdc.tooltip(butEdit,"Edit", self.win)
+                butCopy = tk.Button(self.butFrame, text= txtCopy, font= ('Calibri 12'), command=self.copyData, width=w)   
+                cdc.tooltip(butCopy,"Copy", self.win)
+                butClone = tk.Button(self.butFrame, text= txtClone, font= ('Calibri 12'), command=self.cloneData, width=w) 
+                cdc.tooltip(butClone,"Clone", self.win)
+                butDel = tk.Button(self.butFrame, text= txtRemove, font= rFont , padx=3, pady=3, command=self.delData, width=w)
+                cdc.tooltip(butDel,"Remove", self.win)
                 if 'E' in self.withButton or 'W' in self.withButton:
                     butEdit.pack()
                     butCopy.pack()
@@ -526,7 +526,7 @@ class editJsonObject():
         if self.objMainMess is None:
             self.objMainMess = cdc.messageObj(self.mainFrame, height=25)
 
-        topItem = tk.Frame(self.mainFrame, bg="red")
+        topItem = tk.Frame(self.mainFrame)          #, bg="red"
         topItem.pack(expand=1, fill=X, padx = 1, pady = 1)
         mainItem = tk.Frame(self.mainFrame)
         mainItem.pack(expand=1, fill=BOTH)
@@ -561,7 +561,7 @@ class editJsonObject():
         
       
     def initFrmEdit(self, dataObj = None, editMode = False):
-        self.load = False
+
         self.dictArr = []
         self.arrToDel = []
         self.editMode = editMode
@@ -573,7 +573,7 @@ class editJsonObject():
         self.dataFrame = tk.Frame(self.mainItem)  #, bg="blue"
 
 
-        self.scrollDataFrame = cdc.VscrollFrame(self.dataFrame, 300)
+        self.scrollDataFrame = cdc.VscrollFrame(self.dataFrame, 150)
         self.scrollDataFrame.pack(expand= True, fill=BOTH)
         self.recFrame = self.scrollDataFrame.interior
 
@@ -586,12 +586,6 @@ class editJsonObject():
         if self.withButton and not 'N' in self.withButton:
             self.showButtons(editMode = editMode)
        
-        self.scrollDataFrame.canvas.config(width = self.scrollDataFrame.interior.winfo_reqwidth()-1)
-        #pdb.set_trace()
-        #self.scrollDataFrame.initialize(300)
-        print("self.winHeight= " + str(self.winHeight))
-        wh = 400 if self.winHeight <=0 else self.winHeight
-        #self.scrollDataFrame.initialize(wh - self.adjustHeight)
 
 
 class editModalObj(simpledialog.Dialog):
@@ -609,7 +603,8 @@ class editModalObj(simpledialog.Dialog):
         self.win_size = 0   
         self.minsize(width = 400, height = self.initHeight)
         #return [self.obj, self.trx]
-
+    
+    """  Pesonnalized buttons
     def buttonbox(self):
         box = tk.Frame(self)
 
@@ -623,7 +618,7 @@ class editModalObj(simpledialog.Dialog):
         self.bind("<Escape>", self.cancel)
 
         box.pack(side=tk.BOTTOM, fill=tk.X)
-        
+    """   
         
     def validate(self):     
         self.obj, self.trx = self.editClass.getData()
@@ -647,6 +642,7 @@ class editOntopObj():
         self.callBack = callBack
         self.winEdit = tk.Toplevel(parent)
         self.winEdit.title("Edit JSON Object")
+        self.winEdit.minsize(width = 400, height = 250)
         self.winEdit.wm_attributes("-topmost", True)        
         #self.initHeight = 250
         
@@ -660,7 +656,7 @@ class editOntopObj():
         box = tk.Frame(self.winEdit)
         w = tk.Button(box, text="OK", width=10, command=self.ok, default=tk.ACTIVE)
         w.pack(side=tk.LEFT, padx=5, pady=5)
-        w = tk.Button(box, text="Annuler", width=10, command=self.cancel)
+        w = tk.Button(box, text="Cancel", width=10, command=self.cancel)
         w.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.winEdit.bind("<Return>", self.ok)
