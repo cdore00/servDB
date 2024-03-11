@@ -643,7 +643,7 @@ class editOntopObj():
         self.winEdit = tk.Toplevel(parent)
         self.winEdit.title("Edit JSON Object")
         self.winEdit.minsize(width = 400, height = 250)
-        self.winEdit.wm_attributes("-topmost", True)        
+        #self.winEdit.wm_attributes("-topmost", True)        
         #self.initHeight = 250
         
         self.showWin(parent)
@@ -678,8 +678,10 @@ class editOntopObj():
             self.result = [self.obj, self.trx]
             if self.callBack is not None:
                 self.callBack(self.obj, self.trx)
+            self.winEdit.grab_release()
             self.winEdit.destroy()
 
     def cancel(self, event=None):
         self.result = None
+        self.winEdit.grab_release()
         self.winEdit.destroy()  

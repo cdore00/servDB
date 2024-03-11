@@ -742,6 +742,7 @@ class tooltip:
         self.parent = parent
         self.tooltip_visible = False
         self.tooltip_label = tk.Label(self.parent, text=self.text, background="lightyellow", relief="solid", borderwidth=1)
+
         # Bind events to show/hide the tooltip
         widget.bind("<Enter>", self.show_tooltip)
         widget.bind("<Leave>", self.hide_tooltip)

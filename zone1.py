@@ -31,7 +31,7 @@ data1 = {
     ]
 }
 
-data2 = {
+data = {
     "_id": "5ec1626963f1571d78b4f8dd",
     "cat": {
         "no": 1,
@@ -106,7 +106,7 @@ def showData( win, obj):
 root = tk.Tk()
 root.title("Édit json")
 root.geometry("250x200")
-root.withdraw()
+#root.withdraw()
 
 res = None
 
