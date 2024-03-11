@@ -54,15 +54,57 @@ def webCallClub(e, val = 0):
     showWebURL(url)    
 
 
+def clone_widget(widget, master=None):
+    """
+    Create a cloned version o a widget
+
+    Parameters
+    ----------
+    widget : tkinter widget
+        tkinter widget that shall be cloned.
+    master : tkinter widget, optional
+        Master widget onto which cloned widget shall be placed. If None, same master of input widget will be used. The
+        default is None.
+
+    Returns
+    -------
+    cloned : tkinter widget
+        Clone of input widget onto master widget.
+
+    """
+    # Get main info
+    parent = master if master else widget.master
+    cls = widget.__class__
+
+    # Clone the widget configuration
+    cfg = {key: widget.cget(key) for key in widget.configure()}
+    cloned = cls(parent, **cfg)
+
+    # Clone the widget's children
+    for child in widget.winfo_children():
+        child_cloned = clone_widget(child, master=cloned)
+        if child.grid_info():
+            grid_info = {k: v for k, v in child.grid_info().items() if k not in {'in'}}
+            child_cloned.grid(**grid_info)
+        elif child.place_info():
+            place_info = {k: v for k, v in child.place_info().items() if k not in {'in'}}
+            child_cloned.place(**place_info)
+        else:
+            pack_info = {k: v for k, v in child.pack_info().items() if k not in {'in'}}
+            child_cloned.pack(**pack_info)
+
+    return cloned  
+
 class VscrollFrame(ttk.Frame):
-    def __init__(self, parent, *args, **kw):
+    def __init__(self, parent, maxInitHeight = None, *args, **kw):
         ttk.Frame.__init__(self, parent, *args, **kw)
         self.win = parent
+        self.maxInitHeight = maxInitHeight if maxInitHeight else 100
         #Create a canvas object and a vertical scrollbar for scrolling it.
         vscrollbar = ttk.Scrollbar(self, orient=VERTICAL)
         vscrollbar.pack(fill=Y, side=RIGHT, expand=FALSE)
         self.canvas = tk.Canvas(self, bd=0, highlightthickness=0,
-                                width = 200, height = 100,
+                                width = 200, height = self.maxInitHeight ,
                                 yscrollcommand=vscrollbar.set)
                                 
         self.canvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
@@ -81,11 +123,27 @@ class VscrollFrame(ttk.Frame):
         if self.interior.winfo_reqwidth() != self.canvas.winfo_width():
             #Update the inner canvas's width to fit the inner frame
             self.canvas.config(width = self.interior.winfo_reqwidth())
-            
+        #if self.interior.winfo_reqheight() != self.canvas.winfo_height():
+            #Update the inner canvas's height to fit the inner frame
+            #ht = min(self.maxInitHeight,self.interior.winfo_reqheight()) if self.maxInitHeight else self.interior.winfo_reqheight()
+            #self.canvas.config(height = ht)
+            #print(str(ht))
+
+        #print("configure_interior")
+        
     def configure_canvas(self, event):   
         if self.interior.winfo_reqwidth() != self.canvas.winfo_width():
             #Update the inner frame's width to fill the canvas
             self.canvas.itemconfigure(self.interior_id, width=self.canvas.winfo_width())
+
+    def initialize(self, ht = None, wt = None):
+        self.maxInitHeight = None
+        if not ht:
+            ht = min(self.maxInitHeight,self.interior.winfo_reqheight()) if self.maxInitHeight else self.interior.winfo_reqheight()
+        print('initialize ' + str(ht) + "  wt= " + str(wt))
+        self.canvas.config(height = ht)
+        if wt:
+            self.canvas.config(width = wt)
             
     def scroll(self, scrollTo = '1'):
         self.win.update_idletasks()
@@ -250,50 +308,11 @@ class messageObj():
                 self.messframe.config(height=self.height)
                 #print(str(self.messframe.winfo_height()) + ", Adjust heigth to : " + str(self.height))
             self.messframe.update_idletasks()
+
+    def delete(self):
+        self.messframe.destroy()
+        self = None
         
-class messageObj2():
-    def __init__(self, parent, objToBind = None, height=0):
-        self.parent = parent
-        self.height = height
-        self.objToBind = objToBind  #Object to click to clear message
-        self.messLabel = None
-        self.messframe = tk.Frame(self.parent, height=height)
-        self.messframe.pack(fill=X)
-        self.messValue = " "
-        self.showMess(self.messValue)
-
-    def showMess(self, message, type = "E", color = ""):
-        #pdb.set_trace()
-        if color == "" :
-            color = '#f00' # color = rouge par défaut
-            if type == "I":
-                color = "#22B14C"   # Si type = Information: color = vert
-        self.clearMess()
-        self.messValue = message
-        self.messLabel = tk.Label(self.messframe, font=('Calibri 12'), fg= color)
-        self.messLabel.config(text= message)
-
-        w = self.messframe.winfo_width() - 50
-        self.messLabel.config(wraplength=w)
-        self.messLabel.pack(expand= True, fill=X)
-        #self.messLabel.pack( )
-        if not self.objToBind is None:
-            self.objToBind.bind("<Button-1>", self.clearMess)
-
-    def addMess(self, message, type = "E", color = ""):
-        #pdb.set_trace()
-        self.showMess(self.messValue + message, type, color)
-        if color == "" :
-            x=1
-            
-    def clearMess(self, event = None):
-        if not self.objToBind is None:
-            self.objToBind.update_idletasks()
-            self.objToBind.unbind("<Button-1>")
-        if not self.messLabel is None:
-            self.messLabel.destroy()
-            self.messframe.config(height=self.height)
-            self.messframe.update_idletasks()
                 
 class imageObj():
     def __init__(self, parentObj, parentContainer, imgURL = "", dim = (2,1),*args, **kwargs):
@@ -507,6 +526,7 @@ class menuEdit():
         
     def paste(self):
         self.inputToBind.event_generate("<<Paste>>")
+        self.inputToBind.event_generate('<End>')
 
     def copy(self):
         self.inputToBind.event_generate("<<Copy>>")
@@ -728,7 +748,44 @@ class progressBarObj():
     def kill(self):
         self.pbZone.destroy()
 
+class tooltip:
+    def __init__(self, widget, text, parent):
+        self.widget = widget
+        self.text = text
+        self.parent = parent
+        self.tooltip_visible = False
 
+        # Bind events to show/hide the tooltip
+        widget.bind("<Enter>", self.show_tooltip)
+        widget.bind("<Leave>", self.hide_tooltip)
+
+    def show_tooltip(self, event):
+        #tw.wm_attributes("-topmost", 1)
+        if not self.tooltip_visible:
+        
+            #pdb.set_trace()
+            self.tooltip_label = tk.Label(self.parent, text=self.text, background="lightyellow", relief="solid", borderwidth=1)
+            #self.tooltip_label.place(x=0, y=-30)
+            #widgetW = self.tooltip_label.winfo_width()
+            x, y, _, _ = self.widget.bbox("insert")
+            x += self.widget.winfo_rootx() 
+            y += self.widget.winfo_rooty() 
+            if self.parent is not None:
+                y = y - self.parent.winfo_y()
+                x = x - self.parent.winfo_x() 
+                x -= (int((len(self.text) * 4.8)) - 10 )
+                #- widgetW + self.widget.winfo_width()
+                
+            #text = "x=" + str(event.x) + " y=" + str(event.y)
+            
+            self.tooltip_label.place(x=x, y=y)
+            self.tooltip_visible = True
+
+    def hide_tooltip(self, event):
+        if self.tooltip_visible:
+            self.tooltip_label.place_forget()
+            self.tooltip_visible = False
+            
 # Logon modal dialog
 class logonBDdialog(simpledialog.Dialog):
     def body(self, master):
@@ -950,7 +1007,7 @@ class logonWin:
 # FIN Logon modal dialog
 
 
-# Logon modal dialog
+# Get text input modal dialog
 class getStrInput(simpledialog.Dialog):
     def __init__(self, parent, title=None, question=None):
         self.question = question

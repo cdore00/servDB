@@ -92,7 +92,7 @@ from sys import argv
 from bson.json_util import dumps
 from bson.json_util import loads
 
-from tkinter import *
+#from tkinter import *
 import tkinter as tk
 from tkinter import * 
 
@@ -113,6 +113,7 @@ from tkinterweb import HtmlFrame
 
 import mongoRoles
 import cdControl as cdc
+import editObject as eob
 import mongoSecHelp as mh
 
 # JSON
@@ -475,8 +476,8 @@ class master_form_find():
         
         #menu_file.add_cascade(label='Help...', command = self.showHelp)  
         # Progress bar frame
-        #self.pbFrame = tk.Frame(self.win)
-        #self.pbFrame.pack(fill=X)
+        self.pbFrame = tk.Frame(self.win)
+        self.pbFrame.pack(fill=X)
 
         # Zone de message
         self.objMainMess = cdc.messageObj(self.win, height=25)
@@ -568,12 +569,20 @@ class master_form_find():
         self.gridHostFrame = cdc.VscrollFrame(tabHost)
         self.gridHostFrame.pack(expand= True, fill=BOTH)        
 
-        #self.gridEditFrame = cdc.VscrollFrame(tabEdit)
-        #self.gridEditFrame.pack(expand= True, fill=BOTH)
         self.editDataObj = editDatabase( self, tabEdit)
         self.editFilter = filterForm(tabEdit, self.keyWordEdit, self.editDataObj.showRecReset, self.editDataObj.showRec)
+        secondBlock = Frame(tabEdit)
+        secondBlock.pack()       
         self.editDataObj.initObj(self.editFilter)
-
+        self.addBut = ttk.Button(secondBlock, text='Add data ➕', command=self.editDataObj.addNewRecord, width=15)    #, command=addNewRecord
+        self.addBut.grid(column=0, row=0, padx=5) 
+        self.importBut = ttk.Button(secondBlock, text='Import data 📥', command=self.editDataObj.addNewRecord, width=15)   
+        self.importBut.grid(column=1, row=0, padx=5)
+        self.exportBut = ttk.Button(secondBlock, text='Export data 📤', command=self.editDataObj.exportRecords, width=15)  
+        self.exportBut.grid(column=2, row=0, padx=5)
+        self.removeBut = ttk.Button(secondBlock, text='Remove data 🗑', command=self.editDataObj.delAllRecord, width=15)
+        self.removeBut.grid(column=3, row=0, padx=5)
+        
     def afficherTitre(self, isConnected, servInfo):
         #pdb.set_trace()
         self.DBlist = []
@@ -2397,7 +2406,7 @@ class editDatabase():
         self.keyObj = ""
         
         self.menuCollDel = Menu(self.mainObj.win,tearoff=0) # Create a menu
-        self.menuCollDel.add_command(label="Delete", command=self.dropCollection, accelerator="🗑") # Create labels and commands   ,command=self.cut, accelerator="Ctrl+X"
+        self.menuCollDel.add_command(label="Remove", command=self.dropCollection, accelerator="🗑") # Create labels and commands   ,command=self.cut, accelerator="Ctrl+X"
         self.menuCollCre = Menu(self.mainObj.win,tearoff=0) # Create a menu
         self.menuCollCre.add_command(label="Create", command=self.createCollection, accelerator="🛢") # Create labels and commands   ,command=self.cut, accelerator="Ctrl+X"
     def initObj(self, editFilter):
@@ -2414,6 +2423,12 @@ class editDatabase():
             self.mainObj.COLlist[self.databaseName].remove(self.colNameSelect)
             iid = self.colltreeview.selection()[0]
             self.colltreeview.delete(iid)
+            #pdb.set_trace()
+            slavelist = self.scrollrecFrame.interior.slaves()
+            for elem in slavelist:
+                elem.destroy() 
+            self.colNameSelect = None
+            self.editFilter.affTot("")   
 
     def createCollection(self):
         colName = cdc.getInput.string(self.mainObj.win, "New collection", "Collection name")
@@ -2439,17 +2454,22 @@ class editDatabase():
             self.databaseName = dbName
             self.dbObj=self.mainObj.data.DBconnect[self.databaseName]
             self.collections = self.mainObj.COLlist[dbName] 
-            print(str(self.collections))
+            #print(str(self.collections))
             collFrame = tk.Frame(self.editFrame)   #, bg="red"     # Reset collections frame
             collFrame.grid(row=0, column=0, sticky='NSWE', padx=0, pady=3)
             collFrame.rowconfigure(0, weight=1)
+            
+            ttk.Label(collFrame, text=dbName, font= ('Segoe 11 bold')).pack()   
+            self.scrollCollFrame = cdc.VscrollFrame(collFrame)
+            self.scrollCollFrame.pack(expand= True, fill=BOTH)     
+                  
             self.recFrame = tk.Frame(self.editFrame, bg="yellow")  # Reset records frame
             self.recFrame.grid(row=0, column=1, sticky='NSWE', padx=5, pady=3)            
             self.recFrame.rowconfigure(0, weight=1)
-            self.colltreeview = ttk.Treeview(collFrame, height=len(self.collections))
-                        
+            
+            self.colltreeview = ttk.Treeview(self.scrollCollFrame.interior, height=len(self.collections))
             self.colltreeview.column("#0",anchor=W, stretch=NO, width=110)
-            self.colltreeview.heading("#0", text= dbName + " :\nCollections")
+            self.colltreeview.heading("#0", text= "Collections")
 
             #style.configure('Treeview.Heading', foreground='black', background='blue', font=('Arial',25),)
             
@@ -2463,10 +2483,10 @@ class editDatabase():
             style = ttk.Style()
             style.configure('Treeview.Heading', foreground='#559', font=('Segoe',10))  
             
+            self.editFilter.affTot("")
+            self.colNameSelect = None
             self.scrollrecFrame = cdc.VscrollFrame(self.recFrame)
             self.scrollrecFrame.pack(expand= True, fill=BOTH)            
-
-    
 
     def popup(self, event):
         """action in event of button 3 on tree view"""
@@ -2495,10 +2515,17 @@ class editDatabase():
     def showRecReset(self):
         self.showRec(newRec=True)
 
+    def isCollSelected(self):
+        if self.colNameSelect is None:
+            messagebox.showinfo(  title="Collection ?",  message="Select a Database and a Collection first.")
+            return False
+        else:
+            return True
+
     def showRec(self, newRec=False):  #, newRec=False
         #pdb.set_trace()
-        if self.colNameSelect is None:
-            messagebox.showinfo(  title="Collection ?",  message="Select a collection first.")
+        if not self.isCollSelected():
+            #messagebox.showinfo(  title="Collection ?",  message="Select a collection first.")
             return
 
         if self.recCnt == self.recTot:
@@ -2510,28 +2537,59 @@ class editDatabase():
         slavelist = self.scrollrecFrame.interior.slaves()
         for elem in slavelist:
             elem.destroy() 
-        #print(str(self.recList))
-         
-        
+
         for ind, coll in enumerate(self.recList):
+            self.addElemToList(coll)
+            self.recCnt += 1          
+
+        self.editFilter.affTot(str(self.recCnt) + "/" + str(self.recTot))
+        #self.mainObj.objMainMess.clearMess()
+
+    def addNewRecord(self): 
+            if not self.isCollSelected():
+                return            
+            custom_dialog = eob.editModalObj(self.mainObj.win, {}, title="Add JSON Object", editMode = True)
+            res = custom_dialog.result        
+            if res:
+                self.addElemToList(res[0])  
+                coll = self.dbObj[self.colNameSelect] 
+                doc = coll.insert_one(res[0])
+                self.updAffCnt(recCnt = 1, totCnt = 1)
+
+    def addElemToList(self, coll, recFrame = None):
+        if recFrame is None:
             recFrame = tk.Frame(self.scrollrecFrame.interior, padx=2)
             recFrame.columnconfigure(0, weight=30) 
             recFrame.columnconfigure(1, weight=1) 
-            recFrame.pack(expand=1, fill=BOTH)
-            
-            formatted_data = json.dumps(coll, indent=4, default=str)  #, indent=4
-            nlines = formatted_data.count('\n')
-            text_box = tk.Text(recFrame, height=nlines+1) #, height= nlines+1
-            #text_box.pack(expand= True, fill=X) 
-            text_box.grid(row= 0, column=0, sticky="WE")
-            cdc.menuEdit(self.mainObj.win, text_box, options = [0,1,0,1])
-            text_box.insert(tk.END, formatted_data)
-            text_box.config( state="disabled")
-            text_box.bind("<Double-Button-1>", self.editRec)
-            butDel = tk.Button(recFrame, text="🗑", command= lambda listObj=recFrame, rec_id=coll["_id"]: self.delRecord(listObj, rec_id), width=5)  #, command=self.selFK
-            butDel.grid(row= 0, column=1)
-            self.recCnt += 1
-        self.editFilter.affTot(str(self.recCnt) + "/" + str(self.recTot))
+            recFrame.pack(expand=1, fill=BOTH)            
+        else:
+            slavelist = recFrame.slaves()
+            for elem in slavelist:
+                elem.destroy()
+        
+        self.addRecToListObj(recFrame, coll)
+        
+        butFrame = tk.Frame(recFrame)
+        butFrame.grid(row= 0, column=1, sticky="N")
+        
+        butEdit = tk.Button(butFrame, text= "🖍", font= ('Calibri 12'), command= lambda listObj=recFrame, obj = coll: self.editRec( listObj, obj)) 
+        butEdit.pack()
+        Hovertip(butEdit,"Edit")
+        butDel = tk.Button(butFrame, text="🗑", font= ('Calibri 9'), command= lambda listObj=recFrame, rec_id=coll["_id"]: self.delRecord(listObj, rec_id))  #, command=self.selFK  🗑  🗑
+        butDel.pack()
+        Hovertip(butDel,"Remove")
+
+
+    def addRecToListObj(self, recFrame, coll):
+        formatted_data = json.dumps(coll, indent=4, default=str, ensure_ascii=False)
+        #pdb.set_trace()
+        nlines = formatted_data.count('\n')
+        text_box = tk.Text(recFrame, height=nlines+1) #, height= nlines+1
+        text_box.grid(row= 0, column=0, sticky="WE")
+        cdc.menuEdit(self.mainObj.win, text_box, options = [0,1,0,1])
+        text_box.insert(tk.END, formatted_data)
+        text_box.config( state="disabled")  
+        text_box.bind("<Double-Button-1>", lambda listObj=recFrame, obj = coll: self.editRec(listObj, obj))
 
     def delRecord(self, listObj, rec_id):
         answer = askyesno(title='Remove record ?',
@@ -2539,7 +2597,18 @@ class editDatabase():
         if answer:
             res=self.dbObj[self.colNameSelect]
             res.delete_one({"_id": rec_id})
-            listObj.destroy()   
+            listObj.destroy()
+            self.updAffCnt(recCnt = -1, totCnt = -1)
+
+    def delAllRecord(self):
+        if not self.isCollSelected():
+            return    
+        answer = askyesno(title='Remove records ?',
+            message='Remove all (' + str(self.recTot) + ') collection\'s records.')
+        if answer:
+            res=self.dbObj[self.colNameSelect]
+            res.delete_many({})
+            self.showRec(newRec=True)
         
     def getdata(self, newRec):
  
@@ -2569,15 +2638,63 @@ class editDatabase():
             res = self.dataObj.find(keyObj).skip(self.recSkip).limit(self.recLimit)  
             self.recList = list(res) 
             self.recSkip += len(self.recList)
-            
-    def editRec(self, e = None):
-        print("edit")
+
+    def updAffCnt(self, recCnt = 0, totCnt = 0):
+        self.recCnt += recCnt
+        self.recTot += totCnt
+        #self.recCnt = max(0, self.recCnt)
+        #self.recTot = max(0, self.recTot)
+        self.editFilter.affTot(str(self.recCnt) + "/" + str(self.recTot))   
+
+    def exportRecords(self):
+        if not self.isCollSelected():
+            return     
+        print("exportRecords")
+
+    def editRec(self, listObj, obj):
+        #txtLog=event.widget.get("1.0",END)
+        custom_dialog = eob.editOntopObj(self.mainObj.win, obj, title="Edit JSON Object", editMode = True)
+        res = custom_dialog.result 
+        
+        if res:
+            obj = res[0]
+            typTrx = res[1]
+            #pdb.set_trace()
+            print(obj)
+            coll = self.dbObj[self.colNameSelect]   # Set data object collection
+            if typTrx == 1:
+                #print("update")
+                objCopy = obj.copy()
+                ID = objCopy['_id']   #getID
+                del objCopy['_id']
+                #doc = coll.update_one({ '_id': ID}, { '$set': objCopy})     #,  upsert=True 
+                #self.addRecToListObj(listObj, obj)
+                self.addElemToList(obj, recFrame = listObj)
+                doc = coll.delete_one({ '_id': obj['_id']})
+                doc = coll.insert_one(obj)
+                
+            elif typTrx == 2:
+                #print("delete")
+                pdb.set_trace()
+                doc = coll.delete_one({ '_id': obj['_id']})
+                listObj.destroy()
+                self.updAffCnt(recCnt = -1, totCnt = -1)
+            elif typTrx == 3:
+                #print("insert")
+                doc = coll.insert_one(obj)
+                self.addElemToList(obj)
+                self.updAffCnt(recCnt = 1, totCnt = 1)
+              
+            return res
     
     def resetList(self):
         self.recTot = 0
         self.recCnt = 0
         self.recSkip = 0      
-    
+
+
+
+   
 def create_main_window():
 
     win = tk.Tk()
