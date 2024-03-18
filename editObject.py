@@ -26,7 +26,7 @@ class editJsonObject():
         self.mainFrame = parentFrame
         self.withButton = withButton  # Options 'S' South = default, 'N' North, 'E' East, 'W' West and optionnal 'I' Icon format
         self.objMainMess = messObj
-        self.initData = recObj
+        self.initData = recObj.copy()
         self.dictObj = recObj
         self.indNew = False
         self.typeTrx = 1
@@ -37,12 +37,14 @@ class editJsonObject():
         #self.editMode = editMode
         self.saveCallback = saveCallback
         self.error = None
-        self.adjustHeight = 120
 
         
         if self.mainFrame is None:
-            self.mainFrame = tk.Frame(self.win)   #, bg='blue', borderwidth=3, relief = RIDGE
-            self.mainFrame.pack(expand=1, fill=BOTH, padx = 1, pady = 10, anchor=NW) #expand=1, fill=BOTH
+            #testF = tk.Frame(self.win)
+            
+            #pdb.set_trace()
+            self.mainFrame = tk.Frame(self.win, bg='blue')   #, bg='blue', borderwidth=3, relief = RIDGE
+            self.mainFrame.pack(expand=1, fill=BOTH, padx = 1, pady = 10, side = TOP) #expand=1, fill=BOTH
  
         self.createFrmEdit(editMode = editMode)   
         
@@ -59,7 +61,7 @@ class editJsonObject():
         ctl.configure(height=(lineCnt + 1))
         ctl.config( width=w+1)   #/(lineCnt+1))
 
-    def addRecord(self, parentFrm, key, elemObj):
+    def addRecord(self, parentFrm, key, elemObj, getFocus = None):
         elemArr = []
         #typ = type(elemObj)
         #pdb.set_trace()
@@ -84,6 +86,8 @@ class editJsonObject():
                 key_in.bind("<KeyPress>", self.on_input_change)
                 cdc.menuEdit(self.win, key_in)
             elemArr.append(key_in)
+            if getFocus :
+                key_in.focus()
             lbl = tk.Label(elemFrame, text= ":")
             lbl.grid(row= 0, column=1, sticky=NW)
             
@@ -212,7 +216,7 @@ class editJsonObject():
             if elem == el:  # Found where to insert
                 fp = ind    # Index where to insert
                 key = -1 if key.__class__.__name__ == 'int' else ""
-                newEl = self.addElement(key, "", dictArr, el.master)
+                newEl = self.addElement(key, "", dictArr, el.master, getFocus = True)
         #pdb.set_trace()
         if fp < ind:
             dictArr.insert(fp+rootInd, newEl)
@@ -220,8 +224,51 @@ class editJsonObject():
             dictArr.append(newEl)
         for ind, elem in enumerate(arrF):
             elem.pack(expand=1, fill="x", padx = 5)
+
+    def addNewChildRecord(self, e, frm, dictArr, key, rootInd):     
+        el=e.widget.master.master.master
+        slavelist=e.widget.master.master.master.master.slaves()
         
-    def addElement(self, key, elemObj, dictArr, frm = None):    # Add recurring element
+        for ind, elem in enumerate(slavelist):
+            if elem == el:  # Found where to insert
+                #pdb.set_trace()
+                key = -1 if dictArr[ind-1+rootInd][2].get() == 'Array' else ""
+                dArr=(dictArr[ind-1+rootInd][0].master.master.slaves())
+                nc = dictArr[ind-1+rootInd][0].master.master  #.master.master   #.master
+                break
+        
+        newEl = self.addElement(key, "", dArr, nc, getFocus = True)      #el.master
+        arrF = []
+        for i, elem in enumerate(dArr):
+            if i > 0:
+                arrF.append(elem)   
+                elem.pack_forget()        
+        fp = 0
+        if len(dictArr[ind-1+rootInd]) == 3:
+            pdb.set_trace()
+        dictArr[ind-1+rootInd][3].insert(fp, newEl)   # [3] insert first list info element
+        #dArr.insert(fp, newEl) 
+        for i, elem in enumerate(arrF):
+            elem.pack(expand=1, fill="x", padx = 5)
+
+    def addListMenu(self, event = None, frm=None, dictArr=None, key=None, rootInd=None, elFrm=None):  #, recFrame, dictArr, key, rootInd
+        self.addChoiceArr = [event, frm, dictArr, key, rootInd, elFrm]
+        self.menuAddChoice = Menu(self.win,tearoff=0) # Create a menu
+        self.menuAddChoice.add_command(label="Add after '" + key + "'.", command=self.addAfterChoice)
+        self.menuAddChoice.add_command(label="Add child to '" + key + "'.", command=self.addChildChoice)
+
+        self.menuAddChoice.tk_popup(event.x_root,event.y_root) #event.x_root,event.y_root
+
+    
+    def addAfterChoice(self):
+        self.addNewRecord(self.addChoiceArr[0], self.addChoiceArr[1], self.addChoiceArr[2], self.addChoiceArr[3], self.addChoiceArr[4])
+        self.menuAddChoice.destroy()
+        
+    def addChildChoice(self):
+        self.addNewChildRecord(self.addChoiceArr[0], self.addChoiceArr[1], self.addChoiceArr[2], self.addChoiceArr[3], self.addChoiceArr[4])
+        self.menuAddChoice.destroy()
+   
+    def addElement(self, key, elemObj, dictArr, frm = None, getFocus = None):    # Add recurring element
         #pdb.set_trace()
         if frm is None :
             rootInd = 1
@@ -234,13 +281,13 @@ class editJsonObject():
         rowFrame.pack(expand=1, fill="x")  
         rowDataFrame, delBut, ctrlBut, expBut = self.addFrame(rowFrame)
         #print(str(expBut))
-        if self.editMode:
-            ctrlBut.bind("<Button-1>", lambda event, frm=recFrame, dictArr=dictArr, key=key, rootInd=rootInd: self.addNewRecord(event, frm, dictArr, key, rootInd))
         
         elemFrame = tk.Frame(rowDataFrame, height=1)
         elemFrame.grid(row= 0, column=3, sticky="EW")        
-        elemArr = self.addRecord( elemFrame, key, elemObj)
-        if key != "_id" and self.editMode:
+        elemArr = self.addRecord( elemFrame, key, elemObj, getFocus = getFocus)        
+
+
+        if key != "_id" and self.editMode:  # Show remove button if edit mode and not '_id' element
             delBut.bind("<Button-1>", lambda event, frm=rowFrame, arrP=dictArr, arrInd=len(dictArr): self.delElement(event, frm, arrP, arrInd))
         else:
             delBut.config( text="    ")
@@ -259,8 +306,15 @@ class editJsonObject():
             arrP=[]
             expBut.bind("<Button-1>", lambda event, frm=elemFrame, arrP=arrP: self.showHide(event, frm, arrP))
             self.showHide(expBut, elemFrame, arrP)            
-        #print("elemArr=" + str(elemArr))
+        
+        if self.editMode:
+            if isinstance(elemObj, (dict)) or isinstance(elemObj, (list)):
+                ctrlBut.bind("<Button-1>", lambda event, frm=recFrame, dictArr=dictArr, key=key, rootInd=rootInd, elFrm=elemFrame: self.addListMenu(event, frm, dictArr, key, rootInd, elFrm))
+            else:
+                ctrlBut.bind("<Button-1>", lambda event, frm=recFrame, dictArr=dictArr, key=key, rootInd=rootInd: self.addNewRecord(event, frm, dictArr, key, rootInd))        
+        
         return elemArr
+
 
     def addListItems(self, listObj, dictArr, frm = None):   # Add recurring lists
         for ind, elem in enumerate(listObj):
@@ -296,17 +350,7 @@ class editJsonObject():
                     #pdb.set_trace()
                     cle = "" if typ == 'dict' else "0"
                     if len(elem) == 3:  # Change type
-                        #pdb.set_trace()
-                        el0=cdc.clone_widget(elem[0])
-                        el0.insert(tk.END,cle)
-                        el1=cdc.clone_widget(elem[1])
-                        data = elem[1].get("1.0", END)
-                        data = data.replace("\n", "")
-                        el1.insert(tk.END,data)
-                        el2=cdc.clone_widget(elem[2])                    
-                        el2.current(typList.index(elem[2].get().__class__.__name__))
-                        elem.append([[el0, el1, el2]])
-                        #elem.append([])
+                        elem.append([])
                     if typ == 'dict':
                         data = self.convertToDict(elem[3])
                     if typ == 'list':
@@ -463,7 +507,7 @@ class editJsonObject():
                 txtEdit = "🖊"
                 txtSave = "💾"
                 txtRemove = "🗑"
-                rFont = ('Calibri 9')
+                rFont = ('Calibri 12')
             else:
                 w = 10
                 txtCancel = "Reset"
@@ -472,32 +516,44 @@ class editJsonObject():
                 txtEdit = "Edit"
                 txtSave = "Save"
                 txtRemove = "Remove"
-                rFont = ('Calibri 12')
+                rFont = ('Segoe 9')
  
             if editMode:              
-                butSave = tk.Button(self.butFrame, text= txtSave, font= ('Calibri 12'), command=self.savedata, width=w)
+                butSave = tk.Button(self.butFrame, text= txtSave, font= rFont, command=self.savedata, width=w)
                 #Hovertip(butSave,"Save")
                 cdc.tooltip(butSave,"Save", self.win)
                 #ToolTip(butSave, msg="Hover info")
                 butCancel = tk.Button(self.butFrame, text= txtCancel, font= rFont , command=self.canceldata, width=w)
                 #Hovertip(butCancel,"Cancel")
                 cdc.tooltip(butCancel,"Reset", self.win)
+                butCopy = tk.Button(self.butFrame, text= txtCopy, font= rFont, command=self.copyData, width=w)   
+                cdc.tooltip(butCopy,"Copy", self.win)
+                butClone = tk.Button(self.butFrame, text= txtClone, font= rFont, command=self.cloneData, width=w) 
+                cdc.tooltip(butClone,"Clone", self.win)
+                butDel = tk.Button(self.butFrame, text= txtRemove, font= rFont, command=self.delData, width=w)
+                cdc.tooltip(butDel,"Remove", self.win)
                 if 'E' in self.withButton or 'W' in self.withButton:
                     if self.typeTrx != 2:  # If not deleted
                         butSave.pack()
                     butCancel.pack()
+                    butCopy.pack()
+                    butClone.pack()
+                    butDel.pack()
                 else:
                     if self.typeTrx != 2:  # If not deleted
                         butSave.grid(row= 0, column=0, sticky="EW") 
                     butCancel.grid(row= 0, column=1, sticky="EW")             
+                    butCopy.grid(row= 0, column=2, sticky="EW")
+                    butClone.grid(row= 0, column=3, sticky="EW")
+                    butDel.grid(row= 0, column=4, sticky="EW")
             else:
-                butEdit = tk.Button(self.butFrame, text= txtEdit, font= ('Calibri 12'), command=self.editData, width=w) 
+                butEdit = tk.Button(self.butFrame, text= txtEdit, font= rFont, command=self.editData, width=w) 
                 cdc.tooltip(butEdit,"Edit", self.win)
-                butCopy = tk.Button(self.butFrame, text= txtCopy, font= ('Calibri 12'), command=self.copyData, width=w)   
+                butCopy = tk.Button(self.butFrame, text= txtCopy, font= rFont, command=self.copyData, width=w)   
                 cdc.tooltip(butCopy,"Copy", self.win)
-                butClone = tk.Button(self.butFrame, text= txtClone, font= ('Calibri 12'), command=self.cloneData, width=w) 
+                butClone = tk.Button(self.butFrame, text= txtClone, font= rFont, command=self.cloneData, width=w) 
                 cdc.tooltip(butClone,"Clone", self.win)
-                butDel = tk.Button(self.butFrame, text= txtRemove, font= rFont , padx=3, pady=3, command=self.delData, width=w)
+                butDel = tk.Button(self.butFrame, text= txtRemove, font= rFont, command=self.delData, width=w)
                 cdc.tooltip(butDel,"Remove", self.win)
                 if 'E' in self.withButton or 'W' in self.withButton:
                     butEdit.pack()
@@ -526,36 +582,35 @@ class editJsonObject():
         if self.objMainMess is None:
             self.objMainMess = cdc.messageObj(self.mainFrame, height=25)
 
-        topItem = tk.Frame(self.mainFrame)          #, bg="red"
-        topItem.pack(expand=1, fill=X, padx = 1, pady = 1)
+        #topItem = tk.Frame(self.mainFrame)          #, bg="red"
+        #topItem.pack(expand=1, fill=X, padx = 1, pady = 1)
         mainItem = tk.Frame(self.mainFrame)
         mainItem.pack(expand=1, fill=BOTH)
-        mainItem.rowconfigure(0, weight = 1)
-        #mainItem.grid_rowconfigure(1, weight = 0)
+        mainItem.grid_rowconfigure(0, weight = 0)
+        mainItem.grid_rowconfigure(1, weight = 1)
         mainItem.grid_columnconfigure(0, weight=0)
         mainItem.grid_columnconfigure(1, weight=1)
         mainItem.grid_columnconfigure(2, weight=0)
-
       
         self.mainItem = mainItem
         
+        topItem = tk.Frame(mainItem, bg="red")          #, bg="red"
+        topItem.grid(row= 0, column=0, columnspan=3, sticky="NS") 
         leftFrame = tk.Frame(mainItem) 
-        leftFrame.grid(row= 0, column=0, sticky="nsew") 
+        leftFrame.grid(row= 1, column=0, sticky="nsew") 
 
         rightFrame = tk.Frame(mainItem)   #, bg="yellow"
-        rightFrame.grid(row= 0, column=2, sticky="nsew")
+        rightFrame.grid(row= 1, column=2, sticky="nsew")
 
         if self.withButton:
             if 'N' in self.withButton:
                 self.butZone = topItem
-                self.adjustHeight += 50
             elif 'W' in self.withButton:
                 self.butZone = leftFrame
             elif 'E' in self.withButton:
                 self.butZone = rightFrame        
             else :  # 'S' default
                 self.butZone = self.mainFrame
-                self.adjustHeight += 50
             
         self.initFrmEdit( dataObj = dataObj, editMode = editMode)
         
@@ -565,12 +620,13 @@ class editJsonObject():
         self.dictArr = []
         self.arrToDel = []
         self.editMode = editMode
-
+        if dataObj:
+            self.dictObj = dataObj
         if self.withButton and 'N' in self.withButton:
             self.showButtons(editMode = editMode)
 
         #recFrame
-        self.dataFrame = tk.Frame(self.mainItem)  #, bg="blue"
+        self.dataFrame = tk.Frame(self.mainItem, bg="yellow")  #, bg="blue"
 
 
         self.scrollDataFrame = cdc.VscrollFrame(self.dataFrame, 150)
@@ -580,7 +636,7 @@ class editJsonObject():
         #self.recFrame = self.dataFrame
         
         self.addKeys(self.dictObj, self.dictArr)
-        self.dataFrame.grid(row= 0, column=1, sticky="nsew")   
+        self.dataFrame.grid(row= 1, column=1, sticky="nsew")   
         self.dataFrame.grid_rowconfigure(0, weight = 1)        
 
         if self.withButton and not 'N' in self.withButton:
@@ -642,6 +698,7 @@ class editOntopObj():
         self.callBack = callBack
         self.winEdit = tk.Toplevel(parent)
         self.winEdit.title("Edit JSON Object")
+        self.winEdit.geometry("500x250")
         self.winEdit.minsize(width = 400, height = 250)
         #self.winEdit.wm_attributes("-topmost", True)        
         #self.initHeight = 250
