@@ -37,7 +37,7 @@ class editJsonObject():
         #self.editMode = editMode
         self.saveCallback = saveCallback
         self.error = None
-
+        self.newEl = None
         
         if self.mainFrame is None:
             #testF = tk.Frame(self.win)
@@ -133,7 +133,7 @@ class editJsonObject():
                     state="readonly",
                     values = typListS
                     )
-                comboType.grid(row= 0, column=3)
+                comboType.grid(row= 0, column=3, padx=5)
                 comboType.current(typList.index(typ))       
                 elemArr.append(comboType)  #typ
                 if key == "_id" and not self.indNew:
@@ -188,21 +188,41 @@ class editJsonObject():
         expBut = e if isinstance(e,(Label)) else e.widget
         slavelist = frm.slaves()
         cnt = len(slavelist)
-        if cnt == 1:
-            expBut.config( text="▲")
-            for ind, elem in enumerate(arrP):
-                elem.pack(expand=1, fill="x", padx = 5)
-        else:
+        
+        def hide():
             expBut.config( text="▼")
             for ind, elem in enumerate(slavelist):
                 if ind > 0:
-                    arrP.append(elem)
-                    elem.pack_forget()
+                    if not elem in arrP:
+                        arrP.append(elem)
+                    elem.pack_forget()   
+
+        def show():
+            expBut.config( text="▲")
+            for ind, elem in enumerate(arrP):
+                if elem.winfo_exists():
+                    elem.pack(expand=1, fill="x", padx = 5) 
+
+        if not self.newEl is None:
+            #pdb.set_trace()
+            print("NewEl ajouté")
+            hide()
+            arrP.insert(0,self.newEl)
+            show()
+            self.newEl = None
+            return
+
+        if cnt == 1:
+            show()
+        else:
+            hide()
         #self.win.update_idletasks()
 
     def delElement(self, e, frm, arrP, ind):
-        self.arrToDel.append([arrP, arrP[ind]])
+        #pdb.set_trace()
         frm.destroy()
+        self.arrToDel.append([arrP, arrP[ind]])
+        
 
     def addNewRecord(self, e, frm, dictArr, key, rootInd):
         el=e.widget.master.master.master
@@ -219,13 +239,13 @@ class editJsonObject():
                 newEl = self.addElement(key, "", dictArr, el.master, getFocus = True)
         #pdb.set_trace()
         if fp < ind:
-            dictArr.insert(fp+rootInd, newEl)
+            dictArr.insert(fp+rootInd, newEl[0])
         else:
-            dictArr.append(newEl)
+            dictArr.append(newEl[0])
         for ind, elem in enumerate(arrF):
             elem.pack(expand=1, fill="x", padx = 5)
 
-    def addNewChildRecord(self, e, frm, dictArr, key, rootInd):     
+    def addNewChildRecord(self, e, frm, dictArr, key, rootInd, expB):     
         el=e.widget.master.master.master
         slavelist=e.widget.master.master.master.master.slaves()
         
@@ -236,23 +256,29 @@ class editJsonObject():
                 dArr=(dictArr[ind-1+rootInd][0].master.master.slaves())
                 nc = dictArr[ind-1+rootInd][0].master.master  #.master.master   #.master
                 break
-        
-        newEl = self.addElement(key, "", dArr, nc, getFocus = True)      #el.master
+
+        newEl = self.addElement(key, "", dArr, nc, getFocus = True, insert = True)      #el.master
+        self.newEl = newEl[1]
+        expB.event_generate("<1>", x=1, y=1)
+        """
         arrF = []
         for i, elem in enumerate(dArr):
             if i > 0:
                 arrF.append(elem)   
-                elem.pack_forget()        
+                elem.pack_forget()  
+        """
         fp = 0
         if len(dictArr[ind-1+rootInd]) == 3:
             pdb.set_trace()
-        dictArr[ind-1+rootInd][3].insert(fp, newEl)   # [3] insert first list info element
-        #dArr.insert(fp, newEl) 
+        dictArr[ind-1+rootInd][3].insert(fp, newEl[0])   # [3] insert first list info element
+        self.win.update_idletasks()
+        """
         for i, elem in enumerate(arrF):
             elem.pack(expand=1, fill="x", padx = 5)
+        """
 
-    def addListMenu(self, event = None, frm=None, dictArr=None, key=None, rootInd=None, elFrm=None):  #, recFrame, dictArr, key, rootInd
-        self.addChoiceArr = [event, frm, dictArr, key, rootInd, elFrm]
+    def addListMenu(self, event = None, frm=None, dictArr=None, key=None, rootInd=None, elFrm=None, expB=None):  #, recFrame, dictArr, key, rootInd
+        self.addChoiceArr = [event, frm, dictArr, key, rootInd, elFrm, expB]
         self.menuAddChoice = Menu(self.win,tearoff=0) # Create a menu
         self.menuAddChoice.add_command(label="Add after '" + key + "'.", command=self.addAfterChoice)
         self.menuAddChoice.add_command(label="Add child to '" + key + "'.", command=self.addChildChoice)
@@ -265,10 +291,10 @@ class editJsonObject():
         self.menuAddChoice.destroy()
         
     def addChildChoice(self):
-        self.addNewChildRecord(self.addChoiceArr[0], self.addChoiceArr[1], self.addChoiceArr[2], self.addChoiceArr[3], self.addChoiceArr[4])
+        self.addNewChildRecord(self.addChoiceArr[0], self.addChoiceArr[1], self.addChoiceArr[2], self.addChoiceArr[3], self.addChoiceArr[4], self.addChoiceArr[5])
         self.menuAddChoice.destroy()
    
-    def addElement(self, key, elemObj, dictArr, frm = None, getFocus = None):    # Add recurring element
+    def addElement(self, key, elemObj, dictArr, frm = None, getFocus = None, insert = False):    # Add recurring element
         #pdb.set_trace()
         if frm is None :
             rootInd = 1
@@ -288,7 +314,8 @@ class editJsonObject():
 
 
         if key != "_id" and self.editMode:  # Show remove button if edit mode and not '_id' element
-            delBut.bind("<Button-1>", lambda event, frm=rowFrame, arrP=dictArr, arrInd=len(dictArr): self.delElement(event, frm, arrP, arrInd))
+            ind = 0 if insert else len(dictArr)     # ind = 0 if new element is inserted in list or object collection
+            delBut.bind("<Button-1>", lambda event, frm=rowFrame, arrP=dictArr, arrInd=ind: self.delElement(event, frm, arrP, arrInd))
         else:
             delBut.config( text="    ")
 
@@ -309,24 +336,39 @@ class editJsonObject():
         
         if self.editMode:
             if isinstance(elemObj, (dict)) or isinstance(elemObj, (list)):
-                ctrlBut.bind("<Button-1>", lambda event, frm=recFrame, dictArr=dictArr, key=key, rootInd=rootInd, elFrm=elemFrame: self.addListMenu(event, frm, dictArr, key, rootInd, elFrm))
+                ctrlBut.bind("<Button-1>", lambda event, frm=recFrame, dictArr=dictArr, key=key, rootInd=rootInd, expB=expBut: self.addListMenu(event, frm, dictArr, key, rootInd, expB))
             else:
                 ctrlBut.bind("<Button-1>", lambda event, frm=recFrame, dictArr=dictArr, key=key, rootInd=rootInd: self.addNewRecord(event, frm, dictArr, key, rootInd))        
         
-        return elemArr
+        return [elemArr, rowFrame]
 
 
     def addListItems(self, listObj, dictArr, frm = None):   # Add recurring lists
         for ind, elem in enumerate(listObj):
-            dictArr.append(self.addElement(ind, elem, dictArr, frm))       
+            dictArr.append(self.addElement(ind, elem, dictArr, frm)[0])      
 
     def addKeys(self, dictObj, dictArr, frm = None):    # Add recurring dictionnarys
         k = list(dictObj.keys())
         for ind, key in enumerate(k):
-            dictArr.append(self.addElement(key, dictObj[key], dictArr, frm))
+            dictArr.append(self.addElement(key, dictObj[key], dictArr, frm)[0])
+
+    def delDead(self, elemList):
+        pdb.set_trace()
+        elemToDel = []
+        for ind, el in enumerate(elemList):
+            if not el[0].winfo_exists():
+                elemToDel.append(elemList[ind])
+        for ind, el in enumerate(elemToDel):
+            elemList.remove(el)
 
 
     def convertdata(self, elem):
+        def delDead(elemList):
+            for ind, el in enumerate(elemList):
+                if not el[0].winfo_exists():
+                    del elemList[ind]
+                    delDead(elemList)
+    
         try:
             #pdb.set_trace()
             typ = typList[typListS.index(elem[2].get())]
@@ -346,14 +388,15 @@ class editJsonObject():
                     data = datetime.strptime(data, '%Y-%m-%d %H:%M:%S.%f')
                 if typ ==  'Timestamp':
                     pdb.set_trace()
-                if typ == 'dict' or typ == 'list':
-                    #pdb.set_trace()
+                if typ == 'dict' or typ == 'list':                    
                     cle = "" if typ == 'dict' else "0"
                     if len(elem) == 3:  # Change type
                         elem.append([])
                     if typ == 'dict':
+                        delDead(elem[3])
                         data = self.convertToDict(elem[3])
                     if typ == 'list':
+                        delDead(elem[3])
                         data = self.convertToList(elem[3], True)
 
                 if typ == 'bool':
@@ -372,7 +415,7 @@ class editJsonObject():
                 self.error = str(ex) + " with '" + typ + "' data type."    
             else:
                 self.error = str(ex) + " Variable typ not exist."
-
+            pdb.set_trace()
             return None
         return data
             
@@ -638,7 +681,9 @@ class editJsonObject():
         self.addKeys(self.dictObj, self.dictArr)
         self.dataFrame.grid(row= 1, column=1, sticky="nsew")   
         self.dataFrame.grid_rowconfigure(0, weight = 1)        
-
+        #pdb.set_trace()
+        #self.scrollDataFrame.initW(400)
+        #self.win.geometry("300x250")
         if self.withButton and not 'N' in self.withButton:
             self.showButtons(editMode = editMode)
        
