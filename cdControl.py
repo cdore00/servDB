@@ -25,6 +25,35 @@ import webbrowser
 
 import dropbox, base64
 
+
+def trouver_parent(liste, element, parent=None, cnt = 0, niv=[] ):
+    if element in liste:
+        niv.append(liste.index(element))
+        print("Niv:" + str(cnt) + "  Pos." + str(niv))
+        return niv
+    for sous_liste in liste:
+        if isinstance(sous_liste, list):
+            cnt += 1
+            resultat = trouver_parent(sous_liste, element, parent=liste, cnt = cnt, niv=niv)
+            if resultat is not None:               
+                niv.append(liste.index(sous_liste))
+                print("Level.=" + str(niv))
+                #print("Liste:" + str(liste) + "  sous_liste." + str(sous_liste))
+                #pdb. set_trace()
+                return niv
+    return None
+    
+def get_parent(liste, element, niv=[]):
+    lst = liste
+    res = trouver_parent(liste, element, niv=niv)
+    print("Result= " + str(res))
+    for i in range(len(res)-1,0,-1):
+        lst = lst[res[i]]
+        print(str(i))
+    return [lst, res[0]]
+    #res[0][res[1]] = 99999
+    #data = [ 11, 22, [ 111, 222, 333, 444, 555, [ 1, 2, 3, [ 5, 6], 8, 9] ] ]
+
 def milliToDate(milli, showTime = False):
     dt=datetime.datetime.fromtimestamp(milli / 1000.0)
     sdt = str(dt.year) + "-" + str(dt.month).rjust(2, '0') + "-" + str(dt.day).rjust(2, '0')
@@ -104,7 +133,7 @@ class VscrollFrame(ttk.Frame):
         vscrollbar = ttk.Scrollbar(self, orient=VERTICAL)
         vscrollbar.pack(fill=Y, side=RIGHT, expand=FALSE)
         self.canvas = tk.Canvas(self, bd=0, highlightthickness=0,
-                                width = 200, height = self.maxInitHeight ,
+                                width = 400, height = self.maxInitHeight ,
                                 yscrollcommand=vscrollbar.set)
                                 
         self.canvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
@@ -135,7 +164,9 @@ class VscrollFrame(ttk.Frame):
     def scroll(self, scrollTo = '1'):
         self.win.update_idletasks()
         self.canvas.yview_moveto(str(scrollTo))
-        
+    
+    def initW(self, w):
+        self.canvas.config(width = w)
             
 class modalDialogWin():
     def __init__(self, win, title = "Dialogue modal", optionalObject = None, geometry = None, modal = True, show = True , *args, **kwargs):

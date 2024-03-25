@@ -15,7 +15,7 @@ data = {
     "cat": "Repas"
 }
 
-data1 = {
+data0 = {
     "_id": "5b26d094dc0ec2000b326366",
     "Time": 1529256020626,
     "Date": "2018-06-17 17:20:20",
@@ -31,7 +31,7 @@ data1 = {
     ]
 }
 
-data = {
+data1 = {
     "_id": "5ec1626963f1571d78b4f8dd",
     "cat": {
         "no": 1,
@@ -42,6 +42,16 @@ data = {
     "keyTup": (1,2,3),
     "keySet": {1,2,3},
     "nom": "Chop suey au poulet",
+    "dec": 1234.56789
+}
+
+
+data2 = {
+    "_id": "5ec1626963f1571d78b4f8dd",
+    "cat": {
+        "no": 1,
+        "desc": "Repas"
+    },
     "dec": 1234.56789
 }
 
@@ -88,6 +98,8 @@ data5 = {"_id": "5ec1626963f1571d78b4f8dd", "cat": {"_id": 1, "desc": "Repas"}, 
  
 data6 = {'_id': ObjectId('5b26d094dc0ec2000b326366'), 'Time': 1529256020626, 'Date': '2018-06-17 17:20:20', 'IP': '172.17.0.4', 'Name': 'Charles Doré', 'Address': '228 Crémazie Ouest #B', 'email': 'cdore00@yahoo.ca', 'ID': '', 'Choix': ["Salade de légumineuses au saumon fumé et à l'aneth frais", 'Couscous aux saucisses merguez et oignons caramélisés', 'Rabais de 2.50$ pour les commandes de 40.00$ et plus'], 'info': [['Livraison du dimanche 15 avril:$1*2$1*3'], ['Frais et rabais$3*1']]} 
 
+data = {'_id': '5ec1626963f1571d78b4f8dd', 'cat': {'no': 1, 'desc': 'Repas'}, 'liste': ['element1', 'element2', 'element3'], 'keyBool': True, 'keyTup': (1, 2, 3), 'keySet': {'obj1': 'o1', 'obj2': 'o2', 'obj3': 'o3', 'obj': {'test': 'ok'}}, 'nom': 'Chop suey au poulet', 'dec': 1234.56789}
+
 def saveData(newObj, updType):
     print("zone1.saveData=" + str(newObj) + "  TRX= " + str(updType))
 
@@ -106,13 +118,13 @@ def showData( win, obj):
 root = tk.Tk()
 root.title("Édit json")
 root.geometry("250x200")
-#root.withdraw()
+root.withdraw()
 
 res = None
 
 #objMess = cdc.messageObj(root, height=25)  # simpledialog.Dialog Class
 #editClass = eob.editJsonObject(root, data, withButton = 'EI', saveCallback = saveData)   #  , messObj = objMess
-editClass = eob.editOntopObj(root, data, editMode = True)   #, callBack = saveData, messObj = objMess
+editClass = eob.editOntopObj(root, {}, editMode = True)   #, callBack = saveData, messObj = objMess
 print(str(editClass.result))
 #res = showData(root, data)    #  simpledialog.Dialog Class
 if res:

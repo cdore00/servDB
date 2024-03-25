@@ -4,6 +4,7 @@
 #Mise à jour et sécurité/Sécurité Windows/Protection contre les virus/Gérer les paramètres/Protection en temps réel
 #Scripts\pyinstaller win64MD.py --onefile --name golf --noconsole
 #Scripts\pyinstaller -F --add-data C:\Users\charl\AppData\Local\Programs\Python\Python312\Lib\site-packages\tkinterweb\tkhtml:. code/mongoSecur.py --collect-all tkinterweb --noconsole
+#Scripts\pyinstaller -F code/mongoSecur.py --collect-all tkinterweb --noconsole
 #C:\Users\charl\AppData\Local\Programs\Python\Python39\Scripts
 #https://pypi.org/project/jsoneditor/
 #Built-In Roles
@@ -2654,7 +2655,7 @@ class editDatabase():
     def addNewRecord(self): 
             if not self.isCollSelected():
                 return            
-            custom_dialog = eob.editModalObj(self.mainObj.win, {}, title="Add JSON Object", editMode = True)
+            custom_dialog = eob.editOntopObj(self.mainObj.win, {}, title="Add JSON Object", editMode = True)
             res = custom_dialog.result        
             if res:
                 self.addElemToList(res[0])  
