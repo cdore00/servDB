@@ -29,7 +29,7 @@ import dropbox, base64
 def trouver_parent(liste, element, parent=None, cnt = 0, niv=[] ):
     if element in liste:
         niv.append(liste.index(element))
-        print("Niv:" + str(cnt) + "  Pos." + str(niv))
+        #print("Niv:" + str(cnt) + "  Pos." + str(niv))
         return niv
     for sous_liste in liste:
         if isinstance(sous_liste, list):
@@ -37,19 +37,17 @@ def trouver_parent(liste, element, parent=None, cnt = 0, niv=[] ):
             resultat = trouver_parent(sous_liste, element, parent=liste, cnt = cnt, niv=niv)
             if resultat is not None:               
                 niv.append(liste.index(sous_liste))
-                print("Level.=" + str(niv))
-                #print("Liste:" + str(liste) + "  sous_liste." + str(sous_liste))
-                #pdb. set_trace()
+                #print("Level.=" + str(niv))
                 return niv
     return None
     
 def get_parent(liste, element, niv=[]):
     lst = liste
     res = trouver_parent(liste, element, niv=niv)
-    print("Result= " + str(res))
+    #print("Result= " + str(res))
     for i in range(len(res)-1,0,-1):
         lst = lst[res[i]]
-        print(str(i))
+        #print(str(i))
     return [lst, res[0]]
     #res[0][res[1]] = 99999
     #data = [ 11, 22, [ 111, 222, 333, 444, 555, [ 1, 2, 3, [ 5, 6], 8, 9] ] ]

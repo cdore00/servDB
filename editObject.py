@@ -6,18 +6,17 @@ import json
 from bson import ObjectId
 from bson.json_util import dumps
 from idlelib.tooltip import Hovertip
-#import tkinter.ttk as ttk
-#from tktooltip import ToolTip
-import pyperclip as cp
+from decimal import *
+from decimal import Decimal
+from bson.decimal128 import Decimal128
+
 from tkinter import simpledialog
 from datetime import datetime
-#from dateutil import parser
-#from tkinter import (Tk, Frame, Button, Entry, Canvas, Text, LEFT, DISABLED, NORMAL, RIDGE, END)
 
 import cdControl as cdc
     
-typList  = ['list',  'bool',   'datetime',   'Int64'  ,  'float', 'int'    , 'dict',   'ObjectId', 'set',     'str',  'Timestamp',  'tuple']
-typListS = ['Array', 'Boolean',  'Datetime', 'Double', 'Float', 'Integer', 'Object', 'ObjectId', 'BSONset', 'String', 'Timestamp',  'Tuple']
+typList  = ['list',  'bool',   'datetime',  'Decimal128' , 'float', 'int'    , 'dict', 'ObjectId', 'set',     'str',  'Timestamp',  'tuple']
+typListS = ['Array', 'Boolean',  'Datetime', 'Decimal', 'Float', 'Integer', 'Object', 'ObjectId', 'BSONset', 'String', 'Timestamp',  'Tuple']
 
 
 class editJsonObject():
@@ -63,7 +62,7 @@ class editJsonObject():
         elemArr = []
         #pdb.set_trace()
         typ = elemObj.__class__.__name__
-        
+        print("typ= " + typ)
         elemFrame = tk.Frame(parentFrm)  #, bg="red"
         elemFrame.pack(expand=1, fill="x", padx = 5)
         elemFrame.columnconfigure(0, weight=0)
@@ -147,7 +146,7 @@ class editJsonObject():
         except Exception as ex:
             self.objMainMess.showMess(str(ex))
             
-        return elemArr, comboType    
+        return elemArr, comboType 
 
     def addFrame(self, pFrm):
         mFrm = tk.Frame(pFrm)  #, bg="red", height=2
@@ -231,14 +230,12 @@ class editJsonObject():
         #pdb.set_trace()
         key = elemArr[0].get()
         elemObj = self.convertdata(elemArr)
-        #dicArr = []
-        #elArr = self.addElement(key, elemObj, dicArr, rowFrame = frm)
         frm.slaves()[0].destroy()
         elArr = self.addElement(key, elemObj, elemArr, rowFrame = frm)
         res = cdc.get_parent(self.dictArr, elemArr, niv=[])
         res[0][res[1]] = elArr[0]
         self.savedata()
-        print('changeType')
+        #print('changeType')
         
 
     def addNewRecord(self, e, frm, dictArr, key, rootInd):
@@ -388,16 +385,19 @@ class editJsonObject():
         try:
             #pdb.set_trace()
             typ = typList[typListS.index(elem[2].get())]
-            
+            #print(typ)
             data = elem[1].get("1.0", END)
             nlines = data.count('\n')
             if nlines == 1:
                 data = data.replace("\n", "")
+            data = data.strip()
             if typ != 'str':
                 if typ == 'ObjectId':
                     data = ObjectId(data)
-                if typ == 'int':
+                if typ == 'int' or typ == 'Int64':
                     data = int(data)
+                if typ == 'Decimal128':
+                    data = Decimal128(data)   
                 if typ == 'float':
                     data = float(data)
                 if typ == 'datetime':
@@ -416,7 +416,7 @@ class editJsonObject():
                         data = self.convertToList(elem[3], True)
                     if len(elem) == 3:
                         print("change to list")
-                        pdb.set_trace()
+                        #pdb.set_trace()
                 if typ == 'bool':
                     data = True if eval(data) else False
                 if typ == "tuple" or typ == "set":
@@ -434,7 +434,7 @@ class editJsonObject():
             else:
                 self.error = str(ex) + " Variable typ not exist."
             #pdb.set_trace()
-            return None
+            return ""
         return data
             
     def convertToList(self, listObj, isList = False):
@@ -554,7 +554,7 @@ class editJsonObject():
             self.objMainMess.clearMess()
             self.butFrame = tk.Frame(self.butZone, height=1)  #, bg="red"
             self.butFrame.pack(expand=1, anchor=N)
-
+            
             if 'I' in self.withButton:  # 'I' = Icon
                 w = 3
                 txtCancel = "✕"
@@ -580,26 +580,29 @@ class editJsonObject():
                 cdc.tooltip(butSave,"Save", self.win)
                 butCancel = tk.Button(self.butFrame, text= txtCancel, font= rFont , command=self.canceldata, width=w)
                 cdc.tooltip(butCancel,"Reset", self.win)
-                butCopy = tk.Button(self.butFrame, text= txtCopy, font= rFont, command=self.copyData, width=w)   
-                cdc.tooltip(butCopy,"Copy", self.win)
-                butClone = tk.Button(self.butFrame, text= txtClone, font= rFont, command=self.cloneData, width=w) 
-                cdc.tooltip(butClone,"Clone", self.win)
-                butDel = tk.Button(self.butFrame, text= txtRemove, font= rFont, command=self.delData, width=w)
-                cdc.tooltip(butDel,"Remove", self.win)
+                if self.typeTrx != 2:  # If not deleted
+                    butCopy = tk.Button(self.butFrame, text= txtCopy, font= rFont, command=self.copyData, width=w)   
+                    cdc.tooltip(butCopy,"Copy", self.win)
+                    butClone = tk.Button(self.butFrame, text= txtClone, font= rFont, command=self.cloneData, width=w) 
+                    cdc.tooltip(butClone,"Clone", self.win)
+                    butDel = tk.Button(self.butFrame, text= txtRemove, font= rFont, command=self.delData, width=w)
+                    cdc.tooltip(butDel,"Remove", self.win)
                 if 'E' in self.withButton or 'W' in self.withButton:
                     if self.typeTrx != 2:  # If not deleted
                         butSave.pack()
                     butCancel.pack()
-                    butCopy.pack()
-                    butClone.pack()
-                    butDel.pack()
+                    if self.typeTrx != 2:  # If not deleted
+                        butCopy.pack()
+                        butClone.pack()
+                        butDel.pack()
                 else:
                     if self.typeTrx != 2:  # If not deleted
                         butSave.grid(row= 0, column=0, sticky="EW") 
                     butCancel.grid(row= 0, column=1, sticky="EW")             
-                    butCopy.grid(row= 0, column=2, sticky="EW")
-                    butClone.grid(row= 0, column=3, sticky="EW")
-                    butDel.grid(row= 0, column=4, sticky="EW")
+                    if self.typeTrx != 2:  # If not deleted
+                        butCopy.grid(row= 0, column=2, sticky="EW")
+                        butClone.grid(row= 0, column=3, sticky="EW")
+                        butDel.grid(row= 0, column=4, sticky="EW")
             else:
                 butEdit = tk.Button(self.butFrame, text= txtEdit, font= rFont, command=self.editData, width=w) 
                 cdc.tooltip(butEdit,"Edit", self.win)
@@ -670,11 +673,11 @@ class editJsonObject():
         
       
     def initFrmEdit(self, dataObj = None, editMode = False):
-
+        #pdb.set_trace()
         self.dictArr = []
         self.arrToDel = []
         self.editMode = editMode
-        if dataObj:
+        if not dataObj is None:
             self.dictObj = dataObj
         if self.withButton and 'N' in self.withButton:
             self.showButtons(editMode = editMode)
@@ -687,13 +690,18 @@ class editJsonObject():
         
         self.addKeys(self.dictObj, self.dictArr)
         self.dataFrame.grid(row= 1, column=1, sticky="nsew")   
-        self.dataFrame.grid_rowconfigure(0, weight = 1)        
+        self.dataFrame.grid_rowconfigure(0, weight = 1)   
+
+        if self.typeTrx == 2:
+            self.dictObj = self.initData
         #pdb.set_trace()
         #self.scrollDataFrame.initW(400)
         #self.win.geometry("300x250")
         if self.withButton and not 'N' in self.withButton:
             self.showButtons(editMode = editMode)
-       
+
+        def scroll(self):
+            self.scrollDataFrame.scroll()
         
 class editOntopObj():
     def __init__(self, parent, obj, title=None, callBack = None, editMode = False):
