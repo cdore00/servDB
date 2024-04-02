@@ -52,7 +52,11 @@ def winChildPos(winObj):
     winObj.pop.attributes('-topmost', True)
     winObj.pop.attributes('-topmost', False)
     
-    
+##########################################################
+#
+#   Tab edit role
+#
+##########################################################      
 class editRoleWin():
     def __init__(self, mainWin, roleData, pos, option = None):
         self.mainObj = mainWin
@@ -563,7 +567,7 @@ class editRoleWin():
 
 ##########################################################
 #
-#   Tab edit users
+#   Tab edit user
 #
 ##########################################################        
 class editUserWin():
@@ -813,6 +817,7 @@ class rolesSelect():
         #print("rolesSelect.rolesList=" + str(self.rolesList))
 
     def addRole(self):
+        self.comboBD.configure(state="readonly")
         sys_check = ttk.Checkbutton(
             self.rolesFrame,
             text="Built-In Roles",
@@ -835,6 +840,7 @@ class rolesSelect():
         self.parent.addRole()
         
     def changeRoleList(self, event= None):
+        
         if self.sysRole.get():
             self.comboRole.config(values=self.mainObj.roleList.copy())
             self.comboBD.config(state="readonly")
@@ -901,7 +907,7 @@ class rolesSelect():
         self.menuRole.add_command(label='Add...', command = self.addRole) 
         self.menuRole.add_command(label='Remove...', command = self.delRole) 
         self.menuBut.configure(menu=self.menuRole)        
-        
+        #pdb.set_trace()
         roleList = []
         dbList = []
         for role in self.rolesList:
@@ -925,7 +931,7 @@ class rolesSelect():
             self.rolesFrame,
             textvariable=self.comboBDText,
             width = 22,
-            state="readonly",
+            state="disable",
             values = dbList.copy()
             ) 
         if dbList:
@@ -990,12 +996,15 @@ class editDatabase():
         answer = askyesno(title='Remove ?',
             message='Remove database : ' + self.databaseName)
         if answer:    
-            #pdb.set_trace()
-            self.mainObj.data.DBconnect.drop_database(self.databaseName)
-            self.mainObj.readDBcolList()
-            self.mainObj.initDBcombo()  
-            self.showDatabase('All')
-
+            try:
+                self.mainObj.data.DBconnect.drop_database(self.databaseName)
+                self.mainObj.readDBcolList()
+                self.mainObj.initDBcombo()  
+                self.showDatabase('All')
+            except pymongo.errors.OperationFailure as ex1:
+                self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
+                return
+                
     def createDatabase(self):
         dbName = cdc.getInput.string(self.mainObj.win, "New database", "Database name")
         if dbName:
@@ -1006,7 +1015,6 @@ class editDatabase():
                 self.mainObj.readDBcolList()
                 self.mainObj.initDBcombo(dbName)
             except pymongo.errors.OperationFailure as ex1:
-                #self.objMess.showMess(ex1.details.get('errmsg', ''))
                 self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                 return
 
@@ -1021,7 +1029,6 @@ class editDatabase():
                 self.mainObj.readDBcolList()
                 self.showDatabase(self.databaseName, refresh = True)            
             except pymongo.errors.OperationFailure as ex1:
-                #self.objMess.showMess(ex1.details.get('errmsg', ''))
                 self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                 return
                 
@@ -1042,7 +1049,6 @@ class editDatabase():
                 self.colNameSelect = None
                 self.editFilter.affTot("")   
             except pymongo.errors.OperationFailure as ex1:
-                #self.objMess.showMess(ex1.details.get('errmsg', ''))
                 self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                 return
                 
@@ -1059,7 +1065,7 @@ class editDatabase():
                 self.mainObj.COLlist[self.databaseName] = colList.copy()
                 self.showDatabase(self.databaseName, refresh = True)
             except pymongo.errors.OperationFailure as ex1:
-                #self.objMess.showMess(ex1.details.get('errmsg', ''))
+                
                 self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                 return
                 
@@ -1077,23 +1083,18 @@ class editDatabase():
             collFrame = tk.Frame(self.editFrame)  
             collFrame.grid(row=0, column=0, sticky='NSWE', padx=0, pady=3)
             collFrame.rowconfigure(0, weight=1)
-
-            butAddBD = ttk.Button(collFrame, text='Create DB', command=self.createDatabase, width=17)
-            butAddBD.pack(anchor=W, padx=10)   
             
             if dbName != "admin" and dbName != "All":
             
                 self.dbObj=self.mainObj.data.DBconnect[self.databaseName]
                 self.collections = self.mainObj.COLlist[dbName]             
-                lblDBname = ttk.Label(collFrame, text=dbName, font= ('Segoe 11 bold'), borderwidth=1, relief = RIDGE, width=14) #, relief = SOLID
-                lblDBname.pack(anchor=W, padx=11) 
+                lblDBname = tk.Label(collFrame, text=dbName, font= ('Segoe 11 bold'), borderwidth=3, relief = SUNKEN, width=14, padx=1) #, relief = SOLID
+                lblDBname.pack(anchor=W, padx=6) 
                 lblDBname.bind("<Button-3>", self.popMenu)
                 
                 self.scrollCollFrame = cdc.VscrollFrame(collFrame)
                 self.scrollCollFrame.pack(expand= True, fill=BOTH)     
-                      
 
-                
                 self.colltreeview = ttk.Treeview(self.scrollCollFrame.interior, height=len(self.collections))
                 self.colltreeview.column("#0",anchor=W, stretch=NO, width=110)
                 self.colltreeview.heading("#0", text= "Collections")
@@ -1103,7 +1104,7 @@ class editDatabase():
                 
                 for ind, coll in enumerate(self.collections):   # Set collections list
                     self.colltreeview.insert('', 'end',text=coll,values=(coll), tags=("selecttag"))  #,values=('1','C++')
-                self.colltreeview.pack()
+                self.colltreeview.pack(anchor=W, padx=6)
                 
                 style = ttk.Style()
                 style.configure('Treeview.Heading', foreground='#559', font=('Segoe',10))  
@@ -1133,8 +1134,6 @@ class editDatabase():
 
     
     def showColl(self, e = None):
-        #pdb.set_trace()
-        #print("event = " + str(e))
         self.mainObj.objMainMess.clearMess()
         if self.colltreeview.selection():
             self.resetList()
@@ -1168,7 +1167,7 @@ class editDatabase():
             elem.destroy() 
 
         for ind, coll in enumerate(self.recList):
-            self.addElemToList(coll)
+            self.addElemToList(coll, ind = self.recCnt  + 1)
             self.recCnt += 1          
 
         self.editFilter.affTot(str(self.recCnt) + "/" + str(self.recTot))
@@ -1182,7 +1181,7 @@ class editDatabase():
             res = custom_dialog.result        
             if res:
                 try:
-                    self.addElemToList(res[0])  
+                    self.addElemToList(res[0], ind = self.recCnt  + 1)  
                     coll = self.dbObj[self.colNameSelect] 
                     doc = coll.insert_one(res[0])
                     self.updAffCnt(recCnt = 1, totCnt = 1)
@@ -1190,7 +1189,7 @@ class editDatabase():
                     self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                     return
                 
-    def addElemToList(self, coll, recFrame = None):
+    def addElemToList(self, coll, recFrame = None, ind = None):
         if recFrame is None:
             recFrame = tk.Frame(self.scrollrecFrame.interior, padx=2)
             recFrame.columnconfigure(0, weight=30) 
@@ -1206,7 +1205,10 @@ class editDatabase():
         butFrame = tk.Frame(recFrame)
         butFrame.grid(row= 0, column=1, sticky="N")
         
-        butEdit = tk.Button(butFrame, text= "🖍", font= ('Calibri 12'), command= lambda listObj=recFrame, obj = coll: self.editRec( listObj, obj)) 
+        indLbl = Label(butFrame, text=str(ind), font=('Segoe 8 bold'), pady=1)
+        indLbl.pack()
+        
+        butEdit = tk.Button(butFrame, text= "🖍", font= ('Calibri 11'), command= lambda listObj=recFrame, obj = coll, ind = ind: self.editRec( listObj, obj, ind)) 
         butEdit.pack()
         Hovertip(butEdit,"Edit")
         butDel = tk.Button(butFrame, text="🗑", font= ('Calibri 9'), command= lambda listObj=recFrame, rec_id=coll["_id"]: self.delRecord(listObj, rec_id))  #, command=self.selFK  🗑  🗑
@@ -1235,7 +1237,6 @@ class editDatabase():
                 listObj.destroy()
                 self.updAffCnt(recCnt = -1, totCnt = -1)
             except pymongo.errors.OperationFailure as ex1:
-                #self.objMess.showMess(ex1.details.get('errmsg', ''))
                 self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                 return
                 
@@ -1250,7 +1251,6 @@ class editDatabase():
                 res.delete_many({})
                 self.showRec(newRec=True)
             except pymongo.errors.OperationFailure as ex1:
-                #self.objMess.showMess(ex1.details.get('errmsg', ''))
                 self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                 return        
     def getdata(self, newRec):
@@ -1284,7 +1284,6 @@ class editDatabase():
                 self.recSkip += len(self.recList)
                 
             except pymongo.errors.OperationFailure as ex1:
-                #self.objMess.showMess(ex1.details.get('errmsg', ''))
                 self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                 return
                 
@@ -1306,8 +1305,7 @@ class editDatabase():
                 doc = coll.insert_many(objColl)
                 self.showRecReset()
                 self.mainObj.objMainMess.showMess( "File data imported to collection: " + file_path, "I")
-        except pymongo.errors.OperationFailure as ex1:
-            #self.objMess.showMess(ex1.details.get('errmsg', ''))
+        except pymongo.errors.OperationFailure as ex1:  
             self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
             return
 
@@ -1326,8 +1324,9 @@ class editDatabase():
             self.mainObj.objMainMess.showMess(str(ex))
 
             
-    def editRec(self, listObj, obj):
+    def editRec(self, listObj, obj, ind = None):
         #txtLog=event.widget.get("1.0",END)
+        #pdb.set_trace()
         custom_dialog = eob.editOntopObj(self.mainObj.win, obj, title="Edit JSON Object", editMode = True)
         res = custom_dialog.result 
         self.mainObj.objMainMess.clearMess()
@@ -1344,7 +1343,7 @@ class editDatabase():
                     doc = coll.delete_one({ '_id': obj['_id']})
                     obj['_id'] = ID
                     doc = coll.insert_one(obj)
-                    self.addElemToList(obj, recFrame = listObj)                
+                    self.addElemToList(obj, recFrame = listObj, ind = ind)                
                 elif typTrx == 2:
                     #print("delete")
                     #pdb.set_trace()
@@ -1355,10 +1354,9 @@ class editDatabase():
                 elif typTrx == 3:
                     #print("insert")
                     doc = coll.insert_one(obj)
-                    self.addElemToList(obj)
+                    self.addElemToList(obj, ind = ind)
                     self.updAffCnt(recCnt = 1, totCnt = 1)
             except pymongo.errors.OperationFailure as ex1:
-                #self.objMess.showMess(ex1.details.get('errmsg', ''))
                 self.mainObj.objMainMess.showMess(ex1.details.get('errmsg', ''))
                 return
             except Exception as ex:

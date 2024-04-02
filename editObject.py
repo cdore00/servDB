@@ -62,7 +62,7 @@ class editJsonObject():
         elemArr = []
         #pdb.set_trace()
         typ = elemObj.__class__.__name__
-        print("typ= " + typ)
+        #print("typ= " + typ)
         elemFrame = tk.Frame(parentFrm)  #, bg="red"
         elemFrame.pack(expand=1, fill="x", padx = 5)
         elemFrame.columnconfigure(0, weight=0)
@@ -489,8 +489,8 @@ class editJsonObject():
                         self.clearMainFrame()
                         self.initFrmEdit(self.dictObj, editMode = True)
         #pdb.set_trace()
-        print(self.dictObj)
-        #pdb.set_trace()
+        #print(self.dictObj)
+
         if self.saveCallback:
             self.saveCallback(self.dictObj, updType)
         if self.error is None:

@@ -362,7 +362,8 @@ class filterLogForm(filterForm):
         self.chxCtx.set(0)
         self.chxMes.set(0)
         self.chxID.set(0)
-        self.objMainMess.clearMess()
+        #pdb.set_trace()
+        #self.objMainMess.clearMess()
         
 class master_form_find():
     def __init__(self, mainWin, *args, **kwargs):
@@ -458,7 +459,7 @@ class master_form_find():
 
         
         menu_file = Menu(menuFichier, tearoff = 0)
-        menu_file.add_command(label='Connect to...', command = self.login)   #, activebackground='lightblue', activeforeground='black'
+        menu_file.add_command(label='Connect to...', command = self.login) 
         menu_file.add_separator()
         menu_file.add_command(label='Sign in...', command = self.authentif)
         menu_file.add_separator()
@@ -594,8 +595,12 @@ class master_form_find():
     def editAction(self, action):
         #pdb.set_trace()
         if action == 11:
+            if self.tabObject.index(self.tabObject.select()) != 0:
+                self.tabObject.select(0)
             mmo.editUserWin(self, self.usersDataList[0], None, 1)
-        elif action == 12:    
+        elif action == 12:
+            if self.tabObject.index(self.tabObject.select()) != 1:
+                self.tabObject.select(1)        
             mmo.editRoleWin(self, self.rolesDataList[0], None, 1)
         else:
             if self.tabObject.index(self.tabObject.select()) != 4:
