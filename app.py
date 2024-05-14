@@ -4,6 +4,8 @@ import cherrypy
 #import certifi
 import ssl
 
+
+
 #pdb expects a usable terminal with a TTY.
 #docker run -it foo
 import pdb
@@ -41,6 +43,7 @@ from pymongo import MongoClient
 dbase = "golf"
 port = 27017
 uri = "mongodb://localhost"
+domain = ".localhost"
 if os.environ.get('MONGODB_USER'):
     if os.environ.get('MONGODB_PORT'):
         port = int(os.environ['MONGODB_PORT'])
@@ -73,6 +76,10 @@ print(str(data))
 """ Golf functions """
 import golfFunc as gf
 import logFunc as lf
+import resFunc as rf
+rf.dataBase = data
+rf.log_Info = gf.log_Info
+
 gf.dataBase = data
 gf.cherry = cherrypy
 gf.usepdb = -1
@@ -120,6 +127,64 @@ class webServer(object):
         res = dumps(docs)
         return res
 
+    @cherrypy.expose
+    def subStartCal(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.subStartCal(param, self)
+
+    @cherrypy.expose
+    def creStartCal(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.creStartCal(param, self)
+        
+    @cherrypy.expose
+    def getStart(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.getStart(param, self)
+
+    @cherrypy.expose
+    def getStartCal(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.getStartCal(param, self)
+        
+    @cherrypy.expose
+    #@cherrypy.tools.json_in(content_type=['application/json', 'text/plain'])  
+    #@cherrypy.tools.json_out() 
+    def reservStart(self, info = False):
+ 
+        #pdb.set_trace()
+        #data = cherrypy.request.json
+        
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.reservStart(param, self)        
+
+    @cherrypy.expose
+    def checkStartAvailable(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.checkStartAvailable(param, self)         
+        
+    @cherrypy.expose
+    def getUserStarts(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.getUserStarts(param, self) 
+
+    @cherrypy.expose
+    def deleteStart(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.deleteStart(param, self)
+
+    @cherrypy.expose
+    def updateStart(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.updateStart(param, self)
+
+    @cherrypy.expose
+    def saveResUser(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.saveResUser(param, self)
+
+    #END reserve functions
+    
     @cherrypy.expose
     def getFav(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
@@ -351,6 +416,7 @@ class webServer(object):
 # Start server listening request
 def run( args):
    #global HOSTcors
+   #pdb.set_trace()
    port = int(args[0])
    domain = args[1]
    print('HOSTcors=' + HOSTcors + ' Domain=' + domain + ' Port=' + str(port) + ("  -Debug= " + str(gf.usepdb) if (gf.usepdb >= 0) else "") )
@@ -359,12 +425,14 @@ def run( args):
              'server.socket_port': port,   
              'tools.response_headers.on': True, 
              'tools.response_headers.headers': [ ('Access-Control-Allow-Origin', HOSTcors), ('Access-Control-Allow-Credentials', 'true')],
+             'access_control_allow_methods' : "POST, OPTIONS",
              'error_page.default': exception_handler,
              'engine.autoreload.on' : False,
              'log.screen': True,
              'log.access_file': '',
              'log.error_file': ''}
    cherrypy.config.update(config)
+   
    gf.log_Info('Starting Web server...(' + HOSTserv + ":" + str(port) + ')') 
    print('Starting Web server...(' + HOSTserv + ":" + str(port) + ')')   
    if HOSTserv == LOCAL_HOST:

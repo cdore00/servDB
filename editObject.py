@@ -9,14 +9,14 @@ from idlelib.tooltip import Hovertip
 from decimal import *
 from decimal import Decimal
 from bson.decimal128 import Decimal128
-
+import pyperclip as cp
 from tkinter import simpledialog
 from datetime import datetime
 
 import cdControl as cdc
     
-typList  = ['list',  'bool',   'datetime',  'Decimal128' , 'float', 'int'    , 'dict', 'ObjectId', 'set',     'str',  'Timestamp',  'tuple']
-typListS = ['Array', 'Boolean',  'Datetime', 'Decimal', 'Float', 'Integer', 'Object', 'ObjectId', 'BSONset', 'String', 'Timestamp',  'Tuple']
+typList  = ['list',  'bool',   'datetime',  'Decimal128' , 'float', 'int' , 'Int64' , 'dict', 'ObjectId', 'set',     'str',  'Timestamp',  'tuple']
+typListS = ['Array', 'Boolean',  'Datetime', 'Decimal', 'Float', 'Int32', 'Int64', 'Object', 'ObjectId', 'BSONset', 'String', 'Timestamp',  'Tuple']
 
 
 class editJsonObject():

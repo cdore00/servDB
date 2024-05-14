@@ -2,6 +2,7 @@ import pdb
 import sys, os, io, time, re, cgi, csv
 import smtplib
 import phonetics
+import requests
 from socket import gethostname, gethostbyname
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
@@ -21,7 +22,7 @@ def millis():
    dt = datetime.now() - datetime(1970, 1, 1)
    ms = (dt.days * 24 * 60 * 60 + dt.seconds) * 1000 + dt.microseconds / 1000.0
    return ms
-   
+#time.time()
 #Log file
 LOG_DIR = (os.getcwd() if os.getcwd() != '/' else '') + '/log'
 #pdb.set_trace()
@@ -243,7 +244,7 @@ def saveUser(param, self):
             def checkEmailExist(doc):
                 docs = coll.find({"courriel": user, "_id": {"$ne": o_id}})
                 if len(list(docs)):
-                    return dumps({"resp": {"result":False, "message": "S0056"} }) # The new email allredy exist
+                    return dumps({"resp": {"result":False, "message": "S0056"} }) # The new email allready exist
                 else:
                     return updUser(doc)
             
@@ -254,7 +255,7 @@ def saveUser(param, self):
                 dic = cursorTOdict(userDoc)
                 return checkEmailExist(dic);
             else:
-                return dumps({resp: {"result":False, "message": "S0057"} }) # The new email allredy exist
+                return dumps({resp: {"result":False, "message": "S0057"} }) # The new email allready exist
         
             return dumps({ })    # modified
         else:
@@ -269,7 +270,7 @@ def getUserInfo(param, self):
             coll = dataBase.users
             if param.get("id"):
                 o_id = getID(param["id"][0])
-                doc = coll.find({"_id": o_id}, ["_id", "Nom", "courriel", "niveau", "actif", "note"])
+                doc = coll.find({"_id": o_id}, ["_id", "ident", "Nom", "courriel", "phone", "niveau", "actif", "note"])
                 dic = cursorTOdict(doc)
                 dic['role']    = ["MEM", "MEA", "ADM"]
                 return dumps(dic)

@@ -3,7 +3,7 @@
 #https://pyinstaller.org/en/stable/usage.html#cmdoption-hidden-import
 #pyinstaller main.py --onefile --name test --icon test.ico --noconsole
 #Mise à jour et sécurité/Sécurité Windows/Protection contre les virus/Gérer les paramètres/Protection en temps réel
-#Scripts\pyinstaller win64MD.py --onefile --name golf --noconsole
+
 #Scripts\pyinstaller  -F --add-data C:\Users\charl\AppData\Local\Programs\Python\Python39\tcl\tix8.4.3;tcl\tix8.4.3 code\win64MD.py --noconsole
 #C:\Users\charl\AppData\Local\Programs\Python\Python39\Scripts
 
@@ -691,7 +691,7 @@ class dbaseObj():
                             APPR: APPRBD}        
         self.server = {
             "Local": "mongodb://localhost:27017/",
-            VSERV: ""
+            VSERV: "mongodb://CDadmin:925045Cd!@cdore.ddns.net:6600/?authSource=admin&ssl=false"
             }
         self.DBconnect = None
         self.isConnect = False
@@ -927,7 +927,7 @@ class dbaseObj():
 
     def addRecette(self, oRec):
         col = self.data.recettes
-
+        #pdb.set_trace()
         doc = col.insert_one(oRec, {"new":True})
         return ({'n': 0, 'ok': 1.0})
         
