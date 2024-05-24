@@ -257,8 +257,9 @@ def getPlayList(param):
     playList = []
     for x in range(4):
         if param.get("P" + str(x)):
-            playList.append(param["P" + str(x)][0])
-            print("P" + str(x))
+            ui = param["P" + str(x)][0].split("$$")
+            playList.append([ui[0], ui[1]])
+
     return playList
     
 def reservStart(param, self):
@@ -273,6 +274,8 @@ def reservStart(param, self):
     
     playList = getPlayList(param)
     
+    #uid = uid.split("$$")
+    #uid = getID(uid[0])
     uid = getID(uid)
     rid = getID(rid)
     npl = int(npl)
@@ -289,13 +292,15 @@ def reservStart(param, self):
 
 
 def updateStart(param, self):
-
+    #res = checkSession(self)
     #pdb.set_trace()
+    
     uid = (param["uid"][0])
     rid = (param["rid"][0])
     npl = (param["npl"][0])
     apl = (param["apl"][0])
     itm = (param["itm"][0])
+    unm = (param["unm"][0])
 
     npl = int(npl)
     apl = int(apl)
@@ -303,20 +308,23 @@ def updateStart(param, self):
     
     checkRes = checkStartAvailable( {'id': [rid], 'npl': [apl - npl]}, self )
  
-    uid = getID(uid)
+    if ObjectId.is_valid(uid):
+        uid = getID(uid)
+    else:
+        user = getClubUsers(param, self, ident = uid)
+        user = loads(user)
+        uid = user["data"][0]["_id"]
+        
     rid = getID(rid)
        
-    playList = []
-    for x in range(4):
-        if param.get("P" + str(x)):
-            playList.append(param["P" + str(x)][0])
+    playList = getPlayList(param)
 
     if not checkRes['error']:
         coll = dataBase.departs
         #delete start
         res = coll.update_one( { '_id': rid},{ '$inc': { 'players': (npl * -1) }, '$pull': {'reserv':{ 'user': uid}}})
         
-        res = coll.update_one( { '_id': rid},{ "$set": {"lockTime": time.time()}, '$inc': { 'players': apl }, '$push': {'reserv':{ 'time': itm, 'timeM': time.time(), 'user': uid, 'players': apl, "playList": playList }}})
+        res = coll.update_one( { '_id': rid},{ "$set": {"lockTime": time.time()}, '$inc': { 'players': apl }, '$push': {'reserv':{ 'time': itm, 'timeM': time.time(), 'user': uid, 'capName': unm, 'players': apl, "playList": playList }}})
         if res.raw_result['n'] == 1:
             return dumps({'error': 0, 'mess': ""})
         else:
@@ -373,6 +381,19 @@ def checkStartAvailable(param, self):
             return dumps({'error': 201, 'mess': "Ce départ n'est plus disponible."})
     #return dumps(res.raw_result)
     
+def getClubUsers(param, self, ident = None):
+    #pdb.set_trace()
+    if param.get("ci") and not param.get("ci") is None:
+        club_id = getID(param["ci"][0])
+    coll = dataBase.users 
+    
+    if ident is None:
+        filterObj = { 'clubID': club_id, "actif": True }
+    else:
+        filterObj = { 'ident': ident, "actif": True } 
+    ex = coll.find( filterObj , ["ident", "Nom"]).sort("Nom", 1)     #  + date
+    docs = list(ex)
+    return dumps({'error': 0,  'data':docs})    # Succes
     
 def getUserStarts(param, self):
    
@@ -381,13 +402,19 @@ def getUserStarts(param, self):
     if not param.get("ui") :
         return dumps({'error': 106, 'mess': "User is required."})    # No user     
 
-    
-    #pdb.set_trace()
+    #datetimeLib.datetime.fromtimestamp(lt, tz=None)
+
     club_id = getID(param["ci"][0])
     user = getID(param["ui"][0])
-    
+    depSel = getID(param["ds"][0])
+    #pdb.set_trace()
     coll = dataBase.departs 
-    ex = coll.find({ 'club_id': club_id, 'reserv': { '$elemMatch' : { 'user': user }} }).sort("startTime", -1)     #  + date
+    if depSel == 1:
+        lt = time.time()
+        ex = coll.find({ 'club_id': club_id, 'startTime': { '$gte': lt }, 'reserv': { '$elemMatch' : { 'user': user }} }).sort("startTime", -1)     #  + date
+    else:
+        ex = coll.find({ 'club_id': club_id, 'reserv': { '$elemMatch' : { 'user': user }} }).sort("startTime", -1)     #  + date
+        
     docs = list(ex)
     
     coll = dataBase.club

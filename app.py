@@ -169,6 +169,11 @@ class webServer(object):
         return rf.getUserStarts(param, self) 
 
     @cherrypy.expose
+    def getClubUsers(self, info = False):
+        param = parse_qs(urlparse('url?' + info).query)
+        return rf.getClubUsers(param, self) 
+
+    @cherrypy.expose
     def deleteStart(self, info = False):
         param = parse_qs(urlparse('url?' + info).query)
         return rf.deleteStart(param, self)

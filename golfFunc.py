@@ -173,8 +173,13 @@ def authUser(param, self, cookie):
                 user = param["user"][0]
                 #print("1- user= " + str(user))
                 coll = dataBase.users
-                doc = coll.find({"courriel": user, "actif": True}, ["_id","Nom", "courriel", "motpass", "niveau"])
+                doc = coll.find({"ident": user, "actif": True}, ["_id","Nom", "courriel", "motpass", "niveau"])
                 userDoc = list(doc)
+                if not len(userDoc):
+                    doc = coll.find({"courriel": user, "actif": True}, ["_id","Nom", "courriel", "motpass", "niveau"])
+                    userDoc = list(doc)
+                else:
+                    user = userDoc[0]["courriel"]
                 if usepdb == 3:
                     pdb.set_trace()                
                 def setSessID(mess, userID):
@@ -708,7 +713,8 @@ def getGameList(param, cpy):
     """Return game list result """
     try:
         if param.get("user"):
-            user = int(param["user"][0])
+            #pdb.set_trace() 
+            user = getID(param["user"][0])
             skip = int(param["skip"][0])
             limit = int(param["limit"][0])
             is18 = int(param["is18"][0])
@@ -717,6 +723,7 @@ def getGameList(param, cpy):
                 parc = int(param["parc"][0])
             else:
                 parc = 0
+               
             if param.get("tele"):
                 intTele = int(param["tele"][0])
             else:
@@ -729,7 +736,6 @@ def getGameList(param, cpy):
             coll = dataBase.score
 
             def addCur(doc):
-                #pdb.set_trace()
                 for x in doc:
                     if intTele != 2:     # If not JSON format Date
                         ts = x['score_date'] / 1000
@@ -849,7 +855,7 @@ def updateGame(param, self):
         if param.get("data"):
             param = param["data"][0]
             para = [x for x in param.split("$")]
-            user = int(para[0])
+            user = getID(para[0])
             parc = int(para[1])
             hole = int(para[2])
             stroke = int(para[3])
@@ -950,7 +956,7 @@ def getGame(param, self, userID = False, parcID = False):
             if param.get("data"):
                 param = param["data"][0]
                 para = [x for x in param.split("$")]
-                user = int(para[0])
+                user = getID(para[0])
                 parc = int(para[1])
                 return getG(user, parc)
         else:
